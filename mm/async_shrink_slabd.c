@@ -43,10 +43,7 @@
 
 extern unsigned long shrink_slab(gfp_t gfp_mask, int nid,
 				 struct mem_cgroup *memcg,
-				 unsigned long nr_scanned,
-				 unsigned long nr_eligible);
-
-static DECLARE_RWSEM(async_shrinker_rwsem);
+				 int priority);
 
 static bool async_shrink_slabd_setup = false;
 wait_queue_head_t shrink_slabd_wait;
@@ -54,8 +51,7 @@ struct async_slabd_parameter {
 	gfp_t shrink_slabd_gfp_mask;
 	int shrink_slabd_nid;
 	struct mem_cgroup *shrink_slabd_memcg;
-	unsigned long shrink_slabd_nr_scanned;
-	unsigned long shrink_slabd_nr_eligible;
+	int shrink_slabd_priority;
 	int shrink_slabd_runnable;
 } asp;
 
@@ -66,28 +62,24 @@ static struct reclaim_state async_reclaim_state = {
 
 bool wakeup_shrink_slabd(gfp_t gfp_mask, int nid,
 				 struct mem_cgroup *memcg,
-				 unsigned long nr_scanned,
-				 unsigned long nr_eligible,
-				 struct reclaim_state *reclaim_state)
+				 int priority, struct reclaim_state *reclaim_state)
 {
 	if (unlikely(!async_shrink_slabd_setup))
 		return false;
 
-	if (!down_read_trylock(&async_shrinker_rwsem))
+	if (asp.shrink_slabd_runnable == 1)
 		return true;
 
+	async_reclaim_state.reclaimed_slab = 0;
 	current->reclaim_state = reclaim_state = &async_reclaim_state;
 
 	asp.shrink_slabd_gfp_mask = gfp_mask;
 	asp.shrink_slabd_nid = nid;
 	asp.shrink_slabd_memcg = memcg;
-	asp.shrink_slabd_nr_scanned = nr_scanned;
-	asp.shrink_slabd_nr_eligible = nr_eligible;
+	asp.shrink_slabd_priority = priority;
 
 	asp.shrink_slabd_runnable = 1;
 	wake_up_interruptible(&shrink_slabd_wait);
-
-	up_read(&async_shrinker_rwsem);
 
 	return true;
 }
@@ -127,8 +119,11 @@ void set_async_slabd_cpus(void)
 	}
 }
 
-static int shrink_slabd(void *p)
+static int kshrink_slabd_func(void *p)
 {
+	int nid, priority;
+	struct mem_cgroup *memcg;
+	gfp_t gfp_mask;
 	/*
 	 * Tell the memory management that we're a "memory allocator",
 	 * and that if we need more memory we should get access to it
@@ -148,8 +143,7 @@ static int shrink_slabd(void *p)
 	asp.shrink_slabd_gfp_mask = 0;
 	asp.shrink_slabd_nid = 0;
 	asp.shrink_slabd_memcg = NULL;
-	asp.shrink_slabd_nr_scanned = 0;
-	asp.shrink_slabd_nr_eligible = 0;
+	asp.shrink_slabd_priority = 0;
 	asp.shrink_slabd_runnable = 0;
 
 	while (!kthread_should_stop()) {
@@ -157,16 +151,15 @@ static int shrink_slabd(void *p)
 					(asp.shrink_slabd_runnable > 0));
 
 		set_async_slabd_cpus();
-		down_read(&async_shrinker_rwsem);
 
-		shrink_slab(asp.shrink_slabd_gfp_mask,
-				asp.shrink_slabd_nid,
-				asp.shrink_slabd_memcg,
-				asp.shrink_slabd_nr_scanned,
-				asp.shrink_slabd_runnable);
+		gfp_mask = asp.shrink_slabd_gfp_mask;
+		nid = asp.shrink_slabd_nid;
+		priority = asp.shrink_slabd_priority;
+		memcg = asp.shrink_slabd_memcg;
+
+		shrink_slab(gfp_mask, nid, memcg, priority);
 
 		asp.shrink_slabd_runnable = 0;
-		up_read(&async_shrinker_rwsem);
 	}
 	current->flags &= ~(PF_MEMALLOC | PF_SWAPWRITE | PF_KSWAPD);
 	current->reclaim_state = NULL;
@@ -180,7 +173,7 @@ static int async_shrink_slabd_init(void)
 
 	init_waitqueue_head(&shrink_slabd_wait);
 
-	shrink_slabd_tsk = kthread_run(shrink_slabd, NULL, "shrink_slabd");
+	shrink_slabd_tsk = kthread_run(kshrink_slabd_func, NULL, "kshrink_slabd");
 	if (IS_ERR_OR_NULL(shrink_slabd_tsk)) {
 		pr_err("Failed to start shrink_slabd on node 0\n");
 		ret = PTR_ERR(shrink_slabd_tsk);
