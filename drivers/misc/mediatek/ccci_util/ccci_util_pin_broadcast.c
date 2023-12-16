@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
  */
 
 
@@ -55,7 +47,7 @@ static struct list_head user_list;
 
 void inject_pin_status_event(int pin_value, const char pin_name[])
 {
-	struct pin_event_user_ctrl *user_ctrl;
+	struct pin_event_user_ctrl *user_ctrl = NULL;
 	int ret = 0;
 
 	spin_lock(&pin_event_update_lock);

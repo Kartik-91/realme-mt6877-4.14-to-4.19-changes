@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2019 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
  */
 #include <linux/clk.h>
 #include <linux/of.h>
@@ -21,6 +13,12 @@
 
 #include <linux/clk-provider.h>
 #include <linux/clk.h>
+#include <linux/module.h>
+#include <linux/of.h>
+#include <linux/of_address.h>
+#include <linux/of_device.h>
+#include <linux/platform_device.h>
+
 #include "clk-mtk-v1.h"
 #include "clk-mt6873-pg.h"
 
@@ -4441,7 +4439,7 @@ struct clk *mt_clk_register_power_gate(const char *name,
 {
 	struct mt_power_gate *pg;
 	struct clk *clk;
-	struct clk_init_data init;
+	struct clk_init_data init = {};
 
 	pg = kzalloc(sizeof(*pg), GFP_KERNEL);
 	if (!pg)
@@ -4773,14 +4771,14 @@ void enable_subsys_hwcg(enum subsys_id id)
 	}
 }
 
-static void __init mt_scpsys_init(struct device_node *node)
+static int clk_mt6873_scpsys_probe(struct platform_device *pdev)
 {
 	struct clk_onecell_data *clk_data;
 	void __iomem *infracfg_reg;
 	void __iomem *spm_reg;
 	void __iomem *ckgen_reg;
-
 	int r;
+	struct device_node *node = pdev->dev.of_node;
 
 	infracfg_reg = get_reg(node, 0);
 	spm_reg = get_reg(node, 1);
@@ -4790,10 +4788,12 @@ static void __init mt_scpsys_init(struct device_node *node)
 
 	if (!infracfg_reg || !spm_reg   || !ckgen_reg) {
 		pr_notice("clk-pg-mt6873: missing reg\n");
-		return;
+		return -EINVAL;
 	}
 
 	clk_data = alloc_clk_data(SCP_NR_SYSS);
+	if (!clk_data)
+		return -ENOMEM;
 
 	init_clk_scpsys(infracfg_reg, spm_reg, clk_data);
 
@@ -4865,8 +4865,9 @@ static void __init mt_scpsys_init(struct device_node *node)
 #endif /* CONFIG_FPGA_EARLY_PORTING */
 #endif /* !MT_CCF_BRINGUP */
 	spin_lock_init(&pgcb_lock);
+	return r;
 }
-CLK_OF_DECLARE_DRIVER(mtk_pg_regs, "mediatek,scpsys", mt_scpsys_init);
+
 
 #if 0 /* MT6873 todo: add print CG status for suspend checking */
 static const char * const *get_all_clk_names(size_t *num)
@@ -5203,3 +5204,32 @@ void mtcmos_force_off(void)
 	spm_mtcmos_ctrl_conn(STA_POWER_DOWN);
 }
 #endif
+static const struct of_device_id of_match_clk_mt6873_scpsys[] = {
+	{ .compatible = "mediatek,scpsys", },
+	{}
+};
+
+static struct platform_driver clk_mt6873_scpsys_drv = {
+	.probe = clk_mt6873_scpsys_probe,
+	.driver = {
+		.name = "clk-mt6873-scpsys",
+		.owner = THIS_MODULE,
+		.of_match_table = of_match_clk_mt6873_scpsys,
+	},
+};
+
+static int __init clk_mt6873_scpsys_init(void)
+{
+	return platform_driver_register(&clk_mt6873_scpsys_drv);
+}
+
+static void __exit clk_mt6873_scpsys_exit(void)
+{
+}
+
+arch_initcall(clk_mt6873_scpsys_init);
+module_exit(clk_mt6873_scpsys_exit);
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("MTK");
+MODULE_DESCRIPTION("MTK CCF  Driver");
+

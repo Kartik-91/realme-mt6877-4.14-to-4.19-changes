@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2015 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
@@ -226,6 +218,10 @@
 #define MIPITX_CK_SW_LPTX_PRE_OE	(0x0348UL)
 #define MIPITX_CKC_SW_LPTX_PRE_OE	(0x0368UL)
 
+#ifdef OPLUS_BUG_STABILITY
+unsigned int oplus_panel_index;
+#endif	/* OPLUS_BUG_STABILITY */
+
 enum MIPITX_PAD_VALUE {
 	PAD_D2P_T0A = 0,
 	PAD_D2N_T0B,
@@ -262,6 +258,7 @@ struct mtk_mipi_tx {
 
 #ifdef OPLUS_BUG_STABILITY
 extern unsigned int oplus_get_ssc_config_data(void);
+extern unsigned int oplus_enhance_mipi_strength;
 #endif
 
 static inline struct mtk_mipi_tx *mtk_mipi_tx_from_clk_hw(struct clk_hw *hw)
@@ -939,6 +936,21 @@ static int mtk_mipi_tx_pll_prepare_mt6885(struct clk_hw *hw)
 	/* TODO: should write bit8 to set SW_ANA_CK_EN here */
 	mtk_mipi_tx_set_bits(mipi_tx, MIPITX_SW_CTRL_CON4, 1);
 
+	#ifdef OPLUS_BUG_STABILITY
+	/*2112701 is "oplus21127_samsung_ams643ag01_1080p_dsi_cmd,lcm"*/
+	if (oplus_panel_index == 2112701) {
+		writel(0x01b10003, mipi_tx->regs + MIPITX_PLL_CON2);
+		/*example,mipi clock down n% ,(( n x mipi clock x 4 x 262144 + 281644 ) / 563329)*/
+		/*299M dowm 0.1%*/
+		writel(0x00380038, mipi_tx->regs + MIPITX_PLL_CON3);
+
+		/*reg_val = readl(mipi_tx->regs + MIPITX_PLL_CON2);
+		printk("%s - open ssc CON2 reg_val=0x%x \n",__func__,reg_val);
+		reg_val = readl(mipi_tx->regs + MIPITX_PLL_CON3);
+		printk("%s - open ssc CON3 reg_val=0x%x \n",__func__,reg_val);*/
+	}
+	#endif	/* OPLUS_BUG_STABILITY */
+
 	DDPDBG("%s-\n", __func__);
 
 	return 0;
@@ -1380,6 +1392,12 @@ static int mtk_mipi_tx_pll_prepare_mt6877(struct clk_hw *hw)
 
 	/* TODO: should write bit8 to set SW_ANA_CK_EN here */
 	mtk_mipi_tx_set_bits(mipi_tx, MIPITX_SW_CTRL_CON4, 1);
+
+	/*#ifdef VENDOR_EDIT*/
+	if (oplus_enhance_mipi_strength == 1) {
+		mtk_mipi_tx_update_bits(mipi_tx, MIPITX_VOLTAGE_SEL, FLD_RG_DSI_HSTX_LDO_REF_SEL, 0xF << 6);
+	}
+	/*#endif*/
 
 	#ifdef OPLUS_BUG_STABILITY
 	ssc_config_data = oplus_get_ssc_config_data();
@@ -1932,6 +1950,7 @@ static int mtk_mipi_tx_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	DDPDBG("%s set rate: %lu Hz\n", __func__, rate);
 
 	dev_dbg(mipi_tx->dev, "set rate: %lu Hz\n", rate);
+
 	mipi_tx->data_rate = rate;
 
 	return 0;

@@ -1,16 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
-
 
 #define pr_fmt(fmt) "[ALS/PS] " fmt
 
@@ -44,7 +35,7 @@ struct alspshub_ipi_data {
 	int			ps_state;
 	int			ps0_offset;
 	int			ps0_value;
-    int			ps0_distance_delta;
+    int         ps0_distance_delta;
 	int			ps1_offset;
 	int			ps1_value;
 	int			ps1_distance_delta;
@@ -59,7 +50,7 @@ struct alspshub_ipi_data {
 	bool ps_factory_enable;
 	bool als_android_enable;
 	bool ps_android_enable;
-	struct wakeup_source ps_wake_lock;
+	struct wakeup_source *ps_wake_lock;
 };
 
 static struct alspshub_ipi_data *obj_ipi_data;
@@ -237,7 +228,7 @@ static ssize_t als_show(struct device_driver *ddri, char *buf)
 #ifndef OPLUS_FEATURE_SENSOR
 		return snprintf(buf, PAGE_SIZE, "0x%04X\n", obj->als);
 #else
-		return snprintf(buf, PAGE_SIZE, "%d\n", obj->als);
+		return snprintf(buf, PAGE_SIZE, "%u\n", obj->als);
 #endif
 }
 
@@ -438,8 +429,9 @@ static void alspshub_init_done_work(struct work_struct *work)
 #else
 
 #ifdef OPLUS_FEATURE_SENSOR
+	update_sensor_parameter();
 	get_sensor_parameter(&c_data);
-	if (c_data.ps0_offset >= 0) {
+	if (c_data.ps0_distance_delta > 0) {
 		cfg_data[0] = c_data.ps0_offset;
 		cfg_data[1] = c_data.ps0_value;
 		cfg_data[2] = c_data.ps0_distance_delta;
@@ -455,6 +447,13 @@ static void alspshub_init_done_work(struct work_struct *work)
 				cfg_data[4],
 				cfg_data[5],
 				err);
+	}
+	if (c_data.als_factor > 0) {
+		memset(cfg_data, 0, sizeof(int) * 6);
+		cfg_data[0] = c_data.als_factor;
+		err = sensor_cfg_to_hub(ID_LIGHT,(uint8_t *)&cfg_data, sizeof(cfg_data));
+		pr_err("set als factory cali %d, res = %d\n",
+				cfg_data[0], err);
 	}
 #else
 	cfg_data[0] = atomic_read(&obj->ps_thd_val_high);
@@ -488,7 +487,7 @@ static int ps_recv_data(struct data_unit_t *event, void *reserved)
 		err = ps_flush_report();
 	else if (event->flush_action == DATA_ACTION &&
 			READ_ONCE(obj->ps_android_enable) == true) {
-		__pm_wakeup_event(&obj->ps_wake_lock, msecs_to_jiffies(100));
+		__pm_wakeup_event(obj->ps_wake_lock, msecs_to_jiffies(100));
 		prox_report_count = event->proximity_t.steps;
 		err = ps_data_report_t(event->proximity_t.oneshot,
 			SENSOR_STATUS_ACCURACY_HIGH,
@@ -629,11 +628,14 @@ static int alshub_factory_get_cali(int32_t *offset)
 static int alshub_factory_set_cali(int32_t als_factor)
 {
 	int ret = 0;
-	int cfg_data[12] = {0};
+	int cfg_data = 0;
 	struct alspshub_ipi_data *obj = obj_ipi_data;
+
 	update_sensor_parameter();
 	obj->als_factor = als_factor;
-	sensor_cfg_to_hub(ID_LIGHT,(uint8_t *)cfg_data, sizeof(cfg_data));
+	cfg_data = als_factor;
+	sensor_cfg_to_hub(ID_LIGHT,(uint8_t *)&cfg_data, sizeof(cfg_data));
+
 	pr_err("als_factor = %d\n", obj->als_factor);
 	return ret;
 }
@@ -1093,17 +1095,15 @@ static int ps_get_data(int *value, int *status)
 
 static int ps_set_cali(uint8_t *data, uint8_t count)
 {
-#ifdef OPLUS_FEATURE_SENSOR
+#ifndef OPLUS_FEATURE_SENSOR
 	int32_t *buf = (int32_t *)data;
 	struct alspshub_ipi_data *obj = obj_ipi_data;
-	if (is_support_mtk_origin_cali_func()) {
-		spin_lock(&calibration_lock);
-		atomic_set(&obj->ps_thd_val_high, buf[0]);
-		atomic_set(&obj->ps_thd_val_low, buf[1]);
-		spin_unlock(&calibration_lock);
-		return sensor_cfg_to_hub(ID_PROXIMITY, data, count);
-	}
-	return 0;
+
+	spin_lock(&calibration_lock);
+	atomic_set(&obj->ps_thd_val_high, buf[0]);
+	atomic_set(&obj->ps_thd_val_low, buf[1]);
+	spin_unlock(&calibration_lock);
+	return sensor_cfg_to_hub(ID_PROXIMITY, data, count);
 #else
 	return 0;
 #endif /*OPLUS_FEATURE_SENSOR*/
@@ -1252,7 +1252,12 @@ static int alspshub_probe(struct platform_device *pdev)
 		pr_err("tregister fail = %d\n", err);
 		goto exit_create_attr_failed;
 	}
-	wakeup_source_init(&obj->ps_wake_lock, "ps_wake_lock");
+	obj->ps_wake_lock = wakeup_source_register(NULL, "ps_wake_lock");
+	if (!obj->ps_wake_lock) {
+		pr_err("wakeup source init fail\n");
+		err = -ENOMEM;
+		goto exit_create_attr_failed;
+	}
 
 	alspshub_init_flag = 0;
 	pr_debug("%s: OK\n", __func__);
@@ -1274,7 +1279,10 @@ static int alspshub_remove(struct platform_device *pdev)
 	int err = 0;
 	struct platform_driver *paddr =
 			alspshub_init_info.platform_diver_addr;
+	struct alspshub_ipi_data *obj = obj_ipi_data;
 
+	if (obj)
+		wakeup_source_unregister(obj->ps_wake_lock);
 	err = alspshub_delete_attr(&paddr->driver);
 	if (err)
 		pr_err("alspshub_delete_attr fail: %d\n", err);

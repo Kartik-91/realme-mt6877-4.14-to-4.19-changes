@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2021 MediaTek Inc.
+*/
 
 #include <linux/errno.h>
 #include <linux/mutex.h>
@@ -17,8 +9,8 @@
 #include <linux/time.h>
 
 #include <mt-plat/mtk_boot.h>
-#include <mt-plat/charger_type.h>
-#include <mt-plat/mtk_battery.h>
+#include <mt-plat/v1/charger_type.h>
+#include <mt-plat/v1/mtk_battery.h>
 #include <upmu_common.h>
 #include "mtk_charger_intf.h"
 #include "mtk_charger_init.h"
@@ -27,20 +19,6 @@
 #define PE40_VBUS_STEP 50
 #define PE40_MIN_WATT 5000000
 #define PE40_VBUS_IR_DROP_THRESHOLD 1200
-
-#if ((defined CONFIG_OPLUS_CHARGER_MTK6853) || (defined CONFIG_OPLUS_CHARGER_MTK6769) || (defined CONFIG_OPLUS_CHARGER_MTK6785) \
-		|| (defined CONFIG_OPLUS_CHARGER_MTK6873) || (defined CONFIG_OPLUS_CHARGER_MTK6771))
-/*resolve compile error */
-bool mtk_is_TA_support_pd_pps(struct charger_manager *pinfo)
-{
-	if (pinfo->enable_pe_4 == false && pinfo->enable_pe_5 == false)
-		return false;
-
-	if (pinfo->pd_type == MTK_PD_CONNECT_PE_READY_SNK_APDO)
-		return true;
-	return false;
-}
-#endif
 
 int mtk_pe40_set_mivr(struct charger_manager *pinfo, int uV)
 {
@@ -409,9 +387,9 @@ bool mtk_pe40_get_is_connect(struct charger_manager *pinfo)
 
 	if (pinfo->enable_pe_4 == false)
 		return false;
-
-	if ((get_boot_mode() == META_BOOT) && (get_boot_mode() == ADVMETA_BOOT))
-		return false;
+// workaround for mt6768
+//	if ((get_boot_mode() == META_BOOT) && (get_boot_mode() == ADVMETA_BOOT))
+//		return false;
 
 	return pinfo->pe4.is_connect;
 }

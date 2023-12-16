@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include "kd_imgsensor.h"
@@ -81,7 +73,6 @@ struct IMGSENSOR_HW_CFG imgsensor_custom_config[] = {
 			{IMGSENSOR_HW_ID_GPIO, IMGSENSOR_HW_PIN_PDN},
 			{IMGSENSOR_HW_ID_GPIO, IMGSENSOR_HW_PIN_RST},
 			{IMGSENSOR_HW_ID_NONE, IMGSENSOR_HW_PIN_NONE},
-
 		},
 	},
 	{
@@ -100,76 +91,6 @@ struct IMGSENSOR_HW_CFG imgsensor_custom_config[] = {
 
 	{IMGSENSOR_SENSOR_IDX_NONE}
 };
-
-#ifdef OPLUS_FEATURE_CAMERA_COMMON
-struct IMGSENSOR_HW_CFG imgsensor_custom_config_even[] = {
-	{
-		IMGSENSOR_SENSOR_IDX_MAIN,
-		IMGSENSOR_I2C_DEV_0,
-		{
-			{IMGSENSOR_HW_ID_MCLK, IMGSENSOR_HW_PIN_MCLK},
-			{IMGSENSOR_HW_ID_GPIO, IMGSENSOR_HW_PIN_AVDD},
-			{IMGSENSOR_HW_ID_REGULATOR, IMGSENSOR_HW_PIN_DOVDD},
-			{IMGSENSOR_HW_ID_REGULATOR, IMGSENSOR_HW_PIN_DVDD},
-			{IMGSENSOR_HW_ID_REGULATOR,IMGSENSOR_HW_PIN_AFVDD},
-			{IMGSENSOR_HW_ID_GPIO, IMGSENSOR_HW_PIN_RST},
-			{IMGSENSOR_HW_ID_NONE, IMGSENSOR_HW_PIN_NONE},
-		},
-	},
-	{
-		IMGSENSOR_SENSOR_IDX_SUB,
-		IMGSENSOR_I2C_DEV_1,
-		{
-			{IMGSENSOR_HW_ID_MCLK, IMGSENSOR_HW_PIN_MCLK},
-			{IMGSENSOR_HW_ID_REGULATOR, IMGSENSOR_HW_PIN_AVDD},
-			{IMGSENSOR_HW_ID_REGULATOR, IMGSENSOR_HW_PIN_DOVDD},
-			{IMGSENSOR_HW_ID_REGULATOR, IMGSENSOR_HW_PIN_DVDD},
-			{IMGSENSOR_HW_ID_GPIO, IMGSENSOR_HW_PIN_PDN},
-			{IMGSENSOR_HW_ID_GPIO, IMGSENSOR_HW_PIN_RST},
-			{IMGSENSOR_HW_ID_NONE, IMGSENSOR_HW_PIN_NONE},
-		},
-	},
-	{
-		IMGSENSOR_SENSOR_IDX_MAIN2,
-		IMGSENSOR_I2C_DEV_2,
-		{
-			{IMGSENSOR_HW_ID_MCLK, IMGSENSOR_HW_PIN_MCLK},
-			{IMGSENSOR_HW_ID_REGULATOR, IMGSENSOR_HW_PIN_AVDD},
-			{IMGSENSOR_HW_ID_REGULATOR, IMGSENSOR_HW_PIN_DOVDD},
-			{IMGSENSOR_HW_ID_REGULATOR, IMGSENSOR_HW_PIN_DVDD},
-			{IMGSENSOR_HW_ID_GPIO, IMGSENSOR_HW_PIN_RST},
-			{IMGSENSOR_HW_ID_NONE, IMGSENSOR_HW_PIN_NONE},
-		},
-	},
-	{
-		IMGSENSOR_SENSOR_IDX_SUB2,
-		IMGSENSOR_I2C_DEV_1,
-		{
-			{IMGSENSOR_HW_ID_MCLK, IMGSENSOR_HW_PIN_MCLK},
-			{IMGSENSOR_HW_ID_REGULATOR, IMGSENSOR_HW_PIN_AVDD},
-			{IMGSENSOR_HW_ID_REGULATOR, IMGSENSOR_HW_PIN_DOVDD},
-			{IMGSENSOR_HW_ID_GPIO, IMGSENSOR_HW_PIN_RST},
-			{IMGSENSOR_HW_ID_NONE, IMGSENSOR_HW_PIN_NONE},
-		},
-	},
-	{
-		IMGSENSOR_SENSOR_IDX_MAIN3,
-		IMGSENSOR_I2C_DEV_2,
-		{
-			{IMGSENSOR_HW_ID_MCLK, IMGSENSOR_HW_PIN_MCLK},
-			{IMGSENSOR_HW_ID_GPIO, IMGSENSOR_HW_PIN_AVDD},
-			{IMGSENSOR_HW_ID_REGULATOR, IMGSENSOR_HW_PIN_DOVDD},
-			{IMGSENSOR_HW_ID_REGULATOR, IMGSENSOR_HW_PIN_DVDD},
-			{IMGSENSOR_HW_ID_GPIO, IMGSENSOR_HW_PIN_PDN},
-			{IMGSENSOR_HW_ID_GPIO, IMGSENSOR_HW_PIN_RST},
-			{IMGSENSOR_HW_ID_NONE, IMGSENSOR_HW_PIN_NONE},
-		},
-	},
-
-	{IMGSENSOR_SENSOR_IDX_NONE}
-};
-
-#endif
 
 struct IMGSENSOR_HW_POWER_SEQ platform_power_sequence[] = {
 #ifdef MIPI_SWITCH
@@ -220,97 +141,6 @@ struct IMGSENSOR_HW_POWER_SEQ platform_power_sequence[] = {
 
 /* Legacy design */
 struct IMGSENSOR_HW_POWER_SEQ sensor_power_sequence[] = {
-#if defined(GC08A3_MIPI_RAW)
-	{
-		SENSOR_DRVNAME_GC08A3_MIPI_RAW,
-		{
-			{PDN, Vol_Low, 0},
-			{RST, Vol_Low, 0},
-			{DOVDD, Vol_1800, 1},
-			{DVDD, Vol_1200, 1},
-			{AFVDD, Vol_2800, 1},
-			{AVDD, Vol_2800, 1},
-			{SensorMCLK, Vol_High, 1},
-			{PDN, Vol_High, 0},
-			{RST, Vol_High, 5}
-		},
-	},
-#endif
-#if defined(GC08A3SUB_MIPI_RAW)
-	{
-		SENSOR_DRVNAME_GC08A3SUB_MIPI_RAW,
-		{
-			{PDN, Vol_Low, 0},
-			{RST, Vol_Low, 0},
-			{DOVDD, Vol_1800, 1},
-			{DVDD, Vol_1200, 1},
-			//{AFVDD, Vol_1200, 1},
-			{AVDD, Vol_2800, 1},
-			{SensorMCLK, Vol_High, 1},
-			{PDN, Vol_High, 0},
-			{RST, Vol_High, 5}
-		},
-	},
-#endif
-#if defined(OV13B10_MIPI_RAW)
-	{
-		SENSOR_DRVNAME_OV13B10_MIPI_RAW,
-		{
-
-			{PDN, Vol_Low, 0},
-			{AFVDD, Vol_2800, 1},
-			{RST, Vol_High, 6},
-			{SensorMCLK, Vol_High, 5},
-		},
-	},
-#endif
-
-#if defined(EVEN_QTECH_MAIN_S5KGM1ST03)
-	{
-		SENSOR_DRVNAME_EVEN_QTECH_MAIN_S5KGM1ST03,
-		{
-			{DVDD, Vol_1100, 0},
-			{AVDD, Vol_High, 0},
-			{DOVDD, Vol_1800, 0},
-			{AFVDD, Vol_2800, 1},
-			{RST, Vol_Low, 1},
-			{RST, Vol_High, 1},
-			{SensorMCLK, Vol_High, 1},
-		},
-	},
-#endif
-#if defined(EVEN_QTECH_MAIN_OV13B10)
-	{
-		SENSOR_DRVNAME_EVEN_QTECH_MAIN_OV13B10,
-		{
-			{RST, Vol_Low, 0},
-			{DOVDD, Vol_1800, 1},
-			{AVDD, Vol_2800, 1},
-			{DVDD, Vol_1200, 1},
-			{AFVDD, Vol_2800, 5},
-			{PDN, Vol_High, 1},
-			{RST, Vol_High, 2},
-			{SensorMCLK, Vol_High, 0}
-		},
-	},
-#endif
-#if defined(OV13B10TXD_MIPI_RAW)
-	{
-		SENSOR_DRVNAME_OV13B10TXD_MIPI_RAW,
-		{
-
-			{PDN, Vol_Low, 0},
-			{RST, Vol_Low, 0},
-			{DOVDD, Vol_1800, 1},
-			{AVDD, Vol_2800, 1},
-			{DVDD, Vol_1200, 1},
-			{AFVDD, Vol_2800, 5},
-			{PDN, Vol_High, 1},
-			{RST, Vol_High, 2},
-			{SensorMCLK, Vol_High, 0}
-		},
-	},
-#endif
 #if defined(S5K4H7_MIPI_RAW)
 	{
 		SENSOR_DRVNAME_S5K4H7_MIPI_RAW,
@@ -342,114 +172,6 @@ struct IMGSENSOR_HW_POWER_SEQ sensor_power_sequence[] = {
 			{RST, Vol_High, 0}
 		},
 	},
-#endif
-
-#if defined(EVEN_HLT_FRONT_S5K4H7)
-	{
-		SENSOR_DRVNAME_EVEN_HLT_FRONT_S5K4H7,
-		{
-			{PDN, Vol_Low, 0},
-			{RST, Vol_Low, 3},
-			{DOVDD, Vol_1800, 1},
-			{DVDD, Vol_1200, 1},
-			{AVDD, Vol_2800, 1},
-			{RST, Vol_High, 3},
-			{PDN, Vol_High, 3},
-			{SensorMCLK, Vol_High, 3},
-		},
-	},
-#endif
-#if defined(EVEN_SHENGTAI_FRONT_OV8856)
-	{
-		SENSOR_DRVNAME_EVEN_SHENGTAI_FRONT_OV8856,
-		{
-			{PDN, Vol_Low, 0},
-			{RST, Vol_Low, 1},
-			{SensorMCLK, Vol_High, 1},
-			{DOVDD, Vol_1800, 1},
-			{AVDD, Vol_2800, 1},
-			{DVDD, Vol_1200, 0},
-			{RST, Vol_High, 5},
-			{PDN, Vol_High, 3},
-		},
-	},
-#endif
-#if defined(EVEN_HLT_DEPTH_GC02M1B)
-    {
-        SENSOR_DRVNAME_EVEN_HLT_DEPTH_GC02M1B,
-        {
-            {RST, Vol_Low, 1},
-            {DOVDD, Vol_1800, 5},
-            {AVDD, Vol_2800, 0},
-            {RST, Vol_High, 5},
-            {SensorMCLK, Vol_High, 3},
-        },
-    },
-#endif
-#if defined(EVEN_SHENGTAI_MACRO_OV02B10)
-	{
-		SENSOR_DRVNAME_EVEN_SHENGTAI_MACRO_OV02B10,
-		{
-			{RST, Vol_Low, 1},
-			{DOVDD, Vol_1800, 0},
-			{AVDD, Vol_2800, 0},
-			{SensorMCLK, Vol_High, 5},
-			{RST, Vol_High, 4},
-		},
-	},
-#endif
-#if defined(EVEN_SHINETECH_MAIN_S5KJN103)
-    {
-        SENSOR_DRVNAME_EVEN_SHINETECH_MAIN_S5KJN103,
-        {
-            {RST, Vol_Low, 0},
-            {DOVDD, Vol_1800, 1},
-            {DVDD, Vol_1100, 2},
-            {AVDD, Vol_2800, 1},
-            {AFVDD, Vol_2800, 1},
-            {RST, Vol_High, 6},
-            {SensorMCLK, Vol_High, 1},
-        },
-    },
-#endif
-#if defined(EVENC_SHENGTAI_FRONT_OV8856)
-    {
-        SENSOR_DRVNAME_EVENC_SHENGTAI_FRONT_OV8856,
-        {
-            {PDN, Vol_Low, 0},
-            {RST, Vol_Low, 1},
-            {DOVDD, Vol_1800, 1},
-            {AVDD, Vol_2800, 1},
-            {DVDD, Vol_1200, 0},
-            {SensorMCLK, Vol_High, 1},
-            {RST, Vol_High, 5},
-            {PDN, Vol_High, 3},
-        },
-    },
-#endif
-#if defined(EVENC_SHINETECH_DEPTH_GC02M1B)
-    {
-        SENSOR_DRVNAME_EVENC_SHINETECH_DEPTH_GC02M1B,
-        {
-            {RST, Vol_Low, 1},
-            {DOVDD, Vol_1800, 5},
-            {AVDD, Vol_2800, 0},
-            {RST, Vol_High, 5},
-            {SensorMCLK, Vol_High, 3},
-        },
-    },
-#endif
-#if defined(EVENC_SHENGTAI_MACRO_OV02B10)
-    {
-        SENSOR_DRVNAME_EVENC_SHENGTAI_MACRO_OV02B10,
-        {
-            {RST, Vol_Low, 1},
-            {DOVDD, Vol_1800, 0},
-            {AVDD, Vol_2800, 0},
-            {SensorMCLK, Vol_High, 4},
-            {RST, Vol_High, 4},
-        },
-    },
 #endif
 #if defined(IMX519_MIPI_RAW)
 	{

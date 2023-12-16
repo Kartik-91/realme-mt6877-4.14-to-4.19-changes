@@ -48,13 +48,12 @@
 #include "kd_camera_typedef.h"
 #include "imgsensor_common.h"
 #include "s5kgm1spmipiraw_Sensor.h"
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #ifndef OPLUS_FEATURE_CAMERA_COMMON
 /* Houbing.Peng@ODM_HQ Cam.Drv, Add for hal can't detect when read sensor ID fail 20191104*/
 #define OPLUS_FEATURE_CAMERA_COMMON
 #endif
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
-//#include <soc/oppo/oppo_project.h>  //compiler not found 20190812
 //#include <mmdvfs_mgr.h>  //compiler not found 20190812
 #include <linux/pm_qos.h>
 //#ifdef CONFIG_MTK_QOS_SUPPORT

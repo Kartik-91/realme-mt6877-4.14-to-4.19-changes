@@ -31,6 +31,7 @@
 #include <linux/of_graph.h>
 #include <soc/oplus/device_info.h>
 #include <soc/oplus/system/oplus_mm_kevent_fb.h>
+#include <mt-plat/mtk_boot_common.h>
 
 #define CONFIG_MTK_PANEL_EXT
 #if defined(CONFIG_MTK_PANEL_EXT)
@@ -678,6 +679,7 @@ static struct mtk_panel_params ext_params = {
 		},
     .vendor = "AMS643AG01",
     .manufacture = "samsung2048",
+    .oplus_serial_para0 = 0xD8,
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
         .round_corner_en = 1,
         .corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -685,6 +687,12 @@ static struct mtk_panel_params ext_params = {
         .corner_pattern_tp_size = sizeof(top_rc_pattern),
         .corner_pattern_lt_addr = (void *)top_rc_pattern,
 #endif
+#ifdef CONFIG_OPLUS_OFP_V2
+	.oplus_ofp_need_keep_apart_backlight = false,
+	.oplus_ofp_hbm_on_delay = 0,
+	.oplus_ofp_pre_hbm_off_delay = 2,
+	.oplus_ofp_hbm_off_delay = 9,
+#else
 	.hbm_en_time = 1,
 	.hbm_dis_time = 0,
 	.oplus_need_hbm_wait = 1,
@@ -698,6 +706,7 @@ static struct mtk_panel_params ext_params = {
 	.before_hbm_dis_time = 0,
 	//delay time: us
 	.before_hbm_en_delay_time = 8000,
+#endif
 };
 
 static struct mtk_panel_params ext_params_90hz = {
@@ -755,6 +764,7 @@ static struct mtk_panel_params ext_params_90hz = {
         },
     .vendor = "AMS643AG01",
     .manufacture = "samsung2048",
+    .oplus_serial_para0 = 0xD8,
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
         .round_corner_en = 1,
         .corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -762,6 +772,12 @@ static struct mtk_panel_params ext_params_90hz = {
         .corner_pattern_tp_size = sizeof(top_rc_pattern),
         .corner_pattern_lt_addr = (void *)top_rc_pattern,
 #endif
+#ifdef CONFIG_OPLUS_OFP_V2
+	.oplus_ofp_need_keep_apart_backlight = true,
+	.oplus_ofp_hbm_on_delay = 11,
+	.oplus_ofp_pre_hbm_off_delay = 2,
+	.oplus_ofp_hbm_off_delay = 11,
+#else
 	.hbm_en_time = 1,
 	.hbm_dis_time = 0,
 	.oplus_need_hbm_wait = 0,
@@ -775,15 +791,16 @@ static struct mtk_panel_params ext_params_90hz = {
 	.before_hbm_dis_time = 0,
 	//delay time: us
 	.before_hbm_en_delay_time =8000,
+#endif
 };
 static int mtk_panel_ext_param_set(struct drm_panel *panel,
 			 unsigned int mode)
 {
 	struct mtk_panel_ext *ext = find_panel_ext(panel);
 	int ret = 0;
-	if (mode == 0)
+	if (ext && mode == 0)
 		ext->params = &ext_params;
-	else if (mode == 1)
+	else if (ext && mode == 1)
 		ext->params = &ext_params_90hz;
 	else
 		ret = 1;
@@ -1173,11 +1190,15 @@ static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 
 	if (!cb)
 		return -1;
-	if (level > 2047)
+	if (level > 2047) {
 		level = level + 1679;
-
-	if (level > 4095)
+	}
+	if (level > 4095) {
 		level = 4095;
+	}
+	if ((get_boot_mode() == KERNEL_POWER_OFF_CHARGING_BOOT) && (level > 1)) {
+		level = 2047;
+	}
 	//mapped_level = oplus_lcm_dc_backlight(dsi,cb,handle, level, 0);
 	mapped_level = level;
 	bl_tb0[1] = mapped_level >> 8;
@@ -1494,10 +1515,12 @@ static struct mtk_panel_funcs ext_funcs = {
 	.panel_poweroff = lcm_panel_poweroff,
 	//.panel_disp_off = lcm_panel_disp_off,
 	.hbm_set_cmdq = panel_hbm_set_cmdq,
+	#ifndef CONFIG_OPLUS_OFP_V2
 	.hbm_get_state = panel_hbm_get_state,
 	.hbm_set_state = panel_hbm_set_state,
 	.hbm_get_wait_state = panel_hbm_get_wait_state,
 	.hbm_set_wait_state = panel_hbm_set_wait_state,
+	#endif
 	//.doze_area_set = panel_doze_area_set,
 	//.panel_no_cv_switch = panel_no_video_cmd_switch_state,
 	.ext_param_set = mtk_panel_ext_param_set,

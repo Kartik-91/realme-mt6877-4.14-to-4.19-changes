@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 /*****************************************************************************
@@ -48,6 +40,7 @@
 #include "imx519mipiraw_Sensor.h"
 #include "imx519_eeprom.h"
 
+#undef VENDOR_EDIT
 
 /***************Modify Following Strings for Debug**********************/
 #define PFX "IMX519_camera_sensor"
@@ -64,7 +57,9 @@
 #define I2C_BUFFER_LEN 3
 #endif
 
+#ifdef VENDOR_EDIT
 #define MODULE_ID_OFFSET 0x0000
+#endif
 
 /* 2-trio setting on capture mode */
 #define IMX519_CAP_2TRIO 0
@@ -4837,9 +4832,11 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 	case SENSOR_FEATURE_SET_NIGHTMODE:
 		 /* night_mode((BOOL) *feature_data); */
 		break;
+	#ifdef VENDOR_EDIT
 	case SENSOR_FEATURE_CHECK_MODULE_ID:
 		*feature_return_para_32 = imgsensor_info.module_id;
 		break;
+	#endif
 	case SENSOR_FEATURE_SET_GAIN:
 		set_gain((UINT16) *feature_data);
 		break;

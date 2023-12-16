@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2020 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2020 MediaTek Inc.
  */
 
 #ifndef __VOW_H__
@@ -50,6 +42,8 @@
 
 #define VOW_WAITCHECK_INTERVAL_MS      2
 #define MAX_VOW_INFO_LEN               7
+/*Merge mtk patch to solve the problem of low wake rate*/
+#define VOW_VOICE_RECORD_LOG_THRESHOLD 320
 #define VOW_VOICE_RECORD_THRESHOLD     2560 /* 80ms */
 #define VOW_VOICE_RECORD_BIG_THRESHOLD 8320 /* 260ms */
 #define VOW_IPI_SEND_CNT_TIMEOUT       50 /* 50 loop */
@@ -140,8 +134,11 @@
 #endif
 #define VOW_BARGEIN_IRQ_MAX_NUM       32
 
+/*Merge mtk patch to solve the problem of low wake rate*/
+#define VOICE_DATA_MSG_NUM            10
+
 #define KERNEL_VOW_DRV_VER              "2.1.0"
-#define DEFAULT_GOOGLE_ENGINE_VER       2147483647
+#define DEFAULT_GOOGLE_ENGINE_VER       1235201314  /* set meaningless default value */
 
 struct dump_package_t {
 	uint32_t dump_data_type;
@@ -209,7 +206,9 @@ enum vow_ipi_msgid_t {
 	IPIMSG_VOW_ALEXA_ENGINE_VER = 25,
 	IPIMSG_VOW_GOOGLE_ENGINE_VER = 26,
 	IPIMSG_VOW_GOOGLE_ARCH = 27,
-	IPIMSG_VOW_SET_CUSTOM_MODEL = 28
+	IPIMSG_VOW_SET_CUSTOM_MODEL = 28,
+	IPIMSG_VOW_HAL_REBOOT = 29,
+	IPIMSG_VOW_FLUSH = 30
 };
 
 enum vow_eint_status_t {
@@ -386,6 +385,14 @@ struct vow_payloaddump_info_kernel_t {
 	compat_size_t max_payloaddump_size;
 };
 
+//#ifdef OPLUS_ARCH_EXTENDS
+/*Merge mtk patch to solve the problem of low wake rate*/
+struct voice_data_msg_t {
+	unsigned int offset;
+	unsigned int length;
+};
+//#endif /* OPLUS_ARCH_EXTENDS */
+
 #else  /* #ifdef CONFIG_COMPAT */
 
 struct vow_speaker_model_t {
@@ -427,6 +434,14 @@ struct vow_payloaddump_info_t {
 	long return_payloaddump_size_addr;
 	long max_payloaddump_size;
 };
+
+//#ifdef OPLUS_ARCH_EXTENDS
+/*Merge mtk patch to solve the problem of low wake rate*/
+struct voice_data_msg_t {
+	unsigned int offset;
+	unsigned int length;
+};
+//#endif /* OPLUS_ARCH_EXTENDS */
 
 #endif  /* #ifdef CONFIG_COMPAT */
 

@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2021 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2020 MediaTek Inc.
  */
 
 #include "jpeg_ion.h"
@@ -159,7 +151,7 @@ void jpg_ion_unmap_handle(struct ion_handle *handle)
 
 	ion_unmap_kernel(g_jpg_ion_client, handle);
 
-	JPEG_LOG(1, "unmap ion handle hnd=0x%p fd:%d", handle);
+	JPEG_LOG(1, "unmap ion handle hnd=0x%p", handle);
 #endif
 }
 

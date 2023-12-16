@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2019 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2020 MediaTek Inc.
  */
 
 #include <linux/types.h>
@@ -49,6 +41,7 @@ void apu_power_dump_opp_table(struct seq_file *s)
 	int line_size = 0;
 	char info[INFO_LENGTH];
 	char *separate = NULL;
+	int n = 0;
 
 	memset(info, 0, sizeof(info));
 
@@ -72,14 +65,16 @@ void apu_power_dump_opp_table(struct seq_file *s)
 		seq_printf(s, "|%3d|", opp_num);
 		for (bd = 0 ; bd < APUSYS_BUCK_DOMAIN_NUM; bd++) {
 			memset(info, 0, sizeof(info));
-			snprintf(info, INFO_LENGTH, "%3dMhz(%3dmv)|",
+			n = snprintf(info, INFO_LENGTH, "%3dMhz(%3dmv)|",
 				apusys_opps.opps[opp_num][bd].freq / 1000,
 				apusys_opps.opps[opp_num][bd].voltage / 1000);
 				seq_printf(s, info);
+			if (!n)
+				goto out;
 		}
 		add_separte(s, separate);
 	}
-
+out:
 	/* release separator line array */
 	vfree(separate);
 }
@@ -130,8 +125,9 @@ int apu_power_dump_curr_status(struct seq_file *s, int oneline_str)
 int apusys_power_fail_show(struct seq_file *s, void *unused)
 {
 	char log_str[128];
+	int n = 0;
 
-	snprintf(log_str, sizeof(log_str),
+	n = snprintf(log_str, sizeof(log_str),
 		"v[%u,%u,%u]f[%u,%u,%u,%u]r[%x,%x,%x,%x,%x,%x]t[%lu.%06lu]",
 		power_fail_record.pwr_info.vvpu,
 		power_fail_record.pwr_info.vcore,
@@ -148,6 +144,8 @@ int apusys_power_fail_show(struct seq_file *s, void *unused)
 		power_fail_record.pwr_info.vpu1_cg_stat,
 		power_fail_record.time_sec, power_fail_record.time_nsec);
 
+	if (!n)
+		goto out;
 	seq_printf(s, "%s\n", log_str);
 
 #ifdef APUPWR_TAG_TP
@@ -155,6 +153,6 @@ int apusys_power_fail_show(struct seq_file *s, void *unused)
 	seq_puts(s, "======== Tags ========\n");
 	apupwr_tags_show(s);
 #endif
-
-	return 0;
+out:
+	return n;
 }

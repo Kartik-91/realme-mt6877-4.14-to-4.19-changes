@@ -15,7 +15,7 @@
 #define __FLASHLIGHT_CUSTOM_CTRL_H__
 
 #include <linux/types.h>
-#include<soc/oppo/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 
 #include "richtek/rt-flashlight.h"
 #include "../flashlight-core.h"

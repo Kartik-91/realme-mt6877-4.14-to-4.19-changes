@@ -1,20 +1,13 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (C) 2016 MediaTek Inc.
  */
+
 
 #ifndef __MODEM_SECURE_BASE_H__
 #define __MODEM_SECURE_BASE_H__
-
-#include <mt-plat/mtk_secure_api.h>
+/* mark for fix build error */
+//#include <mt-plat/mtk_secure_api.h>
 
 enum CCCI_SECURE_REQ_ID {
 	MD_DBGSYS_REG_DUMP = 0,
@@ -25,6 +18,8 @@ enum CCCI_SECURE_REQ_ID {
 	MD_CLOCK_REQUEST,
 	MD_POWER_CONFIG,
 	MD_FLIGHT_MODE_SET,
+	SCP_INFO_TO_SAVE = 12, /* save scp smem addr in tfa*/
+	SCP_CLK_SET_DONE,
 };
 
 
@@ -41,8 +36,5 @@ enum MD_POWER_CONFIG_ID {
 	MD_CHECK_DONE,
 	MD_BOOT_STATUS,
 };
-
-#define mdreg_write32(reg_id, value)		\
-	mt_secure_call(MTK_SIP_KERNEL_CCCI_GET_INFO, reg_id, value, 0, 0)
 
 #endif				/* __MODEM_SECURE_BASE_H__ */

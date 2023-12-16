@@ -43,7 +43,7 @@ bool is_support_chip(chip_type chip)
 			target_chipset = "NQ330";
 			break;
 		case SN100T:
-			target_chipset = "SN100T";
+			target_chipset = "SN100T|SN110T";
 			break;
 		case SN100F:
 			target_chipset = "SN100F";
@@ -122,12 +122,12 @@ static int oplus_nfc_probe(struct platform_device *pdev)
 	//project contains letters is big then 0x10000 == 65536
 	if (project > 0x10000)
 	{
-		sprintf(prop_project, "chipset-%X", project);
-		sprintf(prop_project_operator, "chipset-%X-%u", project, operator);
+		snprintf(prop_project, sizeof(prop_project),  "chipset-%X", project);
+		snprintf(prop_project_operator, sizeof(prop_project_operator),  "chipset-%X-%u", project, operator);
 	} else
 	{
-		sprintf(prop_project, "chipset-%u", project);
-		sprintf(prop_project_operator, "chipset-%u-%u", project, operator);
+		snprintf(prop_project, sizeof(prop_project), "chipset-%u", project);
+		snprintf(prop_project_operator, sizeof(prop_project_operator),  "chipset-%u-%u", project, operator);
 	}
 	pr_err("%s, prop_project_operator to be read = %s", __func__, prop_project_operator);
 	readRet = of_property_read_string(dev->of_node, prop_project_operator, &chipset_node);
@@ -139,11 +139,11 @@ static int oplus_nfc_probe(struct platform_device *pdev)
 	np = dev->of_node;
 	if (readRet != 0)
 	{
-		sprintf(current_chipset, "NULL");
+		snprintf(current_chipset, sizeof(current_chipset), "NULL");
 	} else
 	{
 		pr_err("%s, get chipset_node content = %s", __func__, chipset_node);
-		strcpy(current_chipset, chipset_node);
+		strncpy(current_chipset, chipset_node, sizeof(current_chipset) - 1);
 		support_nfc = true;
 	}
 

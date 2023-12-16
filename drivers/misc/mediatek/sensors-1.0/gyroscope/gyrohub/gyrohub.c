@@ -1,17 +1,7 @@
-/* GYRO_HUB motion sensor driver
- *
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2019 MediaTek Inc.
  */
-
 
 #define pr_fmt(fmt) "[GYRO] " fmt
 
@@ -592,10 +582,6 @@ static int gyrohub_factory_get_data(int32_t data[3], int *status)
 	data[0] = data[0] / 1000;
 	data[1] = data[1] / 1000;
 	data[2] = data[2] / 1000;
-#else
-        data[0] = data[0];
-        data[1] = data[1];
-        data[2] = data[2];
 #endif
 	return ret;
 }
@@ -809,58 +795,37 @@ static int gyrohub_set_cali(uint8_t *data, uint8_t count)
 {
 	int32_t *buf = (int32_t *)data;
 	struct gyrohub_ipi_data *obj = obj_ipi_data;
-	if (is_support_mtk_origin_cali_func()) {
+#ifdef OPLUS_FEATURE_SENSOR
+	struct cali_data c_data;
+	get_sensor_parameter(&c_data);
+#endif
 
-		spin_lock(&calibration_lock);
-		obj->dynamic_cali[0] = buf[0];
-		obj->dynamic_cali[1] = buf[1];
-		obj->dynamic_cali[2] = buf[2];
-		pr_err("gyrohub_set_cali %d %d %d %d %d %d \n",buf[0],buf[1],buf[2],buf[3],buf[4],buf[5]);
+	spin_lock(&calibration_lock);
+	obj->dynamic_cali[0] = buf[0];
+	obj->dynamic_cali[1] = buf[1];
+	obj->dynamic_cali[2] = buf[2];
+#ifndef OPLUS_FEATURE_SENSOR
+	obj->static_cali[0] = buf[3];
+	obj->static_cali[1] = buf[4];
+	obj->static_cali[2] = buf[5];
+#else
+	obj->static_cali[0] = c_data.gyro_data[0];
+	obj->static_cali[1] = c_data.gyro_data[1];
+	obj->static_cali[2] = c_data.gyro_data[2];
 
-		obj->static_cali[0] = buf[3];
-		obj->static_cali[1] = buf[4];
-		obj->static_cali[2] = buf[5];
+	buf[3] = c_data.gyro_data[0];
+	buf[4] = c_data.gyro_data[1];
+	buf[5] = c_data.gyro_data[2];
 
-		obj->temperature_cali[0] = buf[6];
-		obj->temperature_cali[1] = buf[7];
-		obj->temperature_cali[2] = buf[8];
-		obj->temperature_cali[3] = buf[9];
-		obj->temperature_cali[4] = buf[10];
-		obj->temperature_cali[5] = buf[11];
-		spin_unlock(&calibration_lock);
-	} else {
-	#ifdef OPLUS_FEATURE_SENSOR
-		struct cali_data c_data;
-		get_sensor_parameter(&c_data);
-	#endif
-
-		spin_lock(&calibration_lock);
-		obj->dynamic_cali[0] = buf[0];
-		obj->dynamic_cali[1] = buf[1];
-		obj->dynamic_cali[2] = buf[2];
-	#ifndef OPLUS_FEATURE_SENSOR
-		obj->static_cali[0] = buf[3];
-		obj->static_cali[1] = buf[4];
-		obj->static_cali[2] = buf[5];
-	#else
-		obj->static_cali[0] = c_data.gyro_data[0];
-		obj->static_cali[1] = c_data.gyro_data[1];
-		obj->static_cali[2] = c_data.gyro_data[2];
-
-		buf[3] = c_data.gyro_data[0];
-		buf[4] = c_data.gyro_data[1];
-		buf[5] = c_data.gyro_data[2];
-
-		pr_err("gyrohub_set_cali::cali_data::%d %d %d\n",buf[3],buf[4],buf[5]);
-	#endif
-		obj->temperature_cali[0] = buf[6];
-		obj->temperature_cali[1] = buf[7];
-		obj->temperature_cali[2] = buf[8];
-		obj->temperature_cali[3] = buf[9];
-		obj->temperature_cali[4] = buf[10];
-		obj->temperature_cali[5] = buf[11];
-		spin_unlock(&calibration_lock);
-	}
+	pr_err("gyrohub_set_cali::cali_data::%d %d %d\n",buf[3],buf[4],buf[5]);
+#endif
+	obj->temperature_cali[0] = buf[6];
+	obj->temperature_cali[1] = buf[7];
+	obj->temperature_cali[2] = buf[8];
+	obj->temperature_cali[3] = buf[9];
+	obj->temperature_cali[4] = buf[10];
+	obj->temperature_cali[5] = buf[11];
+	spin_unlock(&calibration_lock);
 	return sensor_cfg_to_hub(ID_GYROSCOPE, data, count);
 }
 

@@ -13,7 +13,7 @@
 
 #include "imgsensor_eeprom.h"
 #include <soc/oplus/device_info.h>
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #define DUMP_EEPROM 0
 
 /*GC8054: 0xA2*/
@@ -159,6 +159,79 @@ static enum IMGSENSOR_RETURN Eeprom_WriteProtectEnable20817(kal_uint16 enable, k
     return ret;
 }
 
+static enum IMGSENSOR_RETURN Eeprom_WriteProtectEnable21881(kal_uint16 enable, kal_uint16 i4SlaveAddr)
+{
+    enum IMGSENSOR_RETURN ret = IMGSENSOR_RETURN_SUCCESS;
+    char pusendcmd[3];
+
+    //1、enable write
+    pusendcmd[0] = 0xFF;
+    pusendcmd[1] = 0x35;
+    ret = iBurstWriteReg((kal_uint8 *)pusendcmd , 2, i4SlaveAddr);
+    pr_debug("[Eeprom_WriteProtectEnable21881] write 0xFF35 ret(%d) addr(0x%x)", ret, i4SlaveAddr);
+    msleep(6);
+
+    //2、write protective flag on or off
+    pusendcmd[0] = 0x06;
+    pusendcmd[1] = 0xCA;
+    if (enable)
+        pusendcmd[2] = 0x02;
+    else
+        pusendcmd[2] = 0x00;
+    ret = iBurstWriteReg((kal_uint8 *)pusendcmd , 3, i4SlaveAddr);
+    pr_debug("[Eeprom_WriteProtectEnable21881] enable: %d ret: %d", enable, ret);
+    return ret;
+}
+
+static enum IMGSENSOR_RETURN Eeprom_WriteProtectEnable21305(kal_uint16 enable, kal_uint16 i4SlaveAddr)
+{
+    enum IMGSENSOR_RETURN ret = IMGSENSOR_RETURN_SUCCESS;
+    char pusendcmd[3];
+
+    pusendcmd[0] = 0xA0;
+    pusendcmd[1] = 0x00;
+    pusendcmd[2] = 0x00;
+    if(enable){
+        //Open write-protection
+        pusendcmd[2] = 0x0E;
+    }
+    ret = iBurstWriteReg((kal_uint8 *)pusendcmd , 3, i4SlaveAddr);
+    pr_debug("[Eeprom_WriteProtectEnable21305]P24C256C Open/Close value[%d], ret(%d), slaveId:0x%x", pusendcmd[2], ret, i4SlaveAddr);
+    return ret;
+}
+
+static enum IMGSENSOR_RETURN Eeprom_WriteProtectEnable21305IMX355(kal_uint16 enable, kal_uint16 i4SlaveAddr)
+{
+    enum IMGSENSOR_RETURN ret = IMGSENSOR_RETURN_SUCCESS;
+    char pusendcmd[3];
+    if (enable){
+        pusendcmd[0] = 0xE0;
+        pusendcmd[1] = 0x00;
+        pusendcmd[2] = 0xA3;
+        ret = iBurstWriteReg((kal_uint8 *)pusendcmd , 3, i4SlaveAddr);
+        pr_info("[Eeprom_WriteProtectEnable21305IMX355] device lock enable: %d ret: %d", enable, ret);
+        msleep(6);
+        pusendcmd[0] = 0xA0;
+        pusendcmd[1] = 0x00;
+        pusendcmd[2] = 0xFF;
+    }
+    else{
+        pusendcmd[0] = 0xC0;
+        pusendcmd[1] = 0x00;
+        pusendcmd[2] = 0x00;
+        ret = iBurstWriteReg((kal_uint8 *)pusendcmd , 3, i4SlaveAddr);
+        pr_info("[Eeprom_WriteProtectEnable21305IMX355] device unlock enable: %d ret: %d", enable, ret);
+        msleep(6);
+        pusendcmd[0] = 0xE0;
+        pusendcmd[1] = 0x00;
+        pusendcmd[2] = 0xA2;
+    }
+
+    ret = iBurstWriteReg((kal_uint8 *)pusendcmd , 3, i4SlaveAddr);
+    pr_info("[Eeprom_WriteProtectEnable21305IMX355] enable: %d ret: %d", enable, ret);
+    return ret;
+}
+
 static enum IMGSENSOR_RETURN Eeprom_WriteInfomatch(
                 ACDK_SENSOR_ENGMODE_STEREO_STRUCT *pStereoData)
 {
@@ -214,6 +287,32 @@ static enum IMGSENSOR_RETURN Eeprom_WriteInfomatch(
                 pr_debug("imx355 212A1 DA:0x%x DL:%d", data_base, data_length);
             } else {
                 pr_debug("imx355 212A1 Invalid DA:0x%x DL:%d", data_base, data_length);
+                return IMGSENSOR_RETURN_ERROR;
+            }
+            break;
+        }
+        #endif
+        #if defined(OV64B_MIPI_RAW21851)
+        case OV64B_SENSOR_ID_21851:
+        {
+            if (data_length == CALI_DATA_MASTER_LENGTH
+                && data_base == OV64B_STEREO_START_ADDR) {
+                pr_debug("ov64b 21851 DA:0x%x DL:%d", data_base, data_length);
+            } else {
+                pr_debug("ov64b 21851 Invalid DA:0x%x DL:%d", data_base, data_length);
+                return IMGSENSOR_RETURN_ERROR;
+            }
+            break;
+        }
+        #endif
+        #if defined(IMX355_MIPI_RAW21851)
+        case IMX355_SENSOR_ID_21851:
+        {
+            if (data_length == CALI_DATA_SLAVE_LENGTH
+                && data_base == IMX355_STEREO_START_ADDR) {
+                pr_debug("imx355 21851 DA:0x%x DL:%d", data_base, data_length);
+            } else {
+                pr_debug("imx355 21851 Invalid DA:0x%x DL:%d", data_base, data_length);
                 return IMGSENSOR_RETURN_ERROR;
             }
             break;
@@ -325,6 +424,60 @@ static enum IMGSENSOR_RETURN Eeprom_WriteInfomatch(
             break;
         }
         #endif
+	#if defined(IMX766_MIPI_RAW21881)
+        case IMX766_SENSOR_ID_21881:
+        {
+            if (data_length == CALI_DATA_MASTER_LENGTH
+                && data_base == IMX766_STEREO_START_ADDR) {
+                pr_debug("21881 imx766 DA:0x%x DL:%d", data_base, data_length);
+            } else {
+                pr_debug("21881 imx766 Invalid DA:0x%x DL:%d", data_base, data_length);
+                return IMGSENSOR_RETURN_ERROR;
+            }
+            break;
+        }
+        #endif
+        #if defined(IMX355_MIPI_RAW21881)
+        case IMX355_SENSOR_ID_21881:
+        {
+            if (data_length == CALI_DATA_SLAVE_LENGTH
+                && data_base == IMX355_STEREO_START_ADDR) {
+                pr_debug("21881 imx355 DA:0x%x DL:%d", data_base, data_length);
+            } else {
+                pr_debug("21881 imx355 Invalid DA:0x%x DL:%d", data_base, data_length);
+                return IMGSENSOR_RETURN_ERROR;
+            }
+            break;
+        }
+        #endif
+
+        #if defined(IMX766_MIPI_RAW_21305)
+        case IMX766_SENSOR_ID_21305:
+        {
+            if (data_length == CALI_DATA_MASTER_LENGTH
+                && data_base == IMX766_STEREO_START_ADDR) {
+                pr_debug("21305 imx766 DA:0x%x DL:%d", data_base, data_length);
+            } else {
+                pr_debug("21305 imx766 Invalid DA:0x%x DL:%d", data_base, data_length);
+                return IMGSENSOR_RETURN_ERROR;
+            }
+            break;
+        }
+        #endif
+        #if defined(IMX355_MIPI_RAW_21305)
+        case IMX355_SENSOR_ID_21305:
+        {
+            if (data_length == CALI_DATA_SLAVE_LENGTH
+                && data_base == IMX355_STEREO_START_ADDR) {
+                pr_debug("21305 imx355 DA:0x%x DL:%d", data_base, data_length);
+            } else {
+                pr_debug("21305 imx355 Invalid DA:0x%x DL:%d", data_base, data_length);
+                return IMGSENSOR_RETURN_ERROR;
+            }
+            break;
+        }
+        #endif
+
         default:
             pr_debug("Invalid SensorID:0x%x", uSensorId);
             return IMGSENSOR_RETURN_ERROR;
@@ -480,6 +633,151 @@ static enum IMGSENSOR_RETURN Eeprom_WriteData_20817(kal_uint16 data_base, kal_ui
     return ret;
 }
 
+static enum IMGSENSOR_RETURN Eeprom_WriteData_21881(kal_uint16 data_base, kal_uint16 data_length,
+                                   kal_uint8 *pData,  kal_uint16 i4DataSlaveAddr, kal_uint16 i4ProtectSlaveAddr)
+{
+    enum IMGSENSOR_RETURN ret = IMGSENSOR_RETURN_SUCCESS;
+    kal_uint16 max_Lens = WRITE_DATA_MAX_LENGTH;
+    kal_uint32 idx, idy, i = 0;
+    if (pData == NULL || data_length < WRITE_DATA_MAX_LENGTH) {
+        pr_err("Eeprom_WriteData_21881 pData is NULL or invalid DL:%d",data_length );
+        return IMGSENSOR_RETURN_ERROR;
+    }
+
+    idx = data_length/max_Lens;
+    idy = data_length%max_Lens;
+    pr_debug("Eeprom_WriteData_21881: 0x%x %d i4DataSlaveAddr:0x%x i4ProtectSlaveAddr:0x%x\n",
+                data_base,
+                data_length,
+                i4DataSlaveAddr,
+                i4ProtectSlaveAddr);
+
+    /* close write protect */
+    Eeprom_WriteProtectEnable21881(0, i4ProtectSlaveAddr);
+    msleep(6);
+    for (i = 0; i < idx; i++ ) {
+        ret = Eeprom_TableWrite((data_base+max_Lens*i),
+                &pData[max_Lens*i], max_Lens, i4DataSlaveAddr);
+        if (ret != IMGSENSOR_RETURN_SUCCESS) {
+            pr_err("write_eeprom error: i= %d\n", i);
+            /* open write protect */
+            Eeprom_WriteProtectEnable21881(1, i4ProtectSlaveAddr);
+            msleep(6);
+            return IMGSENSOR_RETURN_ERROR;
+        }
+        msleep(6);
+    }
+    ret = Eeprom_TableWrite((data_base+max_Lens*idx),
+            &pData[max_Lens*idx], idy, i4DataSlaveAddr);
+    if (ret != IMGSENSOR_RETURN_SUCCESS) {
+        pr_err("Eeprom_TableWrite error: idx= %d idy= %d\n", idx, idy);
+        /* open write protect */
+        Eeprom_WriteProtectEnable21881(1, i4ProtectSlaveAddr);
+        msleep(6);
+        return IMGSENSOR_RETURN_ERROR;
+    }
+    msleep(6);
+    /* open write protect */
+    Eeprom_WriteProtectEnable21881(1, i4ProtectSlaveAddr);
+    msleep(6);
+
+    return ret;
+}
+
+static enum IMGSENSOR_RETURN Eeprom_WriteData_21305(kal_uint16 data_base, kal_uint16 data_length,
+                                   kal_uint8 *pData,  kal_uint16 i4SlaveAddr)
+{
+    enum IMGSENSOR_RETURN ret = IMGSENSOR_RETURN_SUCCESS;
+    kal_uint16 max_Lens = WRITE_DATA_MAX_LENGTH;
+    kal_uint32 idx, idy, i = 0;
+    if (pData == NULL || data_length < WRITE_DATA_MAX_LENGTH) {
+        pr_err("Eeprom_WriteData_21305 pData is NULL or invalid DataLen:%d",data_length );
+        return IMGSENSOR_RETURN_ERROR;
+    }
+
+    idx = data_length/max_Lens;
+    idy = data_length%max_Lens;
+
+    //close the eeprom write protection
+    Eeprom_WriteProtectEnable21305(0, i4SlaveAddr);
+
+    //Write OPT data.
+    msleep(6);
+    for (i = 0; i < idx; i++ ) {
+        ret = Eeprom_TableWrite((data_base+max_Lens*i),
+                &pData[max_Lens*i], max_Lens, i4SlaveAddr);
+        if (ret != IMGSENSOR_RETURN_SUCCESS) {
+            pr_err("write_eeprom data:0x%x, error: i= %d\n", pData[max_Lens*i], i);
+            /* open write protect */
+            Eeprom_WriteProtectEnable21305(1, i4SlaveAddr);
+            msleep(6);
+            return IMGSENSOR_RETURN_ERROR;
+        }
+        msleep(6);
+    }
+    ret = Eeprom_TableWrite((data_base+max_Lens*idx),
+            &pData[max_Lens*idx], idy, i4SlaveAddr);
+    if (ret != IMGSENSOR_RETURN_SUCCESS) {
+        pr_err("Eeprom_TableWrite error: idx= %d idy= %d\n", idx, idy);
+        /* open write protect */
+        Eeprom_WriteProtectEnable21305(1, i4SlaveAddr);
+        msleep(6);
+        return IMGSENSOR_RETURN_ERROR;
+    }
+    msleep(6);
+    /* open write protect */
+    Eeprom_WriteProtectEnable21305(1, i4SlaveAddr);
+    msleep(6);
+    return ret;
+}
+
+static enum IMGSENSOR_RETURN Eeprom_WriteData_21305_Imx355(kal_uint16 data_base, kal_uint16 data_length,
+                                   kal_uint8 *pData,  kal_uint16 i4SlaveAddr)
+{
+    enum IMGSENSOR_RETURN ret = IMGSENSOR_RETURN_SUCCESS;
+    kal_uint16 max_Lens = WRITE_DATA_MAX_LENGTH;
+    kal_uint32 idx, idy, i = 0;
+    if (pData == NULL || data_length < WRITE_DATA_MAX_LENGTH) {
+        pr_err("Eeprom_WriteData_21305_Imx355 pData is NULL or invalid DataLen:%d",data_length );
+        return IMGSENSOR_RETURN_ERROR;
+    }
+
+    idx = data_length/max_Lens;
+    idy = data_length%max_Lens;
+
+    //close the eeprom write protection
+    Eeprom_WriteProtectEnable21305IMX355(0, i4SlaveAddr);
+
+    //Write OPT data.
+    msleep(6);
+    for (i = 0; i < idx; i++ ) {
+        ret = Eeprom_TableWrite((data_base+max_Lens*i),
+                &pData[max_Lens*i], max_Lens, i4SlaveAddr);
+        if (ret != IMGSENSOR_RETURN_SUCCESS) {
+            pr_err("write_eeprom data:0x%x, error: i= %d\n", pData[max_Lens*i], i);
+            //open write protect
+            Eeprom_WriteProtectEnable21305IMX355(1, i4SlaveAddr);
+            msleep(6);
+            return IMGSENSOR_RETURN_ERROR;
+        }
+        msleep(6);
+    }
+    ret = Eeprom_TableWrite((data_base+max_Lens*idx),
+            &pData[max_Lens*idx], idy, i4SlaveAddr);
+    if (ret != IMGSENSOR_RETURN_SUCCESS) {
+        pr_err("Eeprom_TableWrite error: idx= %d idy= %d\n", idx, idy);
+        //open write protect
+        Eeprom_WriteProtectEnable21305IMX355(1, i4SlaveAddr);
+        msleep(6);
+        return IMGSENSOR_RETURN_ERROR;
+    }
+    msleep(6);
+    //open write protect
+    Eeprom_WriteProtectEnable21305IMX355(1, i4SlaveAddr);
+    msleep(6);
+    return ret;
+}
+
 enum IMGSENSOR_RETURN Eeprom_SensorInfoValid(
             enum IMGSENSOR_SENSOR_IDX sensor_idx,
             kal_uint32 sensorID)
@@ -580,12 +878,22 @@ enum IMGSENSOR_RETURN Eeprom_CallWriteService(ACDK_SENSOR_ENGMODE_STEREO_STRUCT 
         return IMGSENSOR_RETURN_ERROR;
     }
 
-    if ((is_project(20817) || is_project(20827) || is_project(20831)
-        || is_project(21881) || is_project(21882)) && uSensorId == IMX766_SENSOR_ID_20817){
+    if (is_project(20817) || is_project(20827) || is_project(20831)
+        || is_project(21881) || is_project(21882)){
         // 0xB0为imx766 eeprom写保护的slave addr
-        ret = Eeprom_WriteData_20817(data_base, data_length, pData, i4SlaveAddr, 0xB0);
+    	if ( uSensorId == IMX766_SENSOR_ID_20817) {
+    		ret = Eeprom_WriteData_20817(data_base, data_length, pData, i4SlaveAddr, 0xB0);
+    	}else if (uSensorId == IMX766_SENSOR_ID_21881) {
+    		ret = Eeprom_WriteData_21881(data_base, data_length, pData, i4SlaveAddr, 0xB0);
+    	}else {
+    		pr_err("Other projects.");
+    	}
     }else if((is_project(21015) || is_project(21217) || is_project(21016) || is_project(21218)) && uSensorId == (IMX766_SENSOR_ID_21015-SENSOR_ID_OFFSET_21015)){
         ret = Eeprom_WriteData_21015(data_base, data_length, pData, i4SlaveAddr);
+    }else if(is_project(21305) && uSensorId == IMX766_SENSOR_ID_21305){
+        ret = Eeprom_WriteData_21305(data_base, data_length, pData, i4SlaveAddr);
+    }else if(is_project(21305) && uSensorId == IMX355_SENSOR_ID_21305){
+        ret = Eeprom_WriteData_21305_Imx355(data_base, data_length, pData, i4SlaveAddr);
     }
     else {
         ret = Eeprom_WriteData(data_base, data_length, pData, i4SlaveAddr);
@@ -717,6 +1025,8 @@ void Eeprom_StereoDataRead(enum IMGSENSOR_SENSOR_IDX sensor_idx, kal_uint16 slav
             if (is_project(20615) || is_project(21609) ||
                 is_project(20662) || is_project(20619)){
                 dataLens = CALI_DATA_MASTER_LENGTH_20615;
+            } else if (is_project(20730) || is_project(20731) || is_project(20732)){
+                dataLens = CALI_DATA_MASTER_LENGTH_20730;
             } else {
                 dataLens = CALI_DATA_MASTER_LENGTH;
             }
@@ -727,13 +1037,18 @@ void Eeprom_StereoDataRead(enum IMGSENSOR_SENSOR_IDX sensor_idx, kal_uint16 slav
             if (is_project(20615) || is_project(21609) ||
                 is_project(20662) || is_project(20619)){
                 dataCnt = CALI_DATA_MASTER_LENGTH_20615;
+            } else if (is_project(20730) || is_project(20731) || is_project(20732)){
+                dataCnt = CALI_DATA_MASTER_LENGTH_20730;
+                dataLens = CALI_DATA_SLAVE_LENGTH_20730;
             } else {
                 dataCnt = CALI_DATA_MASTER_LENGTH;
             }
         }
-        for (i = 0; i < dataLens; i++) {
-            pCamDeviceObj->stereoMWdata[dataCnt+i] =
-                        (kal_uint8)Eeprom_1ByteDataRead(dataAddr+i, slaveAddr);
+        if(sensor_idx == IMGSENSOR_SENSOR_IDX_MAIN || sensor_idx == IMGSENSOR_SENSOR_IDX_MAIN2) {
+            for (i = 0; i < dataLens; i++) {
+                pCamDeviceObj->stereoMWdata[dataCnt+i] =
+                            (kal_uint8)Eeprom_1ByteDataRead(dataAddr+i, slaveAddr);
+            }
         }
     } else if (pCamDeviceObj->i4MWDataIdx == IMGSENSOR_SENSOR_IDX_SUB2) {
         if (sensor_idx == IMGSENSOR_SENSOR_IDX_MAIN) {
@@ -769,6 +1084,16 @@ void Eeprom_DistortionParamsRead(enum IMGSENSOR_SENSOR_IDX sensor_idx, kal_uint1
     kal_uint16 dataAddr = 0xFFFF, dataLens = CAMERA_DISTORTIONPARAMS_LENGTH;
     kal_uint16 i = 0;
     struct CAMERA_DEVICE_INFO *pCamDeviceObj = &gImgEepromInfo;
+#ifdef SENSOR_PLATFORM_5G_H
+    /*2021/12/28, Bringup camera for 20817.*/
+    if (is_project(20817) || is_project(20827) || is_project(20831)){
+        pCamDeviceObj = &gImgEepromInfo_20817;
+    }
+
+    if (is_project(21881) || is_project(21882)){
+        pCamDeviceObj = &gImgEepromInfo_21881;
+    }
+#endif
 
     if (sensor_idx == IMGSENSOR_SENSOR_IDX_MAIN2 && pCamDeviceObj->i4DistortionAddr) {
         dataAddr = pCamDeviceObj->i4DistortionAddr;
@@ -881,7 +1206,8 @@ enum CUSTOM_CAMERA_ERROR_CODE_ENUM Eeprom_Control(
                     || is_project(20615) || is_project(20619)
                     || is_project(21015) || is_project(21217)
                     || is_project(21061) || is_project(21218)
-                    || is_project(21609) || is_project(20662)) {
+                    || is_project(21609) || is_project(20662)
+                    || is_project(21305)) {
                     memcpy(&feature_para[0], pCamDeviceObj->stereoMWdata, DUALCAM_CALI_DATA_LENGTH_TOTAL_QCOM);
                 } else if (is_project(20817) || is_project(20827) || is_project(20831)
                            || is_project(21881) || is_project(21882)) {
@@ -911,7 +1237,10 @@ enum CUSTOM_CAMERA_ERROR_CODE_ENUM Eeprom_Control(
               || is_project(21639) || is_project(0x216CD) || is_project(0x216CE)
               || is_project(21831) || is_project(19165) || is_project(20095) || is_project(20610)
               || is_project(20611) || is_project(20680) || is_project(20613) || is_project(20686)
-              || is_project(20041) || is_project(20042) || is_project(20043))
+              || is_project(20041) || is_project(20042) || is_project(20043)
+              || is_project(22603) || is_project(22604) || is_project(22609)
+              || is_project(0x2260A) || is_project(0x2260B) || is_project(22669)
+              || is_project(0x2266A) || is_project(0x2266B) || is_project(0x2266C))
                 return ERROR_NONE;
             ret = Eeprom_CallWriteService((ACDK_SENSOR_ENGMODE_STEREO_STRUCT *)(feature_para));
             if (ret == IMGSENSOR_RETURN_SUCCESS)

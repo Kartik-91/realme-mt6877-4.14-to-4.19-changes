@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/delay.h>
 #include <linux/sched.h>
@@ -112,7 +104,7 @@ static atomic_t esd_ext_te_1_event = ATOMIC_INIT(0);
 static unsigned int extd_esd_check_mode;
 static unsigned int extd_esd_check_enable;
 #endif
-unsigned int esd_recovery_backlight_level = 2;
+
 atomic_t enable_ovl0_recovery = ATOMIC_INIT(0);
 atomic_t enable_ovl0_2l_recovery = ATOMIC_INIT(0);
 
@@ -837,9 +829,6 @@ static int primary_display_check_recovery_worker_kthread(void *data)
 	DISPFUNCEND();
 	return 0;
 }
-#ifdef OPLUS_BUG_STABILITY
-extern bool __attribute((weak)) oplus_flag_lcd_off;
-#endif
 
 /* ESD RECOVERY */
 int primary_display_esd_recovery(void)
@@ -1009,9 +998,6 @@ int primary_display_esd_recovery(void)
 #endif
 done:
 	primary_display_manual_unlock();
-#ifdef OPLUS_BUG_STABILITY
-	oplus_flag_lcd_off = false;
-#endif
 	DISPCHECK("[ESD]ESD recovery end\n");
 	mmprofile_log_ex(mmp_r, MMPROFILE_FLAG_END, 0, 0);
 	dprec_logger_done(DPREC_LOGGER_ESD_RECOVERY, 0, 0);
@@ -1210,11 +1196,11 @@ void primary_display_requset_eint(void)
 	}
 }
 
-static void primary_display_esd_check_enable_handler(unsigned long data)
+/*static void primary_display_esd_check_enable_handler(unsigned long data)
 {
 	DDPMSG("%s do start esd check\n", __func__);
 	primary_display_esd_check_enable(1);
-}
+}*/
 
 void primary_display_esd_check_enable_delay(int enable)
 {
@@ -1243,10 +1229,10 @@ void primary_display_check_recovery_init(void)
 			init_waitqueue_head(&esd_ext_te_wq);
 			primary_display_requset_eint();
 			set_esd_check_mode(GPIO_EINT_MODE);
-			init_timer(&timer);
-			timer.function = primary_display_esd_check_enable_handler;
-//			primary_display_esd_check_enable(1);
-			primary_display_esd_check_enable_delay(1);
+			//init_timer(&timer);
+			//timer.function = primary_display_esd_check_enable_handler;
+			primary_display_esd_check_enable(1);
+			//primary_display_esd_check_enable_delay(1);
 		}
 	}
 	if (disp_helper_get_stage() == DISP_HELPER_STAGE_NORMAL) {

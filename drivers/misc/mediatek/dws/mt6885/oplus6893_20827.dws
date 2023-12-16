@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--dct_version="2.5" buid_sn="161102" dws_modification_time="01.09.2022.15:08:17"-->
+<!--dct_version="2.5" buid_sn="161102" dws_modification_time="06.10.2022.17:55:57"-->
 <dct_cfg>
     <general chip="MT6893">
         <proj>MT6893</proj>
@@ -149,11 +149,11 @@
                 <ies>true</ies>
             </gpio4>
             <gpio5>
-                <eint_mode>true</eint_mode>
+                <eint_mode>false</eint_mode>
                 <def_mode>0</def_mode>
-                <inpull_en>false</inpull_en>
+                <inpull_en>true</inpull_en>
                 <inpull_selhigh>false</inpull_selhigh>
-                <def_dir>IN</def_dir>
+                <def_dir>OUT</def_dir>
                 <out_high>false</out_high>
                 <smt>true</smt>
                 <ies>true</ies>
@@ -802,11 +802,11 @@
             </gpio67>
             <gpio68>
                 <eint_mode>false</eint_mode>
-                <def_mode>1</def_mode>
+                <def_mode>0</def_mode>
                 <inpull_en>true</inpull_en>
                 <inpull_selhigh>false</inpull_selhigh>
-                <def_dir>IN</def_dir>
-                <out_high>false</out_high>
+                <def_dir>OUT</def_dir>
+                <out_high>true</out_high>
                 <smt>false</smt>
                 <ies>true</ies>
             </gpio68>
@@ -1192,7 +1192,7 @@
             </gpio105>
             <gpio106>
                 <eint_mode>false</eint_mode>
-                <def_mode>7</def_mode>
+                <def_mode>2</def_mode>
                 <inpull_en>true</inpull_en>
                 <inpull_selhigh>false</inpull_selhigh>
                 <def_dir>IN</def_dir>
@@ -2025,10 +2025,10 @@
             </gpio185>
             <gpio186>
                 <eint_mode>false</eint_mode>
-                <def_mode>0</def_mode>
+                <def_mode>1</def_mode>
                 <inpull_en>true</inpull_en>
-                <inpull_selhigh>false</inpull_selhigh>
-                <def_dir>OUT</def_dir>
+                <inpull_selhigh>true</inpull_selhigh>
+                <def_dir>IN</def_dir>
                 <out_high>false</out_high>
                 <varName0>GPIO_INIT_NO_COVER</varName0>
                 <smt>true</smt>
@@ -2036,12 +2036,13 @@
             </gpio186>
             <gpio187>
                 <eint_mode>false</eint_mode>
-                <def_mode>0</def_mode>
+                <def_mode>1</def_mode>
                 <inpull_en>true</inpull_en>
-                <inpull_selhigh>false</inpull_selhigh>
-                <def_dir>OUT</def_dir>
+                <inpull_selhigh>true</inpull_selhigh>
+                <def_dir>IN</def_dir>
                 <out_high>false</out_high>
-                <smt>false</smt>
+                <varName0>GPIO_INIT_NO_COVER</varName0>
+                <smt>true</smt>
                 <ies>true</ies>
             </gpio187>
             <gpio188>
@@ -2057,11 +2058,12 @@
             </gpio188>
             <gpio189>
                 <eint_mode>false</eint_mode>
-                <def_mode>0</def_mode>
+                <def_mode>1</def_mode>
                 <inpull_en>true</inpull_en>
-                <inpull_selhigh>false</inpull_selhigh>
-                <def_dir>OUT</def_dir>
+                <inpull_selhigh>true</inpull_selhigh>
+                <def_dir>IN</def_dir>
                 <out_high>false</out_high>
+                <varName0>GPIO_INIT_NO_COVER</varName0>
                 <smt>true</smt>
                 <ies>true</ies>
             </gpio189>
@@ -2401,7 +2403,7 @@
             </i2c_bus1>
             <i2c_bus2>
                 <speed_kbps>400</speed_kbps>
-                <pullPushEn>true</pullPushEn>
+                <pullPushEn>false</pullPushEn>
             </i2c_bus2>
             <i2c_bus3>
                 <speed_kbps>400</speed_kbps>
@@ -2409,7 +2411,7 @@
             </i2c_bus3>
             <i2c_bus4>
                 <speed_kbps>400</speed_kbps>
-                <pullPushEn>true</pullPushEn>
+                <pullPushEn>false</pullPushEn>
             </i2c_bus4>
             <i2c_bus5>
                 <speed_kbps>3400</speed_kbps>

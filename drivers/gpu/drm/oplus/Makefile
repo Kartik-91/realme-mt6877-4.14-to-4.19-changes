@@ -27,6 +27,5 @@ ccflags-y += -I$(srctree)/drivers/misc/mediatek/dramc/$(MTK_PLATFORM)	\
 
 ccflags-$(CONFIG_MTK_CMDQ_MBOX_EXT) += -I$(srctree)/drivers/misc/mediatek/cmdq/mailbox
 
-subdir-ccflags-y += -I$(srctree)/drivers/staging/android/ion/ \
-		    -I$(srctree)/drivers/staging/android/ion/mtk
-
+subdir-ccflags-y += -I$(srctree)/drivers/staging/android/mtk_ion/ \
+		    -I$(srctree)/drivers/staging/android/mtk_ion/mtk

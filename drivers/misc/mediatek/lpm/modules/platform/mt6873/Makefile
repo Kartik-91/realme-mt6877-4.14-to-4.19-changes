@@ -1,3 +1,4 @@
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/lpm/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/sspm/v1
 
 
@@ -10,6 +11,7 @@ ccflags-y += -I$(srctree)/drivers/misc/mediatek/lpm/inc/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/lpm/mtk_lpm_trace_event/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/lpm/modules/include/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/lpm/modules/include/mt6873/
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/lpm/modules/debug/mt6873/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/include/power_gs_v1
 
 obj-y += mt6873.o

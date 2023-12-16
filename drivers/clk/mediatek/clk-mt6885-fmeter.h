@@ -1,154 +1,151 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2019 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2021 MediaTek Inc.
+ * Author: Owen Chen <owen.chen@mediatek.com>
  */
 
-#ifndef __CLK_MT6885_FMETER_H
-#define __CLK_MT6885_FMETER_H
+#ifndef _CLK_MT6893_FMETER_H
+#define _CLK_MT6893_FMETER_H
 
-/* generate from abist_fqmtr.xlsx from TOPCKGEN DE */
+/* generate from clock_table.xlsx from TOPCKGEN DE */
 
 /* CKGEN Part */
-#define hd_faxi_ck	1
-#define hg_fspm_ck	2
-#define hf_fscp_ck	3
-#define hd_fbus_aximem_ck	4
-#define hf_fdisp_ck	5
-#define hf_fmdp_ck	6
-#define hf_fimg1_ck	7
-#define hf_fimg2_ck	8
-#define hf_fipe_ck	9
-#define hf_fdpe_ck	10
-#define hf_fcam_ck	11
-#define hf_fccu_ck	12
-#define hf_fdsp_ck	13
-#define hf_fdsp1_ck	14
-#define hf_fdsp2_ck	15
-#define hf_fdsp3_ck	16
-#define hf_fdsp4_ck	17
-#define hf_fdsp5_ck	18
-#define hf_fdsp6_ck	19
-#define hf_fdsp7_ck	20
-#define hf_fipu_if_ck	21
-#define hf_fmfg_ck	22
-#define f_fcamtg_ck	23
-#define f_fcamtg2_ck	24
-#define f_fcamtg3_ck	25
-#define f_fcamtg4_ck	26
-#define f_fuart_ck	27
-#define hf_fspi_ck	28
-#define hf_fmsdc50_0_hclk_ck	29
-#define hf_fmsdc50_0_ck	30
-#define hf_fmsdc30_1_ck	31
-#define hf_faudio_ck	32
-#define hf_faud_intbus_ck	33
-#define f_fpwrap_ulposc_ck	34
-#define hf_fatb_ck	35
-#define hf_fsspm_ck	36
-#define hf_fdp_ck	37
-#define hf_fscam_ck	38
-#define f_fdisp_pwm_ck	39
-#define f_fusb_top_ck	40
-#define f_fssusb_xhci_ck	41
-#define f_fi2c_ck	42
-#define f_fseninf_ck	43
-#define hg_mcupm_ck	44
-#define hf_fspmi_mst_ck	45
-#define hg_fdvfsrc_ck	46
-#define hf_fdxcc_ck	47
-#define hf_faud_engen1_ck	48
-#define hf_faud_engen2_ck	49
-#define hf_faes_ufsfde_ck	50
-#define hf_fufs_ck	51
-#define hf_faud_1_ck	52
-#define hf_faud_2_ck	53
-#define hf_fadsp_ck	54
-#define hf_fdpmaif_main_ck	55
-#define hf_fvenc_ck	56
-#define hf_fvdec_ck	57
-#define hf_fvdec_lat_ck	58
-#define hf_fcamtm_ck	59
-#define hf_fpwm_ck	60
-#define hf_faudio_h_ck	61
-#define f_fcamtg5_ck	62
-#define f_fcamtg6_ck	63
+#define FM_AXI_CK				1
+#define FM_SPM_CK				2
+#define FM_SCP_CK				3
+#define FM_BUS_CK				4
+#define FM_DISP_CK				5
+#define FM_MDP_CK				6
+#define FM_IMG1_CK				7
+#define FM_IMG2_CK				8
+#define FM_IPE_CK				9
+#define FM_DPE_CK				10
+#define FM_MM_CK				11
+#define FM_CCU_CK				12
+#define FM_DSP_CK				13
+#define FM_DSP1_CK				14
+#define FM_DSP2_CK				15
+#define FM_DSP3_CK				16
+#define FM_DSP4_CK				17
+#define FM_DSP5_CK				18
+#define FM_DSP6_CK				19
+#define FM_DSP7_CK				20
+#define FM_IPU_IF_CK				21
+#define FM_MFG_REF_CK				22
+#define FM_FCAMTG_CK				23
+#define FM_FCAMTG2_CK				24
+#define FM_FCAMTG3_CK				25
+#define FM_FCAMTG4_CK				26
+#define FM_FUART_CK				27
+#define FM_SPI_CK				28
+#define FM_MSDC50_0_H_CK			29
+#define FM_MSDC50_0_CK				30
+#define FM_MSDC30_1_CK				31
+#define FM_AUDIO_CK				32
+#define FM_AUD_INTBUS_CK			33
+#define FM_FPWRAP_ULPOSC_CK			34
+#define FM_ATB_CK				35
+#define FM_SSPM_CK				36
+#define FM_DP_CK				37
+#define FM_SCAM_CK				38
+#define FM_FDISP_PWM_CK				39
+#define FM_FUSB_CK				40
+#define FM_FSSUSB_XHCI_CK			41
+#define FM_I2C_CK				42
+#define FM_FSENINF_CK				43
+#define FM_MCUPM_CK				44
+#define FM_SPMI_MST_CK				45
+#define FM_DVFSRC_CK				46
+#define FM_DXCC_CK				47
+#define FM_AUD_ENGEN1_CK			48
+#define FM_AUD_ENGEN2_CK			49
+#define FM_AES_UFSFDE_CK			50
+#define FM_UFS_CK				51
+#define FM_AUD_1_CK				52
+#define FM_AUD_2_CK				53
+#define FM_ADSP_CK				54
+#define FM_DPMAIF_MAIN_CK			55
+#define FM_VENC_CK				56
+#define FM_VDEC_CK				57
+#define FM_VDEC_LAT_CK				58
+#define FM_CAMTM_CK				59
+#define FM_PWM_CK				60
+#define FM_AUDIO_H_CK				61
+#define FM_FCAMTG5_CK				62
+#define FM_FCAMTG6_CK				63
+/* ABIST Part */
+#define FM_ADSPPLL_CK				1
+#define FM_APLL1_CK				2
+#define FM_APLL2_CK				3
+#define FM_APPLLGP_MON_FM_CK			4
+#define FM_APUPLL_D2_CK				5
+#define FM_ARMPLL_BL0_CK			6
+#define FM_ARMPLL_BL1_CK			7
+#define FM_ARMPLL_BL2_CK			8
+#define FM_ARMPLL_BL3_CK			9
+#define FM_ARMPLL_LL_CK				10
+#define FM_CCIPLL_CK				11
+#define FM_CSI0A_CDPHY_DELAYCAL_CK		12
+#define FM_CSI0B_CDPHY_DELAYCAL_CK		13
+#define FM_CSI1A_DPHY_DELAYCAL_CK		14
+#define FM_CSI1B_DPHY_DELAYCAL_CK		15
+#define FM_CSI2A_DPHY_DELAYCAL_CK		16
+#define FM_CSI2B_DPHY_DELAYCAL_CK		17
+#define FM_CSI3A_DPHY_DELAYCAL_CK		18
+#define FM_CSI3B_DPHY_DELAYCAL_CK		19
+#define FM_DSI0_LNTC_DSICLK			20
+#define FM_DSI0_MPPLL_TST_CK			21
+#define FM_DSI1_LNTC_DSICLK			22
+#define FM_DSI1_MPPLL_TST_CK			23
+#define FM_MAINPLL_CK				24
+#define FM_MDPLL1_FS26M_GUIDE			25
+#define FM_MFGPLL_CK				26
+#define FM_MMPLL_CK				27
+#define FM_MMPLL_D3_CK				28
+#define FM_MPLL_CK				29
+#define FM_MSDCPLL_CK				30
+#define FM_RCLRPLL_DIV4_CH02			31
+#define FM_RCLRPLL_DIV4_CH13			32
+#define FM_RPHYPLL_DIV4_CH02			33
+#define FM_RPHYPLL_DIV4_CH13			34
+#define FM_TVDPLL_CK				35
+#define FM_ULPOSC2_CK				36
+#define FM_ULPOSC_CK				37
+#define FM_UNIVPLL_CK				38
+#define FM_USB20_192M_CK			39
+#define FM_MPLL_52M_DIV				40
+#define FM_UFS_MP_CLK2FREQ			41
+#define FM_WBG_DIG_BPLL_CK			42
+#define FM_WBG_DIG_WPLL_CK960			43
+#define FMEM_AFT_CH0				44
+#define FMEM_AFT_CH1				45
+#define FMEM_AFT_CH2				46
+#define FMEM_AFT_CH3				47
+#define FMEM_BFE_CH0				48
+#define FMEM_BFE_CH1				49
+#define FM_466M_FMEM_INFRASYS			50
+#define FM_MCUSYS_ARM_OUT_ALL			51
+#define FM_MSDC01_IN_CK				52
+#define FM_MSDC02_IN_CK				53
+#define FM_MSDC11_IN_CK				54
+#define FM_MSDC12_IN_CK				55
+#define FM_MSDC21_IN_CK				56
+#define FM_MSDC22_IN_CK				57
+#define FM_RTC32K_I_VAO				58
+#define FM_CKOMO1_CK				60
+#define FM_CKMON2_CK				61
+#define FM_CKMON3_CK				62
+#define FM_CKMON4_CK				63
 
+enum fm_sys_id {
+	FM_GPU_PLL_CTRL = 0,
+	FM_APU_PLL_CTRL = 1,
+	FM_SYS_NUM = 2,
+};
 
-/* Abist Part */
-#define AD_ADSPPLL_CK	1
-#define AD_APLL1_CK	2
-#define AD_APLL2_CK	3
-#define AD_APPLLGP_MON_FM_CK	4
-#define AD_APUPLL_CK	5
-#define AD_ARMPLL_BL0_CK	6
-#define AD_ARMPLL_BL1_CK	7
-#define AD_ARMPLL_BL2_CK	8
-#define AD_ARMPLL_BL3_CK	9
-#define AD_ARMPLL_LL_CK	10
-#define AD_CCIPLL_CK	11
-#define AD_CSI0A_CDPHY_DELAYCAL_CK	12
-#define AD_CSI0B_CDPHY_DELAYCAL_CK	13
-#define AD_CSI1A_DPHY_DELAYCAL_CK	14
-#define AD_CSI1B_DPHY_DELAYCAL_CK	15
-#define AD_CSI2A_DPHY_DELAYCAL_CK	16
-#define AD_CSI2B_DPHY_DELAYCAL_CK	17
-#define AD_CSI3A_DPHY_DELAYCAL_CK	18
-#define AD_CSI3B_DPHY_DELAYCAL_CK	19
-#define AD_DSI0_LNTC_DSICLK	20
-#define AD_DSI0_MPPLL_TST_CK	21
-#define AD_DSI1_LNTC_DSICLK	22
-#define AD_DSI1_MPPLL_TST_CK	23
-#define AD_MAINPLL_CK	24
-#define AD_MDPLL1_FS26M_CK_guide	25
-#define AD_MFGPLL_CK	26
-#define AD_MMPLL_CK	27
-#define AD_MMPLL_D3_CK	28
-#define AD_MPLL_CK	29
-#define AD_MSDCPLL_CK	30
-#define AD_RCLRPLL_DIV4_CK_ch02	31
-#define AD_RCLRPLL_DIV4_CK_ch13	32
-#define AD_RPHYPLL_DIV4_CK_ch02	33
-#define AD_RPHYPLL_DIV4_CK_ch13	34
-#define AD_TVDPLL_CK	35
-#define AD_ULPOSC2_CK	36
-#define AD_ULPOSC_CK	37
-#define AD_UNIVPLL_CK	38
-#define AD_USB20_192M_CK	39
-#define DA_MPLL_52M_DIV_CK	40
-#define UFS_MP_CLK2FREQ	41
-#define ad_wbg_dig_bpll_ck	42
-#define ad_wbg_dig_wpll_ck960	43
-#define fmem_ck_aft_dcm_ch0	44
-#define fmem_ck_aft_dcm_ch1	45
-#define fmem_ck_aft_dcm_ch2	46
-#define fmem_ck_aft_dcm_ch3	47
-#define fmem_ck_bfe_dcm_ch0	48
-#define fmem_ck_bfe_dcm_ch1	49
-#define hd_466m_fmem_ck_infrasys	50
-#define mcusys_arm_clk_out_all	51
-#define msdc01_in_ck	52
-#define msdc02_in_ck	53
-#define msdc11_in_ck	54
-#define msdc12_in_ck	55
-#define msdc21_in_ck	56
-#define msdc22_in_ck	57
-#define rtc32k_ck_i_vao	58
-/* #define 1'b0	59 */
-#define ckomo1_ck	60
-#define ckmon2_ck	61
-#define ckmon3_ck	62
-#define ckmon4_ck	63
-
-extern unsigned int mt_get_ckgen_freq(unsigned int ID);
-extern unsigned int mt_get_abist_freq(unsigned int ID);
 extern const struct fmeter_clk *get_fmeter_clks(void);
+extern unsigned int mt_get_abist_freq(unsigned int ID);
+extern unsigned int mt_get_abist2_freq(unsigned int ID);
+extern unsigned int mt_get_ckgen_freq(unsigned int ID);
 
-#endif
+#endif /* _CLK_MT6893_FMETER_H */

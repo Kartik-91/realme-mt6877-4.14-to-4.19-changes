@@ -215,7 +215,7 @@ static imgsensor_info_struct imgsensor_info = {
 	.mclk = 24,
 	.mipi_lane_num = SENSOR_MIPI_2_LANE,
 	.i2c_addr_table = {0x44,0xff},
-	.i2c_speed = 400,
+	.i2c_speed = 1000,
 };
 
 static imgsensor_struct imgsensor = {
@@ -255,7 +255,7 @@ static kal_uint16 read_cmos_sensor(kal_uint32 addr)
 
 	//kdSetI2CSpeed(400);
 
-	iReadRegI2C(pu_send_cmd, 2, (u8*)&get_byte, 1, imgsensor.i2c_write_id);
+	iReadRegI2CTiming(pu_send_cmd, 2, (u8*)&get_byte, 1, imgsensor.i2c_write_id, imgsensor_info.i2c_speed);
 
 	return get_byte;
 }
@@ -264,14 +264,14 @@ static void write_cmos_sensor(kal_uint32 addr, kal_uint32 para)
 {
 	char pu_send_cmd[4] = {(char)(addr >> 8), (char)(addr & 0xFF), (char)(para >> 8),(char)(para & 0xFF)};
 	//kdSetI2CSpeed(400);
-	iWriteRegI2C(pu_send_cmd, 4, imgsensor.i2c_write_id);
+	iWriteRegI2CTiming(pu_send_cmd, 4, imgsensor.i2c_write_id, imgsensor_info.i2c_speed);
 }
 
 static void write_cmos_sensor_8(kal_uint32 addr, kal_uint32 para)
 {
 	char pu_send_cmd[4] = {(char)(addr >> 8), (char)(addr & 0xFF), (char)(para & 0xFF)};
 	//kdSetI2CSpeed(400);
-	iWriteRegI2C(pu_send_cmd, 3, imgsensor.i2c_write_id);
+	iWriteRegI2CTiming(pu_send_cmd, 3, imgsensor.i2c_write_id, imgsensor_info.i2c_speed);
 }
 
 static void set_dummy(void)
@@ -3246,27 +3246,11 @@ static kal_uint32 set_test_pattern_mode(kal_bool enable)
 	LOG_INF("enable: %d", enable);
 
 	if (enable) {
-		LOG_INF("enter color bar");
-		// 0x5E00[8]: 1 enable,  0 disable
-		// 0x5E00[1:0]; 00 Color bar, 01 Random Data, 10 Square, 11 BLACK
-
-		write_cmos_sensor(0x0A00, 0x0000);
-		write_cmos_sensor(0x0a04, 0x0141);
-		write_cmos_sensor(0x020a, 0x0200);
-
-		write_cmos_sensor(0x0A00, 0x0100);
-		mdelay(1);
-		//write_cmos_sensor(0x021c, 0x0000);
+        write_cmos_sensor(0x0a04, 0x0141);
+		write_cmos_sensor(0x020a, 0x0100);
 	} else {
-		// 0x5E00[8]: 1 enable,  0 disable
-		// 0x5E00[1:0]; 00 Color bar, 01 Random Data, 10 Square, 11 BLACK
-
-		write_cmos_sensor(0x0A00, 0x0000);
-		write_cmos_sensor(0x0a04, 0x0140);
+        write_cmos_sensor(0x0a04, 0x0142);
 		write_cmos_sensor(0x020a, 0x0000);
-		write_cmos_sensor(0x0A00, 0x0100);
-		mdelay(1);
-		//write_cmos_sensor(0x020a, 0x0000);
 	}
 	spin_lock(&imgsensor_drv_lock);
 	imgsensor.test_pattern = enable;

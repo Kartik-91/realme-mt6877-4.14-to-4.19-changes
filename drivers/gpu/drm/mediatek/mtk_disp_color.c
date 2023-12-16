@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <drm/drmP.h>
 #include <linux/clk.h>
@@ -1271,7 +1263,8 @@ void DpEngine_COLORonConfig(struct mtk_ddp_comp *comp, struct cmdq_pkt *handle)
 		pq_param_p->u4SatAdj[PURP_TONE] >= COLOR_TUNING_INDEX ||
 		pq_param_p->u4SatAdj[SKIN_TONE] >= COLOR_TUNING_INDEX ||
 		pq_param_p->u4SatAdj[GRASS_TONE] >= COLOR_TUNING_INDEX ||
-		pq_param_p->u4SatAdj[SKY_TONE] >= COLOR_TUNING_INDEX) {
+		pq_param_p->u4SatAdj[SKY_TONE] >= COLOR_TUNING_INDEX ||
+		pq_param_p->u4ColorLUT >= COLOR_3D_CNT) {
 		DRM_ERROR("[PQ][COLOR] Tuning index range error !\n");
 		return;
 	}

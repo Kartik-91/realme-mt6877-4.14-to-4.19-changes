@@ -21,7 +21,7 @@
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h>
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 /*#include <asm/atomic.h>*/
 
 #include "kd_camera_typedef.h"
@@ -1417,6 +1417,10 @@ static void read_module_data(void)
 }
 #endif
 
+ extern enum IMGSENSOR_RETURN Eeprom_DataInit(
+            enum IMGSENSOR_SENSOR_IDX sensor_idx,
+            kal_uint32 sensorID);
+
 /*************************************************************************
  * FUNCTION
  *	get_imgsensor_id
@@ -1457,6 +1461,8 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 							deviceInfo_register_value=0x01;
 						}
 						#endif  //OPLUS_FEATURE_CAMERA_COMMON
+						Eeprom_DataInit(IMGSENSOR_SENSOR_IDX_MAIN2, *sensor_id);
+						gImgEepromInfo.camNormdata[IMGSENSOR_SENSOR_IDX_MAIN2][39] = 2;
 						printk("OV8856 get_imgsensor_id success: 0x%x\n", *sensor_id);
 						return ERROR_NONE;
 					}

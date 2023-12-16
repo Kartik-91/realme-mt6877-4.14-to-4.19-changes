@@ -1,16 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * PD Device Policy Manager Core Driver
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include <linux/delay.h>
@@ -104,22 +94,15 @@ static const struct svdm_svid_ops svdm_svid_ops[] = {
 int dpm_check_supported_modes(void)
 {
 	int i;
-	bool is_disorder = false;
-	bool found_error = false;
+	const int size = ARRAY_SIZE(svdm_svid_ops);
 
-	for (i = 0; i < ARRAY_SIZE(svdm_svid_ops); i++) {
-		if (i < (ARRAY_SIZE(svdm_svid_ops) - 1)) {
-			if (svdm_svid_ops[i + 1].svid <=
-				svdm_svid_ops[i].svid)
-				is_disorder = true;
-		}
+	for (i = 0; i < size; i++) {
 		pr_info("SVDM supported mode [%d]: name = %s, svid = 0x%x\n",
 			i, svdm_svid_ops[i].name,
 			svdm_svid_ops[i].svid);
 	}
-	pr_info("%s : found \"disorder\"...\n", __func__);
-	found_error |= is_disorder;
-	return found_error ? -EFAULT : 0;
+
+	return 0;
 }
 
 /*
@@ -1055,9 +1038,9 @@ void pd_dpm_ufp_request_svid_info(struct pd_port *pd_port)
 {
 	bool ack = false;
 #ifdef OPLUS_FEATURE_CHG_BASIC
-	if (pd_port->svid_data_cnt > 0)
+		if (pd_port->svid_data_cnt > 0)
 #endif
-		ack = (dpm_vdm_get_svid(pd_port) == USB_SID_PD);
+			ack = (dpm_vdm_get_svid(pd_port) == USB_SID_PD);
 
 	if (!ack) {
 		dpm_vdm_reply_svdm_nak(pd_port);
@@ -1563,7 +1546,7 @@ void pd_dpm_drs_change_role(struct pd_port *pd_port, uint8_t role)
 
 #ifdef CONFIG_USB_PD_PR_SWAP
 
-#if 0
+#ifdef NEVER
 static bool pd_dpm_evaluate_source_cap_match(pd_port_t *pd_port)
 {
 	int i, j;
@@ -1588,7 +1571,7 @@ static bool pd_dpm_evaluate_source_cap_match(pd_port_t *pd_port)
 
 	return find_cap;
 }
-#endif
+#endif /* NEVER */
 
 /*
  * Rules:
@@ -2342,7 +2325,7 @@ int pd_dpm_core_init(struct pd_port *pd_port)
 
 #ifdef CONFIG_USB_PD_REV30
 	pd_port->pps_request_wake_lock =
-		wakeup_source_register(&tcpc->dev, "pd_pps_request_wake_lock");
+		wakeup_source_register(NULL, "pd_pps_request_wake_lock");
 	init_waitqueue_head(&pd_port->pps_request_wait_que);
 	atomic_set(&pd_port->pps_request, false);
 	pd_port->pps_request_task = kthread_run(pps_request_thread_fn, tcpc,

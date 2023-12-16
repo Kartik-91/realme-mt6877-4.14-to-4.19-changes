@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include "inc/tcpci.h"
@@ -694,15 +686,6 @@ int tcpci_enable_auto_discharge(struct tcpc_device *tcpc, bool en)
 
 	return ret;
 }
-
-#ifdef OPLUS_FEATURE_CHG_BASIC
-int tcpci_enable_bleed_discharge(struct tcpc_device *tcpc, bool en)
-{
-	if (tcpc->ops->set_bleed_discharge)
-		return tcpc->ops->set_bleed_discharge(tcpc, en);
-	return 0;
-}
-#endif /* OPLUS_FEATURE_CHG_BASIC */
 
 static int __tcpci_enable_force_discharge(
 	struct tcpc_device *tcpc, bool en, int mv)

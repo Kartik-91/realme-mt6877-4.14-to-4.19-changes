@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <drm/drm_crtc.h>
 #include "mtk_drm_mmp.h"
@@ -319,7 +311,7 @@ int mtk_drm_mmp_ovl_layer(struct mtk_plane_state *state,
 	struct drm_crtc *crtc = state->crtc;
 	int crtc_idx = drm_crtc_index(crtc);
 	struct mmp_metadata_bitmap_t bitmap;
-	struct mmp_metadata_t meta = {.data1 = 0, .data2 = 0};
+	struct mmp_metadata_t meta;
 	unsigned int fmt = pending->format;
 	int raw = 0;
 	int yuv = 0;
@@ -339,6 +331,7 @@ int mtk_drm_mmp_ovl_layer(struct mtk_plane_state *state,
 		return -1;
 	}
 
+	memset(&meta, 0, sizeof(struct mmp_metadata_t));
 	memset(&bitmap, 0, sizeof(struct mmp_metadata_bitmap_t));
 	bitmap.data1 = 0;
 	bitmap.width = pending->width;

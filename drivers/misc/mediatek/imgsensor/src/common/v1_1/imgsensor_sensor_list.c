@@ -1,19 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include "kd_imgsensor.h"
 #include "imgsensor_sensor_list.h"
-
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 /* Add Sensor Init function here
  * Note:
  * 1. Add by the resolution from ""large to small"", due to large sensor
@@ -24,6 +18,70 @@
  */
 struct IMGSENSOR_SENSOR_LIST
 	gimgsensor_sensor_list[MAX_NUM_OF_SUPPORT_SENSOR] = {
+#if defined(S5KJN103_MIPI_RAW_LIJING)
+    {S5KJN103_SENSOR_ID_LIJING, SENSOR_DRVNAME_S5KJN103_MIPI_RAW_LIJING,
+        S5KJN103_MIPI_RAW_LIJING_SensorInit},
+#endif
+#if defined(S5K3L6_MIPI_RAW_LIJING)
+    {S5K3L6_SENSOR_ID_LIJING, SENSOR_DRVNAME_S5K3L6_MIPI_RAW_LIJING,
+        S5K3L6_MIPI_RAW_LIJING_SensorInit},
+#endif
+#if defined(SC800CS_MIPI_RAW_LIJING)
+    {SC800CS_SENSOR_ID_LIJING, SENSOR_DRVNAME_SC800CS_MIPI_RAW_LIJING,
+        SC800CS_MIPI_RAW_LIJING_SensorInit},
+#endif
+#if defined(HI846_MIPI_RAW_LIJING)
+    {HI846_SENSOR_ID_LIJING, SENSOR_DRVNAME_HI846_MIPI_RAW_LIJING,
+        HI846_MIPI_RAW_LIJING_SensorInit},
+#endif
+#if defined(SC201CS_MIPI_RAW_LIJING)
+    {SC201CS_SENSOR_ID_LIJING, SENSOR_DRVNAME_SC201CS_MIPI_RAW_LIJING,
+        SC201CS_MIPI_RAW_LIJING_SensorInit},
+#endif
+#if defined(C2519_MIPI_RAW_LIJING)
+    {C2519_SENSOR_ID_LIJING, SENSOR_DRVNAME_C2519_MIPI_RAW_LIJING,
+        C2519_MIPI_RAW_LIJING_SensorInit},
+#endif
+#if defined(HI1336_MIPI_RAW_BLADE)
+    {HI1336_SENSOR_ID_BLADE, SENSOR_DRVNAME_HI1336_MIPI_RAW_BLADE,
+        HI1336_MIPI_RAW_BLADE_SensorInit},
+#endif
+#if defined(HI556_MIPI_RAW_BLADE)
+    {HI556_SENSOR_ID_BLADE, SENSOR_DRVNAME_HI556_MIPI_RAW_BLADE,
+        HI556_MIPI_RAW_BLADE_SensorInit},
+#endif
+#if defined(SC201CS_MIPI_MONO_BLADE)
+    {SC201CS_SENSOR_ID_BLADE, SENSOR_DRVNAME_SC201CS_MIPI_MONO_BLADE,
+        SC201CS_MIPI_RAW_BLADE_SensorInit},
+#endif
+#if defined(C2599_MIPI_RAW_BLADE)
+    {C2599_SENSOR_ID_BLADE, SENSOR_DRVNAME_C2599_MIPI_RAW_BLADE,
+        C2599_MIPI_RAW_BLADE_SensorInit},
+#endif
+#if defined(BF20A1_MIPI_RAW_BLADE)
+    {BF20A1_SENSOR_ID_BLADE, SENSOR_DRVNAME_BF20A1_MIPI_RAW_BLADE,
+        BF20A1_MIPI_RAW_BLADE_SensorInit},
+#endif
+#if defined(GC030A_MIPI_RAW_BLADE)
+    {GC030A_SENSOR_ID_BLADE, SENSOR_DRVNAME_GC030A_MIPI_RAW_BLADE,
+        GC030A_MIPI_RAW_BLADE_SensorInit},
+#endif
+#if defined(HI5021SQT_MIPI_RAW_BLADE)
+    {HI5021SQT_SENSOR_ID_BLADE, SENSOR_DRVNAME_HI5021SQT_MIPI_RAW_BLADE,
+        HI5021SQT_MIPI_RAW_BLADE_SensorInit},
+#endif
+#if defined(S5KJN103_MIPI_RAW_BLADE)
+    {S5KJN103_SENSOR_ID_BLADE, SENSOR_DRVNAME_S5KJN103_MIPI_RAW_BLADE,
+        S5KJN103_MIPI_RAW_BLADE_SensorInit},
+#endif
+#if defined(SC800CS_MIPI_RAW_BLADE)
+    {SC800CS_SENSOR_ID_BLADE, SENSOR_DRVNAME_SC800CS_MIPI_RAW_BLADE,
+        SC800CS_MIPI_RAW_BLADE_SensorInit},
+#endif
+#if defined(SC201CS_MIPI_RAW_BLADE)
+    {SC201CS1_SENSOR_ID_BLADE, SENSOR_DRVNAME_SC201CS_MIPI_RAW_BLADE,
+        SC201CS1_MIPI_RAW_BLADE_SensorInit},
+#endif
 #if defined(IMX766_MIPI_RAW)
 {IMX766_SENSOR_ID, SENSOR_DRVNAME_IMX766_MIPI_RAW, IMX766_MIPI_RAW_SensorInit},
 #endif
@@ -690,7 +748,17 @@ struct IMGSENSOR_SENSOR_LIST
     {S5KGM1ST_SENSOR_ID_ALICER, SENSOR_DRVNAME_S5KGM1ST_MIPI_RAW_ALICER,
         S5KGM1ST_MIPI_RAW_ALICER_SensorInit},
 #endif
+#if defined(GC02M1_MIPI_RAW_APOLLOT)
+    {GC02M1_SENSOR_ID_APOLLOT, SENSOR_DRVNAME_GC02M1_MIPI_RAW_APOLLOT,
+        GC02M1_MIPI_RAW_APOLLOT_SensorInit},
+#endif
 
+#if defined(OV13B10LN_MIPI_RAW)
+	{OV13B10LN_SENSOR_ID, SENSOR_DRVNAME_OV13B10LN_MIPI_RAW, OV13B10LN_MIPI_RAW_SensorInit},
+#endif
+#if defined(S5K4H7LN_MIPI_RAW)
+	{S5K4H7LN_SENSOR_ID, SENSOR_DRVNAME_S5K4H7LN_MIPI_RAW, S5K4H7LN_MIPI_RAW_SensorInit},
+#endif
 	/*  ADD sensor driver before this line */
 	{0, {0}, NULL}, /* end of list */
 };

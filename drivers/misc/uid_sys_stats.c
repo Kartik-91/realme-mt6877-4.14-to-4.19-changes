@@ -945,7 +945,8 @@ static ssize_t uid_remove_write(struct file *file,
 	struct hlist_node *tmp;
 	char uids[128];
 	char *start_uid, *end_uid = NULL;
-	long int uid_start = 0, uid_end = 0;
+	uid_t uid_start = 0, uid_end = 0;
+	u64 uid;
 
 	if (count >= sizeof(uids))
 		count = sizeof(uids) - 1;
@@ -960,8 +961,8 @@ static ssize_t uid_remove_write(struct file *file,
 	if (!start_uid || !end_uid)
 		return -EINVAL;
 
-	if (kstrtol(start_uid, 10, &uid_start) != 0 ||
-		kstrtol(end_uid, 10, &uid_end) != 0) {
+	if (kstrtouint(start_uid, 10, &uid_start) != 0 ||
+		kstrtouint(end_uid, 10, &uid_end) != 0) {
 		return -EINVAL;
 	}
 
@@ -973,10 +974,10 @@ static ssize_t uid_remove_write(struct file *file,
 
 	rt_mutex_lock(&uid_lock);
 
-	for (; uid_start <= uid_end; uid_start++) {
+	for (uid = uid_start; uid <= uid_end; uid++) {
 		hash_for_each_possible_safe(hash_table, uid_entry, tmp,
-							hash, (uid_t)uid_start) {
-			if (uid_start == uid_entry->uid) {
+							hash, uid) {
+			if (uid == uid_entry->uid) {
 				remove_uid_tasks(uid_entry);
 				hash_del(&uid_entry->hash);
 				kfree(uid_entry);
@@ -1223,8 +1224,8 @@ static int __init proc_uid_sys_stats_init(void)
 #ifdef CONFIG_OPLUS_FEATURE_UID_PERF
 	proc_create_data("show_uid_perf", 0444, cpu_parent,
 		&uid_perf_fops, NULL);
-	uid_perf_add_thread = kthread_run(__uid_perf_add_work, NULL, "uid_add_thread");
-	uid_perf_remove_thread = kthread_run(__uid_perf_remove_work, NULL, "uid_remove_thread");
+	uid_perf_add_thread = kthread_create(__uid_perf_add_work, NULL, "uid_add_thread");
+	uid_perf_remove_thread = kthread_create(__uid_perf_remove_work, NULL, "uid_remove_thread");
 #endif
 
 	io_parent = proc_mkdir("uid_io", NULL);
@@ -1255,16 +1256,6 @@ err:
 	remove_proc_subtree("uid_cputime", NULL);
 	remove_proc_subtree("uid_io", NULL);
 	remove_proc_subtree("uid_procstat", NULL);
-#ifdef CONFIG_OPLUS_FEATURE_UID_PERF
-	if (uid_perf_add_thread) {
-		kthread_stop(uid_perf_add_thread);
-		uid_perf_add_thread = NULL;
-	}
-	if (uid_perf_remove_thread) {
-		kthread_stop(uid_perf_remove_thread);
-		uid_perf_remove_thread = NULL;
-	}
-#endif
 	return -ENOMEM;
 }
 

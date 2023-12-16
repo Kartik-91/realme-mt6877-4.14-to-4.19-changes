@@ -41,7 +41,7 @@
 
 
 #define MTK_IDENTITY_VALUE 0x010B00FF
-#define LRC_SIZE 384
+#define LRC_SIZE 140
 #define DCC_SIZE 96
 
 struct EEPROM_PDAF_INFO {
@@ -65,9 +65,9 @@ static struct EEPROM_PDAF_INFO eeprom_pdaf_info[] = {
 		.DCC_size = DCC_SIZE
 	},
 	{/* OP_FMT */
-		.LRC_addr = 0x1620,
+		.LRC_addr = 0x700,
 		.LRC_size = LRC_SIZE,
-		.DCC_addr = 0x18D0,
+		.DCC_addr = 0xB06,
 		.DCC_size = DCC_SIZE
 	},
 };

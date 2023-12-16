@@ -23,8 +23,8 @@
 #include <soc/oplus/device_info.h>
 #endif
 
-#define wl2868c_IO_REG_LIMIT 20
-#define wl2868c_IO_BUFFER_LIMIT 128
+#define WL2868C_IO_REG_LIMIT 20
+#define WL2868C_IO_BUFFER_LIMIT 128
 
 #define WL2868C_ADDR 0x28
 #define WL2868C_REG_ID0 0x00
@@ -62,37 +62,37 @@ VOUT3/7 = 1.504V+LDO3/7_VOUT[7:0]*0.008V
  * reg_value struct
  */
 struct reg_value {
-    u8 u8Add;
-    u8 u8Val;
+	u8 u8Add;
+	u8 u8Val;
 };
 
 /*!
  * wl2868c_data_t struct
  */
 struct wl2868c_data_t {
-    struct i2c_client *i2c_client;
+	struct i2c_client *i2c_client;
 	int pcb;
-    int en_gpio;
-    u8 chip_id;
-    u8 id_reg;
-    u8 id_val;
-    int wl2868_status_flag;
-    int v_ldo[7];
-    u8 ldo_en_select;
+	int en_gpio;
+	u8 chip_id;
+	u8 id_reg;
+	u8 id_val;
+	int wl2868_status_flag;
+	int v_ldo[7];
+	u8 ldo_en_select;
 };
 
 enum wl2868c_ldo_num {
-    WL2868C_LDO1 = 1,
-    WL2868C_LDO2 = 2,
-    WL2868C_LDO3 = 3,
-    WL2868C_LDO4 = 4,
-    WL2868C_LDO5 = 5,
-    WL2868C_LDO6 = 6,
-    WL2868C_LDO7 = 7,
+	WL2868C_LDO1 = 1,
+	WL2868C_LDO2 = 2,
+	WL2868C_LDO3 = 3,
+	WL2868C_LDO4 = 4,
+	WL2868C_LDO5 = 5,
+	WL2868C_LDO6 = 6,
+	WL2868C_LDO7 = 7,
 };
 
-const unsigned int LDO12_voltage_base = 496; // 496mv
-const unsigned int LDO34567_voltage_base = 1504; // 1504mv
+const unsigned int ldo12_voltage_base = 496; /* 496mv */
+const unsigned int ldo34567_voltage_base = 1504; /* 1504mv */
 
 /*!
  * wl2868c_data
@@ -109,17 +109,16 @@ static struct wl2868c_data_t wl2868c_data;
  */
 static int wl2868c_write_reg(u8 reg, u8 val)
 {
-    u8 au8Buf[2] = {0};
-    au8Buf[0] = reg;
-    au8Buf[1] = val;
-    if (i2c_master_send(wl2868c_data.i2c_client, au8Buf, 2) < 0)
-    {
-        pr_err("%s:write reg error:reg=%x,val=%x\n",
-            __func__, reg, val);
-        return -1;
-    }
-    pr_err("%s:write reg 0x%x val 0x%x ok\n", __func__,reg,val);
-    return 0;
+	u8 au8Buf[2] = {0};
+	au8Buf[0] = reg;
+	au8Buf[1] = val;
+	if(i2c_master_send(wl2868c_data.i2c_client, au8Buf, 2) < 0) {
+		pr_err("%s:write reg error:reg=%x,val=%x\n",
+			__func__, reg, val);
+		return -1;
+	}
+	pr_err("%s:write reg 0x%x val 0x%x ok\n", __func__, reg, val);
+	return 0;
 }
 
 /*!
@@ -131,22 +130,20 @@ static int wl2868c_write_reg(u8 reg, u8 val)
  */
 static int wl2868c_read_reg(u8 reg, u8 *val)
 {
-    u8 au8RegBuf[1] = {0};
-    u8 u8RdVal = 0;
-    au8RegBuf[0] = reg;
-    if (1 != i2c_master_send(wl2868c_data.i2c_client, au8RegBuf, 1))
-    {
-        pr_err("%s:write reg error:reg=%x\n", __func__, reg);
-        return -1;
-    }
-    if (1 != i2c_master_recv(wl2868c_data.i2c_client, &u8RdVal, 1))
-    {
-        pr_err("%s:read reg error:reg=%x,val=%x\n",__func__, reg, u8RdVal);
-        return -1;
-    }
-    *val = u8RdVal;
-    pr_err("%s: read reg 0x%x val 0x%x ok\n", __func__,reg,*val);
-    return 0;
+	u8 au8RegBuf[1] = {0};
+	u8 u8RdVal = 0;
+	au8RegBuf[0] = reg;
+	if(1 != i2c_master_send(wl2868c_data.i2c_client, au8RegBuf, 1)) {
+		pr_err("%s:write reg error:reg=%x\n", __func__, reg);
+		return -1;
+	}
+	if(1 != i2c_master_recv(wl2868c_data.i2c_client, &u8RdVal, 1)) {
+		pr_err("%s:read reg error:reg=%x,val=%x\n", __func__, reg, u8RdVal);
+		return -1;
+	}
+	*val = u8RdVal;
+	pr_err("%s: read reg 0x%x val 0x%x ok\n", __func__, reg, *val);
+	return 0;
 }
 
 /*!
@@ -159,7 +156,7 @@ static int wl2868c_read_reg(u8 reg, u8 *val)
  */
 int wl2868c_test_i2c_enable(void)
 {
-    return wl2868c_data.wl2868_status_flag;
+	return wl2868c_data.wl2868_status_flag;
 }
 #if !defined(CONFIG_MTK_PMIC_CHIP_MT6358)
 /*!
@@ -203,47 +200,47 @@ int wl2868c_pcb10_vin1(int vdd_status)
  * @param ldo_select select ldo number en, reg_ldo_en code in hex *
  * @return  Error code indicating success or failure
  */
-static int wl2868c_voltage_output_t(u8 ldo_num,int low_or_high, int vol, u8 ldo_select)
+static int wl2868c_voltage_output_t(u8 ldo_num, int low_or_high, int vol, u8 ldo_select)
 {
-    u8 ldo_vout_value = 0;
-    int ret = 0;
-    pr_err("%s,en = %d,set ldo_num = %d,vol = %d\n",__func__, wl2868c_data.ldo_en_select, ldo_num, vol);
-    if (low_or_high) {
-        if (vol > 0) {
-            if (vol < LDO12_voltage_base)
-                goto vol_err;
-            vol = vol > LDO12_VOUT_MAX ? LDO12_VOUT_MAX : vol;
-            ldo_vout_value = (vol-LDO12_voltage_base) / 8;
-            wl2868c_data.ldo_en_select |= (ldo_select + 0x80);
-            ret = wl2868c_write_reg(ldo_num, ldo_vout_value);
-            ret = wl2868c_write_reg(WL2868C_REG_LDOX_EN, wl2868c_data.ldo_en_select);
-        } else {
-            if (vol != -1)
-                goto vol_err;
-            wl2868c_data.ldo_en_select &= (0xFF - ldo_select);
-            ret = wl2868c_write_reg(WL2868C_REG_LDOX_EN, wl2868c_data.ldo_en_select);
-        }
-    } else {
-        if (vol > 0) {
-            if (vol < LDO34567_voltage_base)
-                goto vol_err;
-            vol = vol > LDO34567_VOUT_MAX ? LDO34567_VOUT_MAX : vol;
-            ldo_vout_value = (vol-LDO34567_voltage_base) / 8;
-            wl2868c_data.ldo_en_select |= (ldo_select + 0x80);
-            ret = wl2868c_write_reg(ldo_num, ldo_vout_value);
-            ret = wl2868c_write_reg(WL2868C_REG_LDOX_EN, wl2868c_data.ldo_en_select);
-        } else {
-            if (vol != -1)
-                goto vol_err;
-            wl2868c_data.ldo_en_select &= (0xFF - ldo_select);
-            ret = wl2868c_write_reg(WL2868C_REG_LDOX_EN, wl2868c_data.ldo_en_select);
-        }
-    }
-    return ret;
+	u8 ldo_vout_value = 0;
+	int ret = 0;
+	pr_err("%s,en = %d,set ldo_num = %d,vol = %d\n", __func__, wl2868c_data.ldo_en_select, ldo_num, vol);
+	if (low_or_high) {
+		if (vol > 0) {
+			if (vol < ldo12_voltage_base)
+			    goto vol_err;
+			vol = vol > LDO12_VOUT_MAX ? LDO12_VOUT_MAX : vol;
+			ldo_vout_value = (vol-ldo12_voltage_base) / 8;
+			wl2868c_data.ldo_en_select |= (ldo_select + 0x80);
+			ret = wl2868c_write_reg(ldo_num, ldo_vout_value);
+			ret = wl2868c_write_reg(WL2868C_REG_LDOX_EN, wl2868c_data.ldo_en_select);
+		} else {
+			if (vol != -1)
+			    goto vol_err;
+			wl2868c_data.ldo_en_select &= (0xFF - ldo_select);
+			ret = wl2868c_write_reg(WL2868C_REG_LDOX_EN, wl2868c_data.ldo_en_select);
+		}
+	} else {
+		if (vol > 0) {
+			if (vol < ldo34567_voltage_base)
+			    goto vol_err;
+			vol = vol > LDO34567_VOUT_MAX ? LDO34567_VOUT_MAX : vol;
+			ldo_vout_value = (vol-ldo34567_voltage_base) / 8;
+			wl2868c_data.ldo_en_select |= (ldo_select + 0x80);
+			ret = wl2868c_write_reg(ldo_num, ldo_vout_value);
+			ret = wl2868c_write_reg(WL2868C_REG_LDOX_EN, wl2868c_data.ldo_en_select);
+		} else {
+			if (vol != -1)
+			    goto vol_err;
+			wl2868c_data.ldo_en_select &= (0xFF - ldo_select);
+			ret = wl2868c_write_reg(WL2868C_REG_LDOX_EN, wl2868c_data.ldo_en_select);
+		}
+	}
+	return ret;
 
 vol_err:
-    pr_err("%s,set vol err vol:%d,ldo_num:%d\n",__func__,vol,ldo_num);
-    return -1;
+	pr_err("%s, set vol err vol:%d, ldo_num:%d\n", __func__, vol, ldo_num);
+	return -1;
 }
 
 /*!
@@ -255,7 +252,7 @@ vol_err:
  */
 int wl2868c_voltage_output(unsigned int ldo_num, int vol)
 {
-    int ret = 0;
+	int ret = 0;
 	u8 ulvo_ctl_reg = 0x24;
 	u8 ulvo_ctl_reg_val = 0x00;
 	wl2868c_read_reg(ulvo_ctl_reg, &ulvo_ctl_reg_val);
@@ -265,39 +262,38 @@ int wl2868c_voltage_output(unsigned int ldo_num, int vol)
 	ulvo_ctl_reg_val = 0x00;
 	wl2868c_read_reg(ulvo_ctl_reg, &ulvo_ctl_reg_val);
 	pr_err("ulvo_ctl_reg_val:%x", ulvo_ctl_reg_val);
-    switch (ldo_num)
-    {
-        case WL2868C_LDO1:
-            ret = wl2868c_voltage_output_t(WL2868C_REG_LDO1_VOUT,1,vol,0x01);
-            break;
-        case WL2868C_LDO2:
-        /*linyuehan@camdrv add for (pvt && pcb == 10 && wl2868c) imx615 preview Signal jamming*/
+	switch (ldo_num) {
+	case WL2868C_LDO1:
+		ret = wl2868c_voltage_output_t(WL2868C_REG_LDO1_VOUT, 1, vol, 0x01);
+		break;
+	case WL2868C_LDO2:
+		/*linyuehan@camdrv add for (pvt && pcb == 10 && wl2868c) imx615 preview Signal jamming*/
 		#if !defined(CONFIG_MTK_PMIC_CHIP_MT6358)
-			if (is_project(20181) && (vol != -1)) {
-				wl2868c_pcb10_vin1(PVT_VIN1_VDD_CUSTOM);
-			}
+		if (is_project(20181) && (vol != -1)) {
+			wl2868c_pcb10_vin1(PVT_VIN1_VDD_CUSTOM);
+		}
 		#endif
-            ret = wl2868c_voltage_output_t(WL2868C_REG_LDO2_VOUT,1,vol,0x02);
-            break;
-        case WL2868C_LDO3:
-            ret = wl2868c_voltage_output_t(WL2868C_REG_LDO3_VOUT,0,vol,0x04);
-            break;
-        case WL2868C_LDO4:
-            ret = wl2868c_voltage_output_t(WL2868C_REG_LDO4_VOUT,0,vol,0x08);
-            break;
-        case WL2868C_LDO5:
-            ret = wl2868c_voltage_output_t(WL2868C_REG_LDO5_VOUT,0,vol,0x10);
-            break;
-        case WL2868C_LDO6:
-            ret = wl2868c_voltage_output_t(WL2868C_REG_LDO6_VOUT,0,vol,0x20);
-            break;
-        case WL2868C_LDO7:
-            ret = wl2868c_voltage_output_t(WL2868C_REG_LDO7_VOUT,0,vol,0x40);
-            break;
-        default:
-            return -1;
-    }
-    return ret;
+		ret = wl2868c_voltage_output_t(WL2868C_REG_LDO2_VOUT, 1, vol, 0x02);
+		break;
+	case WL2868C_LDO3:
+		ret = wl2868c_voltage_output_t(WL2868C_REG_LDO3_VOUT, 0, vol, 0x04);
+		break;
+	case WL2868C_LDO4:
+		ret = wl2868c_voltage_output_t(WL2868C_REG_LDO4_VOUT, 0, vol, 0x08);
+		break;
+	case WL2868C_LDO5:
+		ret = wl2868c_voltage_output_t(WL2868C_REG_LDO5_VOUT, 0, vol, 0x10);
+		break;
+	case WL2868C_LDO6:
+		ret = wl2868c_voltage_output_t(WL2868C_REG_LDO6_VOUT, 0, vol, 0x20);
+		break;
+	case WL2868C_LDO7:
+		ret = wl2868c_voltage_output_t(WL2868C_REG_LDO7_VOUT, 0, vol, 0x40);
+		break;
+	default:
+		return -1;
+	}
+	return ret;
 }
 /*!
  * wl2868c power on function
@@ -338,84 +334,84 @@ static int wl2868c_power_on(struct device *dev)
  */
 static int wl2868c_get_match_id(struct device *dev)
 {
-    int ret = 0;
-    int access_time = 3;
-    ret = of_property_read_u32(dev->of_node, "id_reg", (u32 *)&(wl2868c_data.id_reg));
-    pr_err("wl2868c_get_match_id\n");
-    if (ret) {
-        pr_err("id_reg missing or invalid\n");
-        return ret;
-    }
-    ret = of_property_read_u32(dev->of_node, "id_val", (u32 *)&(wl2868c_data.id_val));
-    if (ret) {
-        pr_err("id_val missing or invalid\n");
-        return ret;
-    }
-    pr_err("%s, id_val %d\n",__func__, wl2868c_data.id_val);
-    ret = wl2868c_read_reg(wl2868c_data.id_reg, &(wl2868c_data.chip_id));
-    pr_err("%s, chip_id %d\n",__func__, wl2868c_data.chip_id);
-    while (ret == -1 && --access_time) {
-        mdelay(2);
-        ret = wl2868c_read_reg(wl2868c_data.id_reg, &(wl2868c_data.chip_id));
-    }
-    return ret;
+	int ret = 0;
+	int access_time = 3;
+	ret = of_property_read_u32(dev->of_node, "id_reg", (u32 *)&(wl2868c_data.id_reg));
+	pr_err("wl2868c_get_match_id\n");
+	if (ret) {
+		pr_err("id_reg missing or invalid\n");
+		return ret;
+	}
+	ret = of_property_read_u32(dev->of_node, "id_val", (u32 *)&(wl2868c_data.id_val));
+	if (ret) {
+		pr_err("id_val missing or invalid\n");
+		return ret;
+	}
+	pr_err("%s, id_val %d\n", __func__, wl2868c_data.id_val);
+	ret = wl2868c_read_reg(wl2868c_data.id_reg, &(wl2868c_data.chip_id));
+	pr_err("%s, chip_id %d\n", __func__, wl2868c_data.chip_id);
+	while (ret == -1 && --access_time) {
+		mdelay(2);
+		ret = wl2868c_read_reg(wl2868c_data.id_reg, &(wl2868c_data.chip_id));
+	}
+	return ret;
 }
 
 static ssize_t v_ldo_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-    ssize_t len = 0;
-    int i = 0;
-    u8 reg[7];
-    u8 reg_en;
-    for (i = 0; i < 7; i++) {
-        wl2868c_read_reg(i + 3, &reg[i]);
-    }
-    wl2868c_read_reg(WL2868C_REG_LDOX_EN, &reg_en);
+	ssize_t len = 0;
+	int i = 0;
+	u8 reg[7];
+	u8 reg_en;
+	for (i = 0; i < 7; i++) {
+		wl2868c_read_reg(i + 3, &reg[i]);
+	}
+	wl2868c_read_reg(WL2868C_REG_LDOX_EN, &reg_en);
 
-    for (i = 0;i < 7; i++) {
-        len += snprintf(buf + len, PAGE_SIZE, "%d, setvol = %d, reg = %x\n", i+1, wl2868c_data.v_ldo[i], reg[i]);
-    }
-    len += snprintf(buf + len, PAGE_SIZE, "reg_en = %x\n", reg_en);
-    return len;
+	for (i = 0;i < 7; i++) {
+		len += snprintf(buf + len, PAGE_SIZE, "%d, setvol = %d, reg = %x\n", i+1, wl2868c_data.v_ldo[i], reg[i]);
+	}
+	len += snprintf(buf + len, PAGE_SIZE, "reg_en = %x\n", reg_en);
+	return len;
 }
 static ssize_t v_ldo_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
-    int ret = 0;
-    int i = 0;
-    int temp_ldo_vol = 0;
-    if (strlen(buf) < 2 || strlen(buf) > 16)
-        return size;
+	int ret = 0;
+	int i = 0;
+	int temp_ldo_vol = 0;
+	if (strlen(buf) < 2 || strlen(buf) > 16)
+		return size;
 
-    ret = sscanf(buf, "%d,%d", &i, &temp_ldo_vol);
-    if (!ret) {
-        pr_err("input v_ldo_store format error!\n");
-    } else {
-        pr_err("input v_ldo_store i %d , vol = %d\n",i,temp_ldo_vol);
-    }
-    if (i > 0 && i < 8) {
-        wl2868c_data.v_ldo[i - 1] = temp_ldo_vol;
-        pr_err("v_ldo[i] v_ldo_store i %d , vol = %d\n",i,wl2868c_data.v_ldo[i - 1]);
-        wl2868c_voltage_output(i, wl2868c_data.v_ldo[i - 1]);
-    }
+	ret = sscanf(buf, "%d,%d", &i, &temp_ldo_vol);
+	if (!ret) {
+		pr_err("input v_ldo_store format error!\n");
+	} else {
+		pr_err("input v_ldo_store i %d , vol = %d\n", i, temp_ldo_vol);
+	}
+	if (i > 0 && i < 8) {
+		wl2868c_data.v_ldo[i - 1] = temp_ldo_vol;
+		pr_err("v_ldo[i] v_ldo_store i %d, vol = %d\n", i, wl2868c_data.v_ldo[i - 1]);
+		wl2868c_voltage_output(i, wl2868c_data.v_ldo[i - 1]);
+	}
 
-    return size;
+	return size;
 }
 static DEVICE_ATTR(v_ldo, S_IWUSR | S_IRUGO, v_ldo_show, v_ldo_store);
 
 static struct device_attribute *wl2868c_attributes[] = {
-    &dev_attr_v_ldo,
-    NULL,
+	&dev_attr_v_ldo,
+	NULL,
 };
 
 void enable_wl2868c_gpio(int pwr_status)
 {
 	if (wl2868c_data.en_gpio)
-        gpio_set_value(wl2868c_data.en_gpio, pwr_status);
+		gpio_set_value(wl2868c_data.en_gpio, pwr_status);
 }
 EXPORT_SYMBOL(enable_wl2868c_gpio);
 int wl2868c_ldo_2_set_voltage(unsigned int set_uV)
 {
-    return wl2868c_voltage_output(2, set_uV/1000); /* ldo 2 */
+	return wl2868c_voltage_output(2, set_uV/1000); /* ldo 2 */
 }
 
 int wl2868c_ldo_set_disable(unsigned int ldo_num)
@@ -429,12 +425,12 @@ int wl2868c_ldo_set_disable(unsigned int ldo_num)
 	}
 	return ret;
 #else
-        return wl2868c_voltage_output(ldo_num, -1);
+		return wl2868c_voltage_output(ldo_num, -1);
 #endif
 }
 int wl2868c_ldo_2_set_disable(void)
 {
-    return wl2868c_voltage_output(WL2868C_LDO2, -1);
+	return wl2868c_voltage_output(WL2868C_LDO2, -1);
 }
 
 /*!
@@ -446,35 +442,35 @@ int wl2868c_ldo_2_set_disable(void)
  */
 static int wl2868c_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
-    int ret = 0;
-    struct device_attribute *attr;
-    struct device_attribute **attrs = wl2868c_attributes;
-    pr_err("wl2868c_probe strart attr ok!\n");
-    memset(&wl2868c_data, 0, sizeof(struct wl2868c_data_t));
-    wl2868c_data.i2c_client = client;
-    wl2868c_data.ldo_en_select = 0;
-    ret = wl2868c_power_on(&client->dev);
-    if (ret) {
-        pr_err("wl2868c_power_on failed %d\n", ret);
-        return ret;
-    }
-    ret = wl2868c_get_match_id(&client->dev);
-    if (ret) {
-        wl2868c_data.wl2868_status_flag = -1;
-        pr_err("wl2868c_get_match_id i2c read failed  probe failed%d\n", ret);
-        return ret;
-    } else {
-        wl2868c_data.wl2868_status_flag = (wl2868c_data.chip_id == wl2868c_data.id_val) ? 1 : 0;
-        pr_err("wl2868c_get_match_id i2c read success  %d\n", ret);
-    }
-    while ((attr = *attrs++)) {
-        ret = device_create_file(&client->dev,attr);
-        if (ret) {
-            pr_err(" device_create_file error\n");
-        }
-    }
-    pr_err("wl2868c_probe successed!\n");
-    return 0;
+	int ret = 0;
+	struct device_attribute *attr;
+	struct device_attribute **attrs = wl2868c_attributes;
+	pr_err("wl2868c_probe strart attr ok!\n");
+	memset(&wl2868c_data, 0, sizeof(struct wl2868c_data_t));
+	wl2868c_data.i2c_client = client;
+	wl2868c_data.ldo_en_select = 0;
+	ret = wl2868c_power_on(&client->dev);
+	if (ret) {
+		pr_err("wl2868c_power_on failed %d\n", ret);
+		return ret;
+	}
+	ret = wl2868c_get_match_id(&client->dev);
+	if (ret) {
+		wl2868c_data.wl2868_status_flag = -1;
+		pr_err("wl2868c_get_match_id i2c read failed  probe failed%d\n", ret);
+		return ret;
+	} else {
+		wl2868c_data.wl2868_status_flag = (wl2868c_data.chip_id == wl2868c_data.id_val) ? 1 : 0;
+		pr_err("wl2868c_get_match_id i2c read success  %d\n", ret);
+	}
+	while ((attr = *attrs++)) {
+		ret = device_create_file(&client->dev, attr);
+		if (ret) {
+			pr_err(" device_create_file error\n");
+		}
+	}
+	pr_err("wl2868c_probe successed!\n");
+	return 0;
 }
 
 /*!
@@ -485,8 +481,8 @@ static int wl2868c_probe(struct i2c_client *client, const struct i2c_device_id *
  */
 static int wl2868c_remove(struct i2c_client *client)
 {
-    pr_debug("deregister wl2868c device ok\n");
-    return 0;
+	pr_debug("deregister wl2868c device ok\n");
+	return 0;
 }
 
 /*!
@@ -494,8 +490,8 @@ static int wl2868c_remove(struct i2c_client *client)
  */
 static const struct i2c_device_id wl2868c_id[] =
 {
-    {"wl2868c-i2c", 0},
-    {},
+	{"wl2868c-i2c", 0},
+	{},
 };
 
 MODULE_DEVICE_TABLE(i2c, wl2868c_id);
@@ -505,12 +501,12 @@ MODULE_DEVICE_TABLE(i2c, wl2868c_id);
  */
 static struct i2c_driver wl2868c_i2c_driver =
 {
-    .driver = {
-        .owner = THIS_MODULE,
-        .name  = "wl2868c-i2c",},
-    .probe  = wl2868c_probe,
-    .remove = wl2868c_remove,
-    .id_table = wl2868c_id,
+	.driver = {
+		.owner = THIS_MODULE,
+		.name  = "wl2868c-i2c", },
+	.probe  = wl2868c_probe,
+	.remove = wl2868c_remove,
+	.id_table = wl2868c_id,
 };
 
 /*!
@@ -520,14 +516,14 @@ static struct i2c_driver wl2868c_i2c_driver =
  */
 static __init int wl2868c_init(void)
 {
-    u8 ret = 0;
-    ret = i2c_add_driver(&wl2868c_i2c_driver);
-    if (ret != 0) {
-        pr_err("%s: add driver failed, error=%d\n",__func__, ret);
-        return ret;
-    }
-    pr_debug("%s: add driver success\n", __func__);
-    return ret;
+	u8 ret = 0;
+	ret = i2c_add_driver(&wl2868c_i2c_driver);
+	if (ret != 0) {
+		pr_err("%s: add driver failed, error=%d\n", __func__, ret);
+		return ret;
+	}
+	pr_debug("%s: add driver success\n", __func__);
+	return ret;
 }
 
 /*!
@@ -535,7 +531,7 @@ static __init int wl2868c_init(void)
  */
 static void __exit wl2868c_clean(void)
 {
-    i2c_del_driver(&wl2868c_i2c_driver);
+	i2c_del_driver(&wl2868c_i2c_driver);
 }
 
 module_init(wl2868c_init);

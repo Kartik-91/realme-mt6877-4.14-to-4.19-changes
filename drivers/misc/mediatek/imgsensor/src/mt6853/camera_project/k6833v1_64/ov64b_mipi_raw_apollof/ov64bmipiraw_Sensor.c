@@ -1841,39 +1841,20 @@ static kal_uint32 set_test_pattern_mode(kal_bool enable)
 {
     LOG_INF("Jesse+ enable: %d\n", enable);
     if (enable) {
-
-        write_cmos_sensor(0x0304, 0x00);
-        write_cmos_sensor(0x0305, 0xba);
-        write_cmos_sensor(0x0324, 0x00);
-        write_cmos_sensor(0x0325, 0xf0);
-        write_cmos_sensor(0x034b, 0x00);
-        write_cmos_sensor(0x380c, 0x06);
-        write_cmos_sensor(0x380d, 0xc0);
-        write_cmos_sensor(0x4837, 0x11);
-        write_cmos_sensor(0x4850, 0x43);
-
-        write_cmos_sensor(0x5000, 0x81);
-        write_cmos_sensor(0x5001, 0x40);
-        write_cmos_sensor(0x5002, 0x92);
-        write_cmos_sensor(0x5081, 0x81);
-        } else {
-
-        write_cmos_sensor(0x0304, 0x01);
-        write_cmos_sensor(0x0305, 0x75);
-        write_cmos_sensor(0x0324, 0x01);
-        write_cmos_sensor(0x0325, 0xe0);
-        write_cmos_sensor(0x034b, 0x00);
-        write_cmos_sensor(0x380c, 0x06);
-        write_cmos_sensor(0x380d, 0xc0);
-        write_cmos_sensor(0x4837, 0x08);
-        write_cmos_sensor(0x4850, 0x43);
-
-        write_cmos_sensor(0x5000, 0xCB);
-        write_cmos_sensor(0x5001, 0x43);
-        write_cmos_sensor(0x5002, 0x9E);
-        write_cmos_sensor(0x5081, 0x80);
-        }
-
+        write_cmos_sensor(0x3019, 0xf0);
+        write_cmos_sensor(0x4308, 0x01);
+        write_cmos_sensor(0x4300, 0x00);
+        write_cmos_sensor(0x4302, 0x00);
+        write_cmos_sensor(0x4304, 0x00);
+        write_cmos_sensor(0x4306, 0x00);
+    } else {
+        write_cmos_sensor(0x3019, 0xd2);
+        write_cmos_sensor(0x4308, 0x00);
+        write_cmos_sensor(0x4300, 0x00);
+        write_cmos_sensor(0x4302, 0x00);
+        write_cmos_sensor(0x4304, 0x00);
+        write_cmos_sensor(0x4306, 0x00);
+    }
     spin_lock(&imgsensor_drv_lock);
     imgsensor.test_pattern = enable;
     spin_unlock(&imgsensor_drv_lock);

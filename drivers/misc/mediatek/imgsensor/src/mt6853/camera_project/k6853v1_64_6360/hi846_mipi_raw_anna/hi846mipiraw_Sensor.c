@@ -47,7 +47,7 @@ static DEFINE_SPINLOCK(imgsensor_drv_lock);
 /*add by zhangyang for lost of bsp oppo proect, should be remove if normal publish.*/
 
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
-#include "soc/oppo/oppo_project.h"
+#include <soc/oplus/system/oplus_project.h>
 #endif
 
 #define LONGEXP1	0xFFFF9   /* 最大曝光行（20bit） */

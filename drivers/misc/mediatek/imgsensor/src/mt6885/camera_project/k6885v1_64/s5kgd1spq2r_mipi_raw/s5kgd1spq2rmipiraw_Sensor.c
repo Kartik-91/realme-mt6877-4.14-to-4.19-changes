@@ -3276,7 +3276,11 @@ static kal_uint32 set_test_pattern_mode(kal_bool enable)
 	if (enable) {
 		/* 0x5E00[8]: 1 enable,  0 disable*/
 		/* 0x5E00[1:0]; 00 Color bar, 01 Random Data, 10 Square, 11 BLACK*/
-		write_cmos_sensor_16_16(0x0600, 0x0002);
+		write_cmos_sensor_16_16(0x0600, 0x0001);
+		write_cmos_sensor_16_16(0x0602, 0x0000);
+		write_cmos_sensor_16_16(0x0604, 0x0000);
+		write_cmos_sensor_16_16(0x0606, 0x0000);
+		write_cmos_sensor_16_16(0x0608, 0x0000);
 	} else {
 		/* 0x5E00[8]: 1 enable,  0 disable*/
 		/* 0x5E00[1:0]; 00 Color bar, 01 Random Data, 10 Square, 11 BLACK*/
@@ -3465,7 +3469,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 		break;
         case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
             {
-                *(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -17180000;
+                *(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -1200100;
                 break;
         }
 	#endif

@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef __LINUX_TCPCI_TYPEC_H
@@ -26,11 +18,7 @@ extern bool tcpc_typec_is_act_as_sink_role(struct tcpc_device *tcpc);
  * 3. Policy Engine -> PR_SWAP, Error_Recovery, PE_Idle
  *****************************************************************************/
 
-#ifdef OPLUS_FEATURE_CHG_BASIC
-/*
- * [BLOCK] TYPEC Connection State Definition
- */
-
+#ifdef OPLUS_FEATURE_CHG_BASIC 
 enum TYPEC_CONNECTION_STATE {
 	typec_disabled = 0,
 	typec_errorrecovery,
@@ -105,7 +93,8 @@ enum TYPEC_CONNECTION_STATE {
 
 	typec_unattachwait_pe,	/* Wait Policy Engine go to Idle */
 };
-#endif /* OPLUS_FEATURE_CHG_BASIC */
+#endif /* OPLUS_FEATURE_CHG_BASIC  */
+
 extern int tcpc_typec_enter_lpm_again(struct tcpc_device *tcpc);
 extern int tcpc_typec_handle_cc_change(struct tcpc_device *tcpc);
 

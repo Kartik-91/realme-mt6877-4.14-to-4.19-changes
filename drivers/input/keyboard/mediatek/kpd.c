@@ -1,26 +1,12 @@
 /*
- * Copyright (C) 2010 MediaTek, Inc.
+ * SPDX-License-Identifier: GPL-2.0
  *
- * Author: Terry Chang <terry.chang@mediatek.com>
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
+ * Copyright (c) 2021 MediaTek Inc.
  */
-
-#define DEBUG 1
 
 #include "kpd.h"
 #ifdef CONFIG_PM_SLEEP
 #include <linux/pm_wakeup.h>
-#else
-#include <linux/wakelock.h>
 #endif
 #include <linux/of.h>
 #include <linux/of_address.h>
@@ -28,14 +14,11 @@
 #include <linux/clk.h>
 #include <linux/debugfs.h>
 #include <linux/pinctrl/consumer.h>
-
-#ifndef CONFIG_MACH_MT6768_BAK
 //#ifdef OPLUS_FEATURE_TP_BASIC
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
 #include <linux/of_gpio.h>
-//#include <soc/oppo/oppo_project.h>
-#endif /*CONFIG_MACH_MT6768*/
+#include <soc/oplus/system/oplus_project.h>
 //#endif /*OPLUS_FEATURE_TP_BASIC*/
 
 #if IS_ENABLED(CONFIG_OPLUS_FEATURE_THEIA)
@@ -50,7 +33,6 @@ struct timer_list Long_press_key_timer;
 atomic_t vol_down_long_press_flag = ATOMIC_INIT(0);
 #endif
 //#ifdef OPLUS_FEATURE_TP_BASIC
-#ifndef CONFIG_MACH_MT6768_BAK
 //#define KPD_HOME_NAME 		"mtk-kpd-home"
 #define KPD_VOL_UP_NAME		"mtk-kpd-vol-up"
 #define KPD_VOL_DOWN_NAME	"mtk-kpd-vol-down"
@@ -90,16 +72,10 @@ static irqreturn_t kpd_volumedown_irq_handler(int irq, void *dev_id);
 static void kpd_volumedown_task_process(unsigned long data);
 static DECLARE_TASKLET(kpd_volumekey_down_tasklet, kpd_volumedown_task_process, 0);
 
-#ifdef CONFIG_OPPO_SPECIAL_BUILD
-static int aee_kpd_enable = 1;
-#else
 static int aee_kpd_enable = 0;
-#endif
 static void kpd_aee_handler(u32 keycode, u16 pressed);
 static inline void kpd_update_aee_state(void);
-#ifdef CONFIG_MACH_MT6785
-int g_cphy_dphy_gpio_value = -1;
-#endif
+
 #define VOLKEYPASSWORD 17331	//0x43b3
 int door_open = 0;
 static unsigned int vol_key_password = 0;
@@ -254,19 +230,12 @@ static irqreturn_t kpd_volumedown_irq_handler(int irq, void *dev_id)
 #endif
     kpd_notice("kpd_volumedown_irq_handler called\n");
 	disable_irq_nosync(vol_key_info.vol_down_irq);
-	
+
 	//tasklet_schedule(&kpd_volumekey_down_tasklet);
 	hrtimer_start(&vol_down_timer, ktime_set(0, VOL_DOWN_DELAY_TIME), HRTIMER_MODE_REL);
 
 	return IRQ_HANDLED;
 }
-#else /*CONFIG_MACH_MT6768*/
-#ifdef CONFIG_OPPO_SPECIAL_BUILD
-static int aee_kpd_enable = 1;
-#else
-static int aee_kpd_enable = 0;
-#endif
-#endif /*CONFIG_MACH_MT6768*/
 int kpd_klog_en;
 void __iomem *kp_base;
 static unsigned int kp_irqnr;
@@ -281,9 +250,7 @@ static u16 kpd_keymap_state[KPD_NUM_MEMS];
 
 struct input_dev *kpd_input_dev;
 #ifdef CONFIG_PM_SLEEP
-struct wakeup_source kpd_suspend_lock;
-#else
-struct wake_lock kpd_suspend_lock;
+struct wakeup_source* kpd_suspend_lock;
 #endif
 struct keypad_dts_data kpd_dts_data;
 
@@ -450,7 +417,6 @@ static inline void kpd_update_aee_state(void)
 #endif
 	}
 }
-#ifndef CONFIG_MACH_MT6768_BAK
 static void kpd_aee_handler(u32 keycode, u16 pressed)
 {
 	if (pressed) {
@@ -471,7 +437,6 @@ static void kpd_aee_handler(u32 keycode, u16 pressed)
 		kpd_update_aee_state();
 	}
 }
-#endif /*CONFIG_MACH_MT6768*/
 static enum hrtimer_restart aee_timer_func(struct hrtimer *timer)
 {
         /* kpd_info("kpd: vol up+vol down AEE manual dump!\n"); */
@@ -537,7 +502,6 @@ void kpd_pmic_rstkey_handler(unsigned long pressed)
 	kpd_aee_handler(KPD_PMIC_RSTKEY_MAP, pressed);
 #endif
 
-#ifndef CONFIG_MACH_MT6768_BAK
 //#ifdef OPLUS_FEATURE_TP_BASIC
 if(vol_key_info.homekey_as_vol_up) {
 	kpd_set_vol_key_state(kpd_dts_data.kpd_sw_rstkey, !pressed);
@@ -547,7 +511,6 @@ if(vol_key_info.homekey_as_vol_up) {
 	}
 }
 //#endif /* OPLUS_FEATURE_TP_BASIC */
-#endif /*CONFIG_MACH_MT6768*/
 }
 
 static void kpd_keymap_handler(unsigned long data)
@@ -556,13 +519,10 @@ static void kpd_keymap_handler(unsigned long data)
 	int32_t pressed;
 	u16 new_state[KPD_NUM_MEMS], change, mask;
 	u16 hw_keycode, linux_keycode;
-	void *dest;
 
 	kpd_get_keymap_state(new_state);
 #ifdef CONFIG_PM_SLEEP
-	__pm_wakeup_event(&kpd_suspend_lock, 500);
-#else
-	wake_lock_timeout(&kpd_suspend_lock, HZ / 2);
+	__pm_wakeup_event(kpd_suspend_lock, 500);
 #endif
 	for (i = 0; i < KPD_NUM_MEMS; i++) {
 		change = new_state[i] ^ kpd_keymap_state[i];
@@ -612,15 +572,12 @@ static void kpd_keymap_handler(unsigned long data)
 		}
 	}
 
-	dest = memcpy(kpd_keymap_state, new_state, sizeof(new_state));
+	memcpy(kpd_keymap_state, new_state, sizeof(new_state));
 	enable_irq(kp_irqnr);
 }
 
 static irqreturn_t kpd_irq_handler(int irq, void *dev_id)
 {
-//#ifdef OPLUS_FEATURE_TP_BASIC
-//	return IRQ_HANDLED;   //tanyang test
-//#endif /*OPLUS_FEATURE_TP_BASIC*/
 	/* use _nosync to avoid deadlock */
 	disable_irq_nosync(kp_irqnr);
 	tasklet_schedule(&kpd_keymap_tasklet);
@@ -661,6 +618,8 @@ void kpd_get_dts_info(struct device_node *node)
 		&kpd_dts_data.kpd_hw_factory_key);
 	of_property_read_u32(node, "mediatek,kpd-hw-map-num",
 		&kpd_dts_data.kpd_hw_map_num);
+	of_property_read_u32(node, "mediatek,boot_mode",
+		&kpd_dts_data.boot_mode);
 	ret = of_property_read_u32_array(node, "mediatek,kpd-hw-init-map",
 		kpd_dts_data.kpd_hw_init_map,
 			kpd_dts_data.kpd_hw_map_num);
@@ -677,7 +636,6 @@ void kpd_get_dts_info(struct device_node *node)
 				kpd_dts_data.kpd_sw_rstkey);
 }
 
-#ifndef CONFIG_MACH_MT6768_BAK
 //#ifdef OPLUS_FEATURE_TP_BASIC
 static int kpd_request_named_gpio(struct vol_info *kpd,
 		const char *label, int *gpio)
@@ -778,10 +736,10 @@ static int init_custom_gpio_state(struct platform_device *client) {
 			pr_err("%d volume down irp node not exist\n", __LINE__);
 			return -1;
 		}
-		
+
 		hrtimer_init(&vol_down_timer,CLOCK_MONOTONIC,HRTIMER_MODE_REL);
 		vol_down_timer.function = vol_down_timer_func;
-		
+
 		ret = of_property_read_u32(node, "debounce", &debounce_time);
 		if (ret) {
 			pr_err("%s vol_down get debounce_time fail\n", __func__);
@@ -858,7 +816,6 @@ static void init_proc_aee_kpd_enable(void)
 
 }
 //#endif /* OPLUS_FEATURE_TP_BASIC */
-#endif /*CONFIG_MACH_MT6768*/
 static int32_t kpd_gpio_init(struct device *dev)
 {
 	struct pinctrl *keypad_pinctrl;
@@ -906,16 +863,19 @@ static int mt_kpd_debugfs(void)
 static int kpd_pdrv_probe(struct platform_device *pdev)
 {
 	struct clk *kpd_clk = NULL;
-        u32 i;
-        int32_t err = 0;
-#ifndef CONFIG_MACH_MT6768_BAK
+	u32 i;
+	int32_t err = 0;
 //#ifdef OPLUS_FEATURE_TP_BASIC
 	struct device *dev = &pdev->dev;
-	struct vol_info *kpd_oppo;
+	struct vol_info *kpd_oplus = NULL;
 
-	kpd_oppo = devm_kzalloc(dev, sizeof(*kpd_oppo), GFP_KERNEL);
+	kpd_oplus = devm_kzalloc(dev, sizeof(*kpd_oplus), GFP_KERNEL);
+	if (!kpd_oplus) {
+		kpd_notice("kpd: alloc vol_info fail\n");
+		return -ENOMEM;
+	}
 //#endif /*OPLUS_FEATURE_TP_BASIC*/
-#endif /*CONFIG_MACH_MT6768*/
+	printk("kpd_pdrv_probe\n");
 	if (!pdev->dev.of_node) {
 		kpd_notice("no kpd dev node\n");
 		return -ENODEV;
@@ -994,7 +954,7 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 		return err;
 	}
 #ifdef CONFIG_PM_SLEEP
-	wakeup_source_init(&kpd_suspend_lock, "kpd wakelock");
+	kpd_suspend_lock = wakeup_source_register(NULL, "kpd wakelock");
 #endif
 	/* register IRQ and EINT */
 	kpd_set_debounce(kpd_dts_data.kpd_key_debounce);
@@ -1027,11 +987,10 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 		kpd_delete_attr(&kpd_pdrv.driver);
 		return err;
 	}
-#ifndef CONFIG_MACH_MT6768_BAK
 //#ifdef OPLUS_FEATURE_TP_BASIC
-	kpd_oppo->dev = dev;
-	dev_set_drvdata(dev, kpd_oppo);
-	kpd_oppo->pdev = pdev;
+	kpd_oplus->dev = dev;
+	dev_set_drvdata(dev, kpd_oplus);
+	kpd_oplus->pdev = pdev;
 
 	if (kpd_dts_data.kpd_sw_rstkey == KEY_VOLUMEUP) {
 		vol_key_info.homekey_as_vol_up = true;
@@ -1040,7 +999,7 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 	}
 
 	if (!vol_key_info.homekey_as_vol_up) {  // means not home key as volume up, defined on dws
-		err = kpd_request_named_gpio(kpd_oppo, "keypad,volume-up",
+		err = kpd_request_named_gpio(kpd_oplus, "keypad,volume-up",
 				&vol_key_info.vol_up_gpio);
 
 		if (err) {
@@ -1050,13 +1009,13 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 		err = gpio_direction_input(vol_key_info.vol_up_gpio);
 
 		if (err < 0) {
-			dev_err(&kpd_oppo->pdev->dev,
+			dev_err(&kpd_oplus->pdev->dev,
 				"gpio_direction_input failed for vol_up INT.\n");
 			return -1;
 		}
 	}
 
-	err = kpd_request_named_gpio(kpd_oppo, "keypad,volume-down",
+	err = kpd_request_named_gpio(kpd_oplus, "keypad,volume-down",
 			&vol_key_info.vol_down_gpio);
 	if (err) {
 		pr_err("%s request keypad,volume-down fail\n", __func__);
@@ -1065,7 +1024,7 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 	err = gpio_direction_input(vol_key_info.vol_down_gpio);
 
 	if (err < 0) {
-		dev_err(&kpd_oppo->pdev->dev,
+		dev_err(&kpd_oplus->pdev->dev,
 			"gpio_direction_input failed for vol_down INT.\n");
 		return -1;
 	}
@@ -1089,8 +1048,15 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 //#endif /*OPLUS_FEATURE_TP_BASIC*/
 //#ifdef OPLUS_FEATURE_TP_BASIC
 	init_proc_aee_kpd_enable();
+	if(get_eng_version() == AGING ||
+	   get_eng_version() == PREVERSION ||
+	   get_eng_version() == HIGH_TEMP_AGING ||
+	   get_eng_version() == FACTORY) {
+		aee_kpd_enable = 1;
+	} else {
+		aee_kpd_enable = 0;
+	}
 //#endif /* OPLUS_FEATURE_TP_BASIC */
-#endif /*CONFIG_MACH_MT6768*/
 	/* Add kpd debug node */
 	mt_kpd_debugfs();
 
@@ -1102,7 +1068,6 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 static int kpd_pdrv_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	kpd_suspend = true;
-//#ifndef OPLUS_FEATURE_TP_BASIC
 #ifdef MTK_KP_WAKESOURCE
 	if (call_status == 2) {
 		kpd_print("kpd_early_suspend wake up source enable!! (%d)\n",
@@ -1113,7 +1078,6 @@ static int kpd_pdrv_suspend(struct platform_device *pdev, pm_message_t state)
 				kpd_suspend);
 	}
 #endif
-//#endif /*OPLUS_FEATURE_TP_BASIC*/
 	enable_irq_wake(vol_key_info.vol_down_irq);
 
 	kpd_print("suspend!! (%d)\n", kpd_suspend);
@@ -1123,7 +1087,6 @@ static int kpd_pdrv_suspend(struct platform_device *pdev, pm_message_t state)
 static int kpd_pdrv_resume(struct platform_device *pdev)
 {
 	kpd_suspend = false;
-//#ifndef OPLUS_FEATURE_TP_BASIC
 #ifdef MTK_KP_WAKESOURCE
 	if (call_status == 2) {
 		kpd_print("kpd_early_suspend wake up source enable!! (%d)\n",
@@ -1134,7 +1097,6 @@ static int kpd_pdrv_resume(struct platform_device *pdev)
 		kpd_wakeup_src_setting(1);
 	}
 #endif
-//#endif /*OPLUS_FEATURE_TP_BASIC*/
 	disable_irq_wake(vol_key_info.vol_down_irq);
 
 	kpd_print("resume!! (%d)\n", kpd_suspend);

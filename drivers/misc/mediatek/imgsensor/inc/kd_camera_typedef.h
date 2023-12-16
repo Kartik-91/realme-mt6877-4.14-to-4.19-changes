@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef _CAMERA_TYPEDEFS_H
@@ -27,9 +19,9 @@
 #define kal_uint8 unsigned char
 #define kal_uint16 unsigned short
 #define kal_uint32 unsigned int
-#ifdef OPLUS_FEATURE_CAMERA_COMMON
 #define kal_uint64 unsigned long long
-#endif
+
+
 
 #define UINT8 unsigned char
 #define UINT16 unsigned short

@@ -1,16 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2020 MediaTek Inc.
  */
-
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/kernel.h>
@@ -40,6 +31,18 @@ int __attribute__((weak)) mt_spower_get_leakage(
 	return 0;
 }
 
+int __attribute__((weak)) get_immediate_cpuL_wrap(void)
+{
+	return 0;
+}
+
+int __attribute__((weak)) get_immediate_cpuB_wrap(void)
+{
+	return 0;
+}
+
+
+
 #ifdef PPM_SSPM_SUPPORT
 static void *online_core;
 #endif
@@ -65,7 +68,7 @@ static void ppm_get_cluster_status(struct ppm_cluster_status *cl_status)
 static int ppm_cpu_freq_callback(struct notifier_block *nb,
 			unsigned long val, void *data)
 {
-	struct ppm_cluster_status cl_status[NR_PPM_CLUSTERS];
+	struct ppm_cluster_status cl_status[NR_PPM_CLUSTERS] = { {0} };
 	struct cpufreq_freqs *freq = data;
 	int cpu = freq->cpu;
 	int i, is_root_cpu = 0;
@@ -101,37 +104,45 @@ static struct notifier_block ppm_cpu_freq_notifier = {
 };
 #endif
 
-static int ppm_cpu_hotplug_callback(struct notifier_block *nfb,
-			unsigned long action, void *hcpu)
+static int ppm_cpu_dead(unsigned int cpu)
 {
-	struct ppm_cluster_status cl_status[NR_PPM_CLUSTERS];
+	struct ppm_cluster_status cl_status[NR_PPM_CLUSTERS] = { {0} };
 #ifdef PPM_SSPM_SUPPORT
-	int i;
+	int i = 0;
 #endif
 
-	switch (action & ~CPU_TASKS_FROZEN) {
-	case CPU_ONLINE:
-	case CPU_DEAD:
-		ppm_dbg(DLPT, "%s: action = %lu\n", __func__, action);
-		ppm_get_cluster_status(cl_status);
-#ifdef PPM_SSPM_SUPPORT
-		for_each_ppm_clusters(i)
-			mt_reg_sync_writel(
-				cl_status[i].core_num, online_core +
-				4 * i);
-#endif
-		mt_ppm_dlpt_kick_PBM(cl_status, ppm_main_info.cluster_num);
-		break;
-	default:
-		break;
-	}
+	ppm_dbg(DLPT, "%s+\n", __func__);
+	ppm_get_cluster_status(cl_status);
 
-	return NOTIFY_OK;
+#ifdef PPM_SSPM_SUPPORT
+	for_each_ppm_clusters(i)
+		mt_reg_sync_writel(cl_status[i].core_num, online_core +	4 * i);
+#endif
+	mt_ppm_dlpt_kick_PBM(cl_status, ppm_main_info.cluster_num);
+
+	return 0;
 }
 
-static struct notifier_block __refdata ppm_cpu_hotplug_notifier = {
-	.notifier_call = ppm_cpu_hotplug_callback,
-};
+static int ppm_cpu_up(unsigned int cpu)
+{
+	struct ppm_cluster_status cl_status[NR_PPM_CLUSTERS] = { {0} };
+#ifdef PPM_SSPM_SUPPORT
+	int i = 0;
+#endif
+
+	ppm_dbg(DLPT, "%s+\n", __func__);
+	ppm_get_cluster_status(cl_status);
+
+#ifdef PPM_SSPM_SUPPORT
+	for_each_ppm_clusters(i)
+		mt_reg_sync_writel(cl_status[i].core_num, online_core +	4 * i);
+#endif
+	mt_ppm_dlpt_kick_PBM(cl_status, ppm_main_info.cluster_num);
+
+	return 0;
+}
+
+
 
 #ifdef CONFIG_THERMAL
 static unsigned int ppm_get_cpu_temp(enum ppm_cluster cluster)
@@ -156,7 +167,7 @@ static unsigned int ppm_get_cpu_temp(enum ppm_cluster cluster)
 
 static int ppm_get_spower_devid(enum ppm_cluster cluster)
 {
-#if 0
+#ifdef FIX_ME
 	int devid = -1;
 
 	switch (cluster) {
@@ -194,7 +205,8 @@ int ppm_platform_init(void)
 	cpufreq_register_notifier(
 		&ppm_cpu_freq_notifier, CPUFREQ_TRANSITION_NOTIFIER);
 #endif
-	register_hotcpu_notifier(&ppm_cpu_hotplug_notifier);
+	cpuhp_setup_state_nocalls(CPUHP_BP_PREPARE_DYN,
+		"ppm/cpuhp", ppm_cpu_up, ppm_cpu_dead);
 
 	return 0;
 }
@@ -220,7 +232,7 @@ int ppm_find_pwr_idx(struct ppm_cluster_status *cluster_status)
 
 #ifdef CONFIG_MTK_UNIFY_POWER
 		if (core > 0 && opp >= 0 && opp < DVFS_OPP_NUM) {
-#if 1
+#ifndef FIX_ME
 			pwr_idx += cobra_tbl->basic_pwr_tbl
 				[CORE_NUM_L*i+core-1][opp].power_idx;
 #else
@@ -279,6 +291,11 @@ int ppm_get_max_pwr_idx(void)
 	}
 
 	return ppm_find_pwr_idx(status);
+}
+
+unsigned int ppm_get_cur_freq(enum ppm_cluster cluster)
+{
+	return mt_cpufreq_get_cur_phy_freq_no_lock(cluster);
 }
 
 unsigned int ppm_calc_total_power(struct ppm_cluster_status *cluster_status,
@@ -343,8 +360,8 @@ unsigned int mt_ppm_get_leakage_mw(enum ppm_cluster_lkg cluster)
 
 	/* read total leakage */
 	if (cluster >= TOTAL_CLUSTER_LKG) {
-		struct ppm_cluster_status cl_status[NR_PPM_CLUSTERS];
-		int i;
+		struct ppm_cluster_status cl_status[NR_PPM_CLUSTERS] = { {0} };
+		int i = 0;
 
 		ppm_get_cluster_status(cl_status);
 

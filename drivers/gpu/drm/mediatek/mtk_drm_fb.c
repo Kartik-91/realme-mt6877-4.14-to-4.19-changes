@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2015 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <drm/drmP.h>
 #include <drm/drm_crtc_helper.h>
@@ -111,8 +103,12 @@ static int mtk_drm_fb_create_handle(struct drm_framebuffer *fb,
 				    unsigned int *handle)
 {
 	struct mtk_drm_fb *mtk_fb = to_mtk_fb(fb);
+	int ret = -EINVAL;
 
-	return drm_gem_handle_create(file_priv, mtk_fb->gem_obj, handle);
+	if (mtk_fb->gem_obj && mtk_fb->gem_obj->dev)
+		ret = drm_gem_handle_create(file_priv, mtk_fb->gem_obj, handle);
+
+	return ret;
 }
 
 static void mtk_drm_fb_destroy(struct drm_framebuffer *fb)

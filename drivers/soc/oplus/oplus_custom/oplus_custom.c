@@ -1,6 +1,7 @@
 /************************************************************************************
  **OPLUS Mobile Comm Corp
  ** File: - kernel-4.4\drivers\soc\oplus\oplus_custom\oplus_custom.c
+ ** OPLUS_BUG_STABILITY
  ** Copyright (C), 2008-2017, OPLUS Mobile Comm Corp., Ltd
  **
  ** Description:
@@ -163,7 +164,7 @@ static void oplus_custome_sync_work(struct work_struct *work)
 			printk("oplus_custome_sync_work:timeout tryTime = %d\n",data->tryTime);
 			return;
 		}
-		if(sys_access(OPLUSCUSTOM_FILE, 0) != 0){
+		if(ksys_access(OPLUSCUSTOM_FILE, 0) != 0) {
 			printk("oplus_custome_sync_work: file %s is no exit",OPLUSCUSTOM_FILE);
 
 			data->tryTime++;

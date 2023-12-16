@@ -1,15 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2016 MediaTek Inc.
- * Author: Tiffany Lin <tiffany.lin@mediatek.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef _MTK_VCODEC_DEC_PM_H_
@@ -28,6 +19,7 @@ void mtk_vcodec_dec_pw_on(struct mtk_vcodec_pm *pm, int hw_id);
 void mtk_vcodec_dec_pw_off(struct mtk_vcodec_pm *pm, int hw_id);
 void mtk_vcodec_dec_clock_on(struct mtk_vcodec_pm *pm, int hw_id);
 void mtk_vcodec_dec_clock_off(struct mtk_vcodec_pm *pm, int hw_id);
+void mtk_vdec_hw_break(struct mtk_vcodec_dev *dev, int hw_id);
 
 void mtk_prepare_vdec_dvfs(void);
 void mtk_unprepare_vdec_dvfs(void);

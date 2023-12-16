@@ -253,7 +253,7 @@ static struct imgsensor_info_struct imgsensor_info = {
     .custom4_delay_frame = 2,
     .custom5_delay_frame = 2,
     .custom6_delay_frame = 2,
-    .isp_driving_current = ISP_DRIVING_4MA,
+    .isp_driving_current = ISP_DRIVING_8MA,
     .sensor_interface_type = SENSOR_INTERFACE_TYPE_MIPI,
     /* .mipi_sensor_type = MIPI_OPHY_NCSI2, */
     /* 0,MIPI_OPHY_NCSI2;  1,MIPI_OPHY_CSI2 */
@@ -281,7 +281,7 @@ static struct imgsensor_struct imgsensor = {
     .dummy_line = 0,	/* current dummyline */
     .current_fps = 300,
     .autoflicker_en = KAL_FALSE,
-    .test_pattern = KAL_FALSE,
+    .test_pattern = 0,
     .current_scenario_id = MSDK_SCENARIO_ID_CAMERA_PREVIEW,
     .ihdr_mode = 0, /* sensor need support LE, SE with HDR feature */
     .i2c_write_id = 0x20, /* record current sensor's i2c write id */
@@ -304,7 +304,7 @@ static struct SET_PD_BLOCK_INFO_T imgsensor_pd_info = {
     .i4BlockNumY = 0,
     .i4LeFirst = 0,
     .i4Crop = {
-        {0, 0}, {0, 0}, {0, 356}, {0, 356}, {0, 0},
+        {0, 0}, {0, 0}, {0, 384}, {0, 356}, {0, 0},
         {0, 0}, {0, 356}, {0, 0}, {0, 356}, {0, 356}
     },  //{0, 1632}
     .iMirrorFlip = 3,
@@ -416,7 +416,7 @@ static struct SENSOR_VC_INFO2_STRUCT SENSOR_VC_INFO2[12] = {
         0x04, 0x0a, 0x00, 0x08, 0x40, 0x00, //custom4	QBIN(VBIN)_2DOL_4096x2304_30FPS
         {
             {VC_STAGGER_NE, 0x00, 0x2b, 0x1000, 0x900},
-            {VC_STAGGER_SE, 0x01, 0x2b, 0x1000, 0x900},
+            {VC_STAGGER_ME, 0x01, 0x2b, 0x1000, 0x900},
             {VC_PDAF_STATS_PIX_1, 0x00, 0x30, 0xa00, 0x240},
             {VC_PDAF_STATS_PIX_2, 0x00, 0x31, 0xa00, 0x240},
         },
@@ -4024,7 +4024,7 @@ static kal_uint32 open(void)
     imgsensor.dummy_pixel = 0;
     imgsensor.dummy_line = 0;
     imgsensor.ihdr_mode = 0;
-    imgsensor.test_pattern = KAL_FALSE;
+    imgsensor.test_pattern = 0;
     imgsensor.current_fps = imgsensor_info.pre.max_framerate;
     spin_unlock(&imgsensor_drv_lock);
 
@@ -4980,20 +4980,26 @@ static kal_uint32 get_default_framerate_by_scenario(enum MSDK_SCENARIO_ID_ENUM s
     return ERROR_NONE;
 }
 
-static kal_uint32 set_test_pattern_mode(kal_bool enable)
+static kal_uint32 set_test_pattern_mode(kal_uint32 modes, struct SET_SENSOR_PATTERN_SOLID_COLOR *pdata)
 {
-    LOG_INF("enable: %d\n", enable);
-    if (enable)
-        write_cmos_sensor_8(0x0601, 0x0002); /*100% Color bar*/
-    else
-        write_cmos_sensor_8(0x0601, 0x0000); /*No pattern*/
+    pr_debug("set_test_pattern enum: %d\n", modes);
+
+    if (modes) {
+        write_cmos_sensor_8(0x020E, 0x00);
+        write_cmos_sensor_8(0x0218, 0x00);
+        write_cmos_sensor_8(0x3015, 0x00);
+    } else {
+        write_cmos_sensor_8(0x020E, 0x01);
+        write_cmos_sensor_8(0x0218, 0x01);
+        write_cmos_sensor_8(0x3015, 0x40);
+    }
 
     spin_lock(&imgsensor_drv_lock);
-    imgsensor.test_pattern = enable;
+    imgsensor.test_pattern = modes;
     spin_unlock(&imgsensor_drv_lock);
-
     return ERROR_NONE;
 }
+
 #if 0
 static kal_uint32 imx766_ana_gain_table[] = {
     100000,
@@ -6086,7 +6092,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
         }
         break;
     case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
-        *(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -8059000;
+        *(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -1430000;
         break;
     case SENSOR_FEATURE_GET_PIXEL_CLOCK_FREQ_BY_SCENARIO:
         switch (*feature_data) {
@@ -6269,7 +6275,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
         #endif
         break;
     case SENSOR_FEATURE_SET_TEST_PATTERN:
-        set_test_pattern_mode((BOOL)*feature_data);
+        set_test_pattern_mode((UINT8)*feature_data, (struct SET_SENSOR_PATTERN_SOLID_COLOR *) (feature_data+1));
         break;
     case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE:
         /* for factory mode auto testing */

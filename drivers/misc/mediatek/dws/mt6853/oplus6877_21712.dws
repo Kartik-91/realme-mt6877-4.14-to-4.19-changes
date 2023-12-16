@@ -71,6 +71,13 @@
                 <sensitive_level>Level</sensitive_level>
                 <debounce_en>Disable</debounce_en>
             </eint14>
+            <eint20>
+                <varName>SWTP</varName>
+                <debounce_time>512</debounce_time>
+                <polarity>High</polarity>
+                <sensitive_level>Level</sensitive_level>
+                <debounce_en>Enable</debounce_en>
+            </eint20>
             <eint37>
                 <varName>DSI_TE</varName>
                 <debounce_time>0</debounce_time>
@@ -298,13 +305,12 @@
                 <ies>true</ies>
             </gpio19>
             <gpio20>
-                <eint_mode>false</eint_mode>
-                <def_mode>7</def_mode>
-                <inpull_en>false</inpull_en>
-                <inpull_selhigh>false</inpull_selhigh>
+                <eint_mode>true</eint_mode>
+                <def_mode>0</def_mode>
+                <inpull_en>true</inpull_en>
+                <inpull_selhigh>true</inpull_selhigh>
                 <def_dir>IN</def_dir>
                 <out_high>false</out_high>
-                <varName0>GPIO_JTAG_TMS_PIN</varName0>
                 <smt>false</smt>
                 <ies>true</ies>
             </gpio20>
@@ -2365,7 +2371,7 @@
             <device10>
                 <varName>NFC</varName>
                 <channel>I2C_CHANNEL_8</channel>
-                <address>0x28</address>
+                <address>0x8</address>
             </device10>
             <device11>
                 <varName>CAMERA_SUB</varName>

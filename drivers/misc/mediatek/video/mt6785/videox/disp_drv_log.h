@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef __DISP_DRV_LOG_H__
 #define __DISP_DRV_LOG_H__
@@ -52,6 +44,20 @@
 	do {								\
 		dprec_logger_pr(DPREC_LOGGER_ERROR, string, ##args);	\
 		pr_info("[DISP][%s #%d]warn:"string,			\
+				__func__, __LINE__, ##args);		\
+	} while (0)
+
+#define DISPWARN(string, args...)					\
+	do {								\
+		dprec_logger_pr(DPREC_LOGGER_ERROR, string, ##args);	\
+		pr_info("[DISP][%s #%d]warn:"string,			\
+				__func__, __LINE__, ##args);		\
+	} while (0)
+
+#define DISPERR(string, args...)					\
+	do {								\
+		dprec_logger_pr(DPREC_LOGGER_ERROR, string, ##args);	\
+		pr_info("[DISP][%s #%d]ERROR:"string,			\
 				__func__, __LINE__, ##args);		\
 	} while (0)
 

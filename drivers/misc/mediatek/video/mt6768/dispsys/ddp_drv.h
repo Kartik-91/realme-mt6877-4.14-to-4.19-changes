@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 
 #ifndef __DDP_DRV_H__
@@ -235,14 +227,6 @@ struct disp_iommu_device *disp_get_iommu_dev(void);
 	_IOW(DISP_IOCTL_MAGIC, 90, int)
 #define DISP_IOCTL_OVL_DISABLE_CASCADE \
 	_IOW(DISP_IOCTL_MAGIC, 91, int)
-
-#ifdef OPLUS_BUG_STABILITY
-typedef struct {
-	    char name[128];
-} LCM_MODULE_INFO;
-
-#define DISP_IOCTL_GET_LCM_MODULE_INFO      _IOR(DISP_IOCTL_MAGIC, 236, LCM_MODULE_INFO)
-#endif /* OPLUS_BUG_STABILITY */
 
 /*PQ setting*/
 #define DISP_IOCTL_PQ_GET_DS_PARAM \

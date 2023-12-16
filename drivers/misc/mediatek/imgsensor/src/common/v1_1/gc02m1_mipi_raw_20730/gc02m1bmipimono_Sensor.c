@@ -1003,7 +1003,7 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
     kal_uint8 i = 0;
     kal_uint8 retry = 2;
     //kal_uint16 module_id = 0;
-    /*#ifdef VENDOR_EDIT
+    /*#ifdef OPLUS_FEATURE_CAMERA_COMMON
     int I2C_BUS = -1;
     I2C_BUS = i2c_adapter_id(pgi2c_cfg_legacy->pinst->pi2c_client->adapter);
     LOG_INF("gc02mo_mipi_mono_Sensor I2C_BUS = %d\n", I2C_BUS);

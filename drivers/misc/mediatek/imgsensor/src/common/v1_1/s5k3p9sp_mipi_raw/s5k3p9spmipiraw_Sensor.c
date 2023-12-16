@@ -2,6 +2,7 @@
 /*
  * Copyright (c) 2019 MediaTek Inc.
  */
+
 /*****************************************************************************
  *
  * Filename:
@@ -38,11 +39,15 @@
 //#include "../imgsensor_i2c.h"
 //#include "imgsensor_common.h"
 #include "s5k3p9spmipiraw_Sensor.h"
+#include "imgsensor_hwcfg_custom.h"
 
 #ifdef CONFIG_MTK_CAM_SECURITY_SUPPORT
 #include "imgsensor_ca.h"
 #endif
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	#undef OPLUS_FEATURE_CAMERA_COMMON
+#endif
 #define USE_REMOSAIC 1
 
 #ifndef USE_TNP_BURST
@@ -51,12 +56,12 @@
 
 
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 #define DEVICE_VERSION_S5k3P9SP     "s5k3p9sp"
-extern void register_imgsensor_deviceinfo(
-	char *name, char *version, u8 module_id);
 static kal_uint8 deviceInfo_register_value;
 static kal_uint32 streaming_control(kal_bool enable);
 #define MODULE_ID_OFFSET 0x0000
+#endif
 
 #define PFX "S5K3P9SP_camera_sensor"
 #define LOG_INF(format, args...) pr_debug(PFX "[%s] " format, __func__, ##args)
@@ -67,7 +72,9 @@ static DEFINE_SPINLOCK(imgsensor_drv_lock);
 
 static struct imgsensor_info_struct imgsensor_info = {
 		.sensor_id = S5K3P9SP_SENSOR_ID,
+		#ifdef OPLUS_FEATURE_CAMERA_COMMON
 		.module_id = 0x04,	//0x01 Sunny,0x05 QTEK
+		#endif
 		.checksum_value = 0x31e3fbe2,
 
 		.pre = {
@@ -236,6 +243,7 @@ static struct SENSOR_WINSIZE_INFO_STRUCT imgsensor_winsize_info[5] = {
  */
 /*0 flag   1-12 data*/
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 static kal_uint16 read_module_id(void)
 {
 	kal_uint16 get_byte = 0;
@@ -265,6 +273,7 @@ static void read_eeprom_SN(void)
 			idx, get_byte[idx], gS5k3p9sp_SN[idx]);
 	}
 }
+#endif
 
 static kal_uint16 read_cmos_sensor_16_16(kal_uint32 addr)
 {
@@ -4231,17 +4240,19 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 				LOG_INF("i2c write id: 0x%x, sensor id: 0x%x\n",
 					imgsensor.i2c_write_id, *sensor_id);
 				*sensor_id = S5K3P9SP_SENSOR_ID;
+				#ifdef OPLUS_FEATURE_CAMERA_COMMON
 				imgsensor_info.module_id = read_module_id();
 				read_eeprom_SN();
 				LOG_INF("s5k3p9sp_module_id=%d\n",
 					imgsensor_info.module_id);
 				if (deviceInfo_register_value == 0x00 ||
 					deviceInfo_register_value == NULL) {
-					register_imgsensor_deviceinfo("Cam_f",
+					Oplusimgsensor_Registdeviceinfo("Cam_f",
 					DEVICE_VERSION_S5k3P9SP,
 					imgsensor_info.module_id);
 					deviceInfo_register_value = 0x01;
 				}
+				#endif
 				return ERROR_NONE;
 			}
 			LOG_INF("Read sensor id fail, id: 0x%x\n",
@@ -5108,6 +5119,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 		}
 		break;
 
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	case SENSOR_FEATURE_GET_MODULE_SN:
 		LOG_INF("s5k3p9 GET_MODULE_SN:%d %d\n",
 			*feature_para_len, *feature_data_32);
@@ -5119,6 +5131,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 				| (gS5k3p9sp_SN[4*(*feature_data_32)] & 0xFF);
 		}
 		break;
+	#endif
 	case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
 		*(MUINT32 *)(uintptr_t)(*(feature_data + 1))
 			= 2500000;
@@ -5196,10 +5209,12 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 	case SENSOR_FEATURE_CHECK_SENSOR_ID:
 		get_imgsensor_id(feature_return_para_32);
 		break;
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	/*Caohua.Lin@CAmera, modify for different module 20180723*/
 	case SENSOR_FEATURE_CHECK_MODULE_ID:
 		*feature_return_para_32 = imgsensor_info.module_id;
 		break;
+	#endif
 	case SENSOR_FEATURE_SET_AUTO_FLICKER_MODE:
 		set_auto_flicker_mode((BOOL)*feature_data_16,
 			*(feature_data_16+1));
@@ -5223,7 +5238,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 	 */
 	case SENSOR_FEATURE_SET_TEST_PATTERN:
 		set_test_pattern_mode((UINT32)*feature_data,
-		(struct SET_SENSOR_PATTERN_SOLID_COLOR *)(feature_data+1));
+		(struct SET_SENSOR_PATTERN_SOLID_COLOR *)(uintptr_t)(*(feature_data + 1)));
 		break;
 	/*for factory mode auto testing*/
 	case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE:
@@ -5451,6 +5466,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 			break;
 		}
 		break;
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	case SENSOR_FEATURE_GET_4CELL_DATA:
 		{
 		int type = (kal_uint16)(*feature_data);
@@ -5471,6 +5487,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 		}
 		break;
 		}
+	#endif
 
 	default:
 		break;

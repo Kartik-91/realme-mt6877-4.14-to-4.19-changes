@@ -29,6 +29,8 @@ ccflags-y += \
 	-I$(srctree)/drivers/misc/mediatek/dramc/$(MTK_PLATFORM)	\
 	-I$(EEMGPU_ROOT_DIR)/$(CONFIG_MTK_PLATFORM)/inc	\
 	-I$(srctree)/drivers/misc/mediatek/base/power/mcdi/include/	\
+	-I$(srctree)/drivers/gpu/mediatek/gpufreq/   \
+
 
 
 ifeq ($(PROJECT_DTB_NAMES),mediatek/k6873v1_64_mcl)

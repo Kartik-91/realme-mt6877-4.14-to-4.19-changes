@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include <linux/version.h>
@@ -90,10 +82,7 @@ struct thermal_cooling_device *cdev, unsigned long state)
 #ifdef CONFIG_LVTS_DYNAMIC_ENABLE_REBOOT
 		if (tpcb > DYNAMIC_REBOOT_TRIP_TEMP) {
 			tscpu_printk("SW reset! tpcb = %d\n", tpcb);
-			if (get_eng_version() != HIGH_TEMP_AGING)
-				BUG();
-			else
-				tscpu_printk("should reset bypass \n");
+			BUG();
 		} else {
 			tscpu_printk("Skip SW reset! tpcb = %d\n", tpcb);
 		}
@@ -101,8 +90,13 @@ struct thermal_cooling_device *cdev, unsigned long state)
 		/* To trigger data abort to reset the system
 		 * for thermal protection.
 		 */
+
+#ifndef OPLUS_FEATURE_CHG_BASIC
 		if (get_eng_version() != HIGH_TEMP_AGING)
 			BUG();
+		else
+			tscpu_printk("should reset bypass \n");
+#endif
 #endif
 
 	}

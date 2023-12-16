@@ -294,6 +294,7 @@ static int lcm_panel_poweron(struct drm_panel *panel)
 	devm_gpiod_put(ctx->dev, ctx->bias_neg);
 	_20015_lcm_i2c_write_bytes(0x0, 0xf);
 	_20015_lcm_i2c_write_bytes(0x1, 0xf);
+	usleep_range(5000, 5100);
 	pr_info("%s-\n", __func__);
 	return 0;
 }
@@ -303,8 +304,8 @@ static int lcm_panel_poweroff(struct drm_panel *panel)
 	struct tianma *ctx = panel_to_tianma(panel);
 	int ret;
 
-        pr_info("%s+\n", __func__);
-
+	pr_info("%s+\n", __func__);
+	usleep_range(5000, 5100);
 	if (ctx->prepared)
                 return 0;
 	if (0 == tp_gesture_enable_flag() || (esd_flag == 1) || (shutdown_flag == 1)) {

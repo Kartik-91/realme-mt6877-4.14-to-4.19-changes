@@ -1,18 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+* Copyright (C) 2021 MediaTek Inc.
+*/
 #include <linux/types.h>
-#include <mt-plat/mtk_battery.h>
-#include <mt-plat/mtk_charger.h>
+#include <mt-plat/v1/mtk_battery.h>
+#include <mt-plat/v1/mtk_charger.h>
 #include <mt-plat/mtk_boot.h>
 #include <mtk_gauge_class.h>
 #include <mtk_battery_internal.h>
@@ -49,13 +41,18 @@ signed int battery_get_soc(void)
 
 signed int battery_get_uisoc(void)
 {
-	int boot_mode = get_boot_mode();
+	struct mtk_battery *gm = get_mtk_battery();
+	if (gm != NULL) {
+		int boot_mode = gm->boot_mode;
 
-	if ((boot_mode == META_BOOT) ||
-		(boot_mode == ADVMETA_BOOT) ||
-		(boot_mode == FACTORY_BOOT) ||
-		(boot_mode == ATE_FACTORY_BOOT))
-		return 75;
+		if ((boot_mode == META_BOOT) ||
+			(boot_mode == ADVMETA_BOOT) ||
+			(boot_mode == FACTORY_BOOT) ||
+			(boot_mode == ATE_FACTORY_BOOT))
+			return 75;
+		else if (boot_mode == 0)
+			return gm->ui_soc;
+	}
 
 	return 50;
 }
@@ -94,6 +91,18 @@ signed int battery_get_bat_current(void)
 {
 	int curr_val;
 	bool is_charging;
+#if defined(CONFIG_MTK_DISABLE_GAUGE)
+	union power_supply_propval value;
+
+	/* get battery current from external "battery" power supply if support */
+	struct power_supply *ba_psy = power_supply_get_by_name("battery");
+
+	if (ba_psy) {
+		power_supply_get_property(ba_psy, POWER_SUPPLY_PROP_CURRENT_NOW, &value);
+		pr_info("%s:get ba_psy success, bat_current(%d)\n",__func__, value.intval);
+		return value.intval;
+	}
+#endif
 
 	is_charging = gauge_get_current(&curr_val);
 	if (is_charging == false)
@@ -108,29 +117,78 @@ signed int battery_get_bat_current_mA(void)
 
 signed int battery_get_soc(void)
 {
-	if (get_mtk_battery() != NULL)
-		return get_mtk_battery()->soc;
+	struct mtk_battery *gm = get_mtk_battery();
+
+#if defined(CONFIG_MTK_DISABLE_GAUGE)
+	union power_supply_propval value;
+
+	/* get battery current from external "battery" power supply if support */
+	struct power_supply *ba_psy = power_supply_get_by_name("battery");
+
+	if (ba_psy) {
+		power_supply_get_property(ba_psy, POWER_SUPPLY_PROP_CAPACITY, &value);
+		pr_info("s:get ba_psy success, soc(%d)\n",__func__, value.intval);
+		return value.intval;
+	}
+#endif
+
+	if (gm != NULL)
+		return gm->soc;
 	else
 		return 50;
 }
 
 signed int battery_get_uisoc(void)
 {
-	int boot_mode = get_boot_mode();
+#if defined(CONFIG_MTK_DISABLE_GAUGE)
+	union power_supply_propval value;
+	struct power_supply *ba_psy = power_supply_get_by_name("battery");
+#endif
 
-	if ((boot_mode == META_BOOT) ||
-		(boot_mode == ADVMETA_BOOT) ||
-		(boot_mode == FACTORY_BOOT) ||
-		(boot_mode == ATE_FACTORY_BOOT))
-		return 75;
-	if (get_mtk_battery() != NULL)
-		return get_mtk_battery()->ui_soc;
-	else
-		return 50;
+	struct mtk_battery *gm = get_mtk_battery();
+	if (gm != NULL) {
+		int boot_mode = gm->boot_mode;
+
+		if ((boot_mode == META_BOOT) ||
+			(boot_mode == ADVMETA_BOOT) ||
+			(boot_mode == FACTORY_BOOT) ||
+			(boot_mode == ATE_FACTORY_BOOT))
+			return 75;
+		else if (boot_mode == 0)
+			return gm->ui_soc;
+	}
+
+
+	/* get battery ui_soc from external "battery" power supply if support */
+#if defined(CONFIG_MTK_DISABLE_GAUGE)
+	if (ba_psy) {
+		power_supply_get_property(ba_psy, POWER_SUPPLY_PROP_CAPACITY, &value);
+		pr_info("%s:get ba_psy success, ui_soc(%d)\n",__func__, value.intval);
+		return value.intval;
+	}
+#endif
+
+	return 50;
 }
 
 signed int battery_get_bat_temperature(void)
 {
+#if defined(CONFIG_MTK_DISABLE_GAUGE)
+	union power_supply_propval value;
+
+	/* get battery current from external "battery" power supply if support */
+	struct power_supply *ba_psy = power_supply_get_by_name("battery");
+
+	if (ba_psy) {
+		power_supply_get_property(ba_psy, POWER_SUPPLY_PROP_TEMP, &value);
+		pr_info("%s:get ba_psy success, temp(%d)\n",__func__, value.intval);
+		if (value.intval >= 100)
+			value.intval /= 10;
+
+		return value.intval;
+	}
+#endif
+
 	/* TODO */
 	if (is_battery_init_done())
 		return force_get_tbat(true);
@@ -151,6 +209,20 @@ signed int battery_get_vbus(void)
 signed int battery_get_bat_avg_current(void)
 {
 	bool valid;
+
+#if defined(CONFIG_MTK_DISABLE_GAUGE)
+		union power_supply_propval value;
+
+		/* get battery current from external "battery" power supply if support */
+		struct power_supply *ba_psy = power_supply_get_by_name("battery");
+
+		if (ba_psy) {
+			power_supply_get_property(ba_psy, POWER_SUPPLY_PROP_CURRENT_AVG, &value);
+			pr_info("%s:get ba_psy success, bat_avg_current(%d)\n",__func__,
+				value.intval);
+			return value.intval;
+		}
+#endif
 
 	return gauge_get_average_current(&valid);
 }

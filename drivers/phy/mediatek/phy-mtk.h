@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2020 MediaTek Inc.
+*/
 
 
 #ifndef __PHY_MTK_SSUSB_H
@@ -23,9 +15,6 @@ struct mtk_phy_tuning {
 	s32 u2_enhance;
 #ifdef OPLUS_FEATURE_CHG_BASIC
 	s32 u2_discth;
-	s32 host_u2_vrt_ref;
-	s32 host_u2_term_ref;
-	s32 host_u2_enhance;
 	s32 host_u2_discth;
 #endif
 	bool inited;

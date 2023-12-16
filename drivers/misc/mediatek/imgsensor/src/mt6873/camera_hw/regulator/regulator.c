@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include "regulator.h"
@@ -62,7 +54,7 @@ static enum IMGSENSOR_RETURN regulator_init(
 	struct IMGSENSOR_HW_DEVICE_COMMON *pcommon)
 {
 	struct REGULATOR *preg = (struct REGULATOR *)pinstance;
-	int type, idx;
+	int type, idx, ret = 0;
 	char str_regulator_name[LENGTH_FOR_SNPRINTF];
 
 	for (idx = IMGSENSOR_SENSOR_IDX_MIN_NUM;
@@ -73,11 +65,14 @@ static enum IMGSENSOR_RETURN regulator_init(
 			type++) {
 			memset(str_regulator_name, 0,
 				sizeof(str_regulator_name));
-			snprintf(str_regulator_name,
+			ret = snprintf(str_regulator_name,
 				sizeof(str_regulator_name),
 				"cam%d_%s",
 				idx,
 				regulator_control[type].pregulator_type);
+			if (ret < 0)
+				PK_INFO("NOTICE: %s, snprintf err, %d\n",
+					__func__, ret);
 			preg->pregulator[idx][type] = regulator_get(
 					&pcommon->pplatform_device->dev,
 					str_regulator_name);
@@ -130,12 +125,16 @@ static enum IMGSENSOR_RETURN regulator_set(
 	if (pin > IMGSENSOR_HW_PIN_DOVDD   ||
 	    pin < IMGSENSOR_HW_PIN_AVDD    ||
 	    pin_state < IMGSENSOR_HW_PIN_STATE_LEVEL_0 ||
-	    pin_state >= IMGSENSOR_HW_PIN_STATE_LEVEL_HIGH ||
-	    sensor_idx < 0)
+	    pin_state >= IMGSENSOR_HW_PIN_STATE_LEVEL_HIGH)
 		return IMGSENSOR_RETURN_ERROR;
 
 	reg_type_offset = REGULATOR_TYPE_VCAMA;
 
+	pregulator = preg->pregulator[(unsigned int)sensor_idx][
+		reg_type_offset + pin - IMGSENSOR_HW_PIN_AVDD];
+
+	enable_cnt = &preg->enable_cnt[(unsigned int)sensor_idx][
+		reg_type_offset + pin - IMGSENSOR_HW_PIN_AVDD];
 	pregulator =
 		preg->pregulator[sensor_idx][
 			reg_type_offset + pin - IMGSENSOR_HW_PIN_AVDD];

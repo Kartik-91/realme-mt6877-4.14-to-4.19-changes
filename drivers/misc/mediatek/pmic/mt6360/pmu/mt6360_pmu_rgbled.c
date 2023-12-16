@@ -1,18 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- *  drivers/misc/mediatek/pmic/mt6360/mt6360_pmu_rgbled.c
- *  Driver for MT6360 PMU RGBLed part
- *
- *  Copyright (C) 2018 Mediatek Technology Inc.
- *  cy_huang <cy_huang@richtek.com>
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2 as
- *  published by the Free Software Foundation.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *  See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2020 MediaTek Inc.
  */
 
 #include <linux/init.h>
@@ -49,7 +37,6 @@ __attribute__((weak)) void fan53870_ldo5_20817_disable(void)
 {
     return;
 }
-
 struct mt6360_pmu_rgbled_info {
 	struct mt_led_info l_info; /* most be the first member */
 	struct device *dev;
@@ -62,7 +49,6 @@ struct mt6360_pmu_rgbled_info {
 	unsigned int boot_mode;
 	unsigned long long old_time;
 };
-
 extern int oplus_misc_healthinfo(int type, int para, int bright);
 
 static const struct mt6360_rgbled_platform_data def_platform_data = {
@@ -998,11 +984,8 @@ static void mt6360_led_bright_set(
 		rgbled_info->boot_mode == LOW_POWER_OFF_CHARGING_BOOT) {
 		return;
 	}
-
 	mutex_lock(&rgbled_info->led_lock);
-
 	set_lights_voltgae(rgbled_info, bright, true);
-
 	switch (led_index) {
 	case MT6360_LED_1:
 		reg_addr = MT6360_PMU_RGB1_ISNK;
@@ -1014,7 +997,6 @@ static void mt6360_led_bright_set(
 			rgbled_info->rgb_isnk_on |= 0x01;
 			oplus_misc_healthinfo(LIGHTS_RED, LIGHTS_ON, bright);
 		}
-
 		break;
 	case MT6360_LED_2:
 		reg_addr = MT6360_PMU_RGB2_ISNK;
@@ -1026,7 +1008,6 @@ static void mt6360_led_bright_set(
 			rgbled_info->rgb_isnk_on |= 0x02;
 			oplus_misc_healthinfo(LIGHTS_GREEN, LIGHTS_ON, bright);
 		}
-
 		break;
 	case MT6360_LED_3:
 		reg_addr = MT6360_PMU_RGB3_ISNK;
@@ -1038,7 +1019,6 @@ static void mt6360_led_bright_set(
 			rgbled_info->rgb_isnk_on |= 0x04;
 			oplus_misc_healthinfo(LIGHTS_BLUE, LIGHTS_ON, bright);
 		}
-
 		break;
 	case MT6360_LED_MOONLIGHT:
 		reg_addr = MT6360_PMU_RGB_ML_ISNK;
@@ -1048,9 +1028,7 @@ static void mt6360_led_bright_set(
 	}
 
 	set_lights_voltgae(rgbled_info, bright, false);
-
 	pr_err("%s: led[%d] brightness is %d, rgb_isnk_on is 0x%x", __func__, led_index, bright, rgbled_info->rgb_isnk_on);
-
 	ret = mt6360_pmu_reg_update_bits(rgbled_info->mpi, reg_addr,
 			reg_mask, (bright & reg_mask) << reg_shift);
 	if (ret < 0) {
@@ -1067,7 +1045,6 @@ static void mt6360_led_bright_set(
 			dev_err(led->dev, "update enable bit fail\n");
 	} else
 		mt6360_led_enable_dwork(led);
-
 	mutex_unlock(&rgbled_info->led_lock);
 }
 
@@ -1329,7 +1306,6 @@ static ssize_t oplus_support_regbleds_read(struct device *dev,
 
 	return strlen(buf);
 }
-
 static const struct device_attribute mt6360_rgbled_attrs[] = {
 	__ATTR(support, 0644,
 		oplus_support_regbleds_read, NULL),

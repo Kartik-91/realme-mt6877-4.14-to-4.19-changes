@@ -19,7 +19,7 @@
 #ifdef CONFIG_MTK_TINYSYS_SSPM_SUPPORT
 #include <sspm_ipi_id.h>
 #include <sspm_define.h>
-#include <v2/sspm_reservedmem.h>
+#include <sspm_reservedmem.h>
 #endif
 
 #include <mtk_lpm_module.h>
@@ -285,7 +285,7 @@ void mtk_wait_mbox_init_done(void)
 
 	mtk_lp_apmcu_pwr_ctrl_setting(
 			 MCUPM_MCUSYS_CTRL |
-#ifdef CONFIG_MTK_CM_MGR
+#ifdef CONFIG_MTK_CM_MGR_LEGACY
 			 MCUPM_CM_CTRL |
 #endif
 			 MCUPM_BUCK_CTRL |

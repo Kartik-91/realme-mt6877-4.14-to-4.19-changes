@@ -223,7 +223,7 @@ static struct imgsensor_info_struct imgsensor_info = {
     .sensor_interface_type = SENSOR_INTERFACE_TYPE_MIPI,
     .mipi_sensor_type = MIPI_OPHY_NCSI2,
     .mipi_settle_delay_mode = 1,
-    .sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_B,
+    .sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_4CELL_HW_BAYER_R,
     .mclk = 24,//mclk value, suggest 24 or 26 for 24Mhz or 26Mhz
     .mipi_lane_num = SENSOR_MIPI_4_LANE,//mipi lane num
     .i2c_addr_table = {0x6d, 0xff},
@@ -1013,6 +1013,25 @@ static kal_uint32 return_sensor_id(void)
     return ((read_cmos_sensor(0x300a) << 8) | (read_cmos_sensor(0x300b)));
 }
 
+static void CalDac_EEprom(void)
+{
+    kal_uint32 Dac_master = 0, Dac_mac = 0, Dac_inf = 0;
+
+    Dac_mac = (Eeprom_1ByteDataRead(0x93, 0xA0) << 8) | Eeprom_1ByteDataRead(0x92, 0xA0);
+    Dac_inf = (Eeprom_1ByteDataRead(0x95, 0xA0) << 8) | Eeprom_1ByteDataRead(0x94, 0xA0);
+    Dac_master = (5*Dac_mac+36*Dac_inf)/41;
+    pr_info("Dac_inf:%d Dac_Mac:%d Dac_master:%d\n", Dac_inf, Dac_mac, Dac_master);
+    memset(&gImgEepromInfo.camNormdata[0][28], 0, 8);
+    memcpy(&gImgEepromInfo.camNormdata[0][28], &Dac_master, 4);
+    memcpy(&gImgEepromInfo.camNormdata[2][28], &Dac_master, 4);
+    memcpy(&gImgEepromInfo.camNormdata[0][48], &Dac_mac, 4);
+    memcpy(&gImgEepromInfo.camNormdata[0][52], &Dac_inf, 4);
+}
+
+extern enum IMGSENSOR_RETURN Eeprom_DataInit(
+           enum IMGSENSOR_SENSOR_IDX sensor_idx,
+           kal_uint32 sensorID);
+
 static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 {
     kal_uint8 i = 0;
@@ -1032,6 +1051,8 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
             imgsensor.i2c_write_id, *sensor_id);
             //read_EepromQSC();
             //LOG_INF("RENM0_module_id=%d\n",imgsensor_info.module_id);
+            Eeprom_DataInit(IMGSENSOR_SENSOR_IDX_MAIN, *sensor_id);
+            CalDac_EEprom();
             return ERROR_NONE;
         }
         retry--;

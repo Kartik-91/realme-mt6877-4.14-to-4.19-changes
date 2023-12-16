@@ -690,12 +690,12 @@ static void slim_video_setting(void)
 
 static kal_uint32 set_test_pattern_mode(kal_bool enable)
 {
-	LOG_INF("enable: %d\n", enable);
+	LOG_INF("set_test_pattern modes: %d\n", enable);
 
 	if (enable) {
 		write_cmos_sensor(0xfe, 0x01);
 		write_cmos_sensor(0x8c, 0x11);
-		write_cmos_sensor(0xfe, 0x00);
+		write_cmos_sensor(0x8d, 0x08);
 	} else {
 		write_cmos_sensor(0xfe, 0x01);
 		write_cmos_sensor(0x8c, 0x10);

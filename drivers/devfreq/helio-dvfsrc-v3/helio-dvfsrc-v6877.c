@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2019 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/fb.h>
 #include <linux/platform_device.h>
@@ -38,6 +30,8 @@
 			| (val << shift))
 
 #define V_OPP_TYPE_SHIFT 20
+static int dvfsrc_rsrv;
+
 
 #ifdef	CONFIG_MTK_DVFSRC_MT6877_PRETEST
 static struct reg_config dvfsrc_init_configs[][128] = {
@@ -346,7 +340,6 @@ static u32 dvfsrc_calc_hrt_opp(int data)
 		return DDR_OPP_0;
 
 #else
-	int dvfsrc_rsrv;
 
 	if ((dvfsrc_rsrv >> V_OPP_TYPE_SHIFT) & 0x3) {
 		if (data < 0x780)
@@ -455,7 +448,7 @@ void begin_autok_task(void)
 void finish_autok_task(void)
 {
 	/* check if dvfs force is released */
-	int force = pm_qos_request(PM_QOS_VCORE_DVFS_FORCE_OPP);
+	int force = mtk_pm_qos_request(MTK_PM_QOS_VCORE_DVFS_FORCE_OPP);
 
 	/* notify MM DVFS for msdc autok finish */
 	mmdvfs_prepare_action(MMDVFS_PREPARE_CALIBRATION_END);
@@ -487,7 +480,6 @@ void helio_dvfsrc_platform_pre_init(struct helio_dvfsrc *dvfsrc)
 {
 	struct platform_device *pdev = to_platform_device(dvfsrc->dev);
 	struct resource *res;
-	int dvfsrc_rsrv;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 
@@ -505,7 +497,7 @@ void helio_dvfsrc_platform_pre_init(struct helio_dvfsrc *dvfsrc)
 #endif
 }
 
-__weak void pm_qos_trace_dbg_dump(int pm_qos_class)
+__weak void mtk_pm_qos_trace_dbg_dump(int mtk_pm_qos_class)
 {
 }
 
@@ -516,17 +508,17 @@ void dvfsrc_suspend_cb(struct helio_dvfsrc *dvfsrc)
 	sw_req = dvfsrc_read(DVFSRC_SW_REQ3);
 	pr_info("[DVFSRC] V:%d, F_OPP:%d, RG:%08x, %08x, %08x, %08x\n",
 		get_cur_vcore_uv(),
-		pm_qos_request(PM_QOS_VCORE_DVFS_FORCE_OPP),
+		mtk_pm_qos_request(MTK_PM_QOS_VCORE_DVFS_FORCE_OPP),
 		dvfsrc_read(DVFSRC_CURRENT_LEVEL),
 		dvfsrc_read(DVFSRC_SW_REQ2),
 		sw_req,
 		dvfsrc_read(DVFSRC_DEBUG_STA_0));
 
 	if (sw_req & (DDR_SW_AP_MASK << DDR_SW_AP_SHIFT))
-		pm_qos_trace_dbg_dump(PM_QOS_DDR_OPP);
+		mtk_pm_qos_trace_dbg_dump(MTK_PM_QOS_DDR_OPP);
 
 	if (sw_req & (VCORE_SW_AP_MASK << VCORE_SW_AP_SHIFT))
-		pm_qos_trace_dbg_dump(PM_QOS_VCORE_OPP);
+		mtk_pm_qos_trace_dbg_dump(MTK_PM_QOS_VCORE_OPP);
 }
 
 void dvfsrc_resume_cb(struct helio_dvfsrc *dvfsrc)
@@ -539,7 +531,6 @@ void helio_dvfsrc_platform_init(struct helio_dvfsrc *dvfsrc)
 	int spmfw_idx = 0;
 	struct reg_config *config;
 	int idx = 0;
-	int dvfsrc_rsrv;
 
 	sysfs_merge_group(&dvfsrc->dev->kobj, &mt6877_helio_dvfsrc_attr_group);
 	dvfsrc_rsrv = readl(dvfsrc->regs + DVFSRC_RSRV_4);

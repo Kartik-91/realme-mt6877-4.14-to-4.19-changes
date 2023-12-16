@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2021 MediaTek Inc.
+*/
 
 #include <linux/errno.h>
 #include <linux/mutex.h>
@@ -156,7 +148,7 @@ int pe40_stop(void)
 		pe4->max_charger_ibus = pe4->data.pe40_max_ibus *
 					(100 - pe4->data.ibus_err) / 100;
 	}
-
+	chr_err("%s\n",__func__);
 	return 0;
 }
 
@@ -395,11 +387,12 @@ int pe40_init_state(void)
 		chr_err("[pe40_i0] err:1 %d\n", ret);
 		goto retry;
 	}
+
 	/* disable charger */
 #ifdef OPLUS_FEATURE_CHG_BASIC
-    charger_enable_powerpath(false);
+	charger_enable_powerpath(false);
 #else
-    charger_force_disable_powerpath(true);
+	charger_force_disable_powerpath(true);
 #endif
 
 
@@ -436,7 +429,7 @@ int pe40_init_state(void)
 #ifdef OPLUS_FEATURE_CHG_BASIC
 	charger_enable_powerpath(true);
 #else
-    charger_force_disable_powerpath(false);
+	charger_force_disable_powerpath(false);
 #endif
 
 	msleep(100);

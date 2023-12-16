@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef __DISP_DTS_GPIO_H__
 #define __DISP_DTS_GPIO_H__
@@ -34,9 +26,6 @@ enum DTS_GPIO_STATE {
 	DTS_GPIO_STATE_TE_MODE_GPIO,	/* mode_te_gpio */
 	DTS_GPIO_STATE_TE_MODE_TE,	/* mode_te_te */
 	DTS_GPIO_STATE_TE1_MODE_TE,	/* mode_te1_te */
-	/* #ifdef OPLUS_BUG_STABILITY */
-	DTS_GPIO_STATE_TE_BK_GPIO15,
-	/* #endif */ /* OPLUS_BUG_STABILITY */
 #ifdef CONFIG_MTK_MT6382_BDG
 	DTS_GPIO_STATE_6382_RST_OUT1,
 	DTS_GPIO_STATE_6382_RST_OUT0,

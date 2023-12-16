@@ -26,21 +26,20 @@ struct CAMERA_DEVICE_INFO gImgEepromInfo;
 
 struct IMGSENSOR_SENSOR_LIST
     gimgsensor_sensor_list_20682[MAX_NUM_OF_SUPPORT_SENSOR] = {
-
+#if defined(SALAA_QTECH_MAIN_S5KGM1SP)
+{SALAA_QTECH_MAIN_S5KGM1SP_SENSOR_ID, SENSOR_DRVNAME_SALAA_QTECH_MAIN_S5KGM1SP, SALAA_QTECH_MAIN_S5KGM1SP_SensorInit},
+#endif
 #if defined(IMX682_MIPI_RAW)
 {IMX682_SENSOR_ID, SENSOR_DRVNAME_IMX682_MIPI_RAW, IMX682_MIPI_RAW_SensorInit},
 #endif
 #if defined(S5KGM1SP_MIPI_RAW)
 {S5KGM1SP_SENSOR_ID, SENSOR_DRVNAME_S5KGM1SP_MIPI_RAW, S5KGM1SP_MIPI_RAW_SensorInit},
 #endif
-#if defined(SALAA_QTECH_MAIN_S5KGM1SP)
-{SALAA_QTECH_MAIN_S5KGM1SP_SENSOR_ID, SENSOR_DRVNAME_SALAA_QTECH_MAIN_S5KGM1SP, SALAA_QTECH_MAIN_S5KGM1SP_SensorInit},
+#if defined(IMX471_MIPI_RAW1)
+{IMX471_SENSOR_ID1, SENSOR_DRVNAME_IMX471_MIPI_RAW1, IMX471_MIPI_RAW1_SensorInit},
 #endif
 #if defined(SALA_WIDE_OV8856)
 {SALA_WIDE_OV8856_SENSOR_ID,SENSOR_DRVNAME_SALA_WIDE_OV8856,SALA_WIDE_OV8856_SensorInit},
-#endif
-#if defined(IMX471_MIPI_RAW1)
-{IMX471_SENSOR_ID1, SENSOR_DRVNAME_IMX471_MIPI_RAW1, IMX471_MIPI_RAW1_SensorInit},
 #endif
 #if defined(OV8856_MIPI_RAW)
 {OV8856_SENSOR_ID, SENSOR_DRVNAME_OV8856_MIPI_RAW, OV8856_MIPI_RAW_SensorInit},
@@ -409,6 +408,20 @@ struct IMGSENSOR_HW_POWER_SEQ platform_power_sequence_19661[] ={
 
 
 struct IMGSENSOR_HW_POWER_SEQ sensor_power_sequence_20682[] = {
+#if defined(SALAA_QTECH_MAIN_S5KGM1SP)
+	{
+		SENSOR_DRVNAME_SALAA_QTECH_MAIN_S5KGM1SP,
+		{
+			{SensorMCLK, Vol_High, 0},
+			{RST, Vol_Low, 1},
+			{AVDD2, Vol_2800, 0},
+			{DVDD, Vol_1050, 0},
+			{DOVDD, Vol_1800, 0},
+			{AFVDD, Vol_2800, 2},
+			{RST, Vol_High, 5},
+		},
+	},
+#endif
 #if defined(IMX682_MIPI_RAW)
 	{
 		SENSOR_DRVNAME_IMX682_MIPI_RAW,
@@ -427,20 +440,6 @@ struct IMGSENSOR_HW_POWER_SEQ sensor_power_sequence_20682[] = {
 #if defined(S5KGM1SP_MIPI_RAW)
 	{
 		SENSOR_DRVNAME_S5KGM1SP_MIPI_RAW,
-		{
-			{SensorMCLK, Vol_High, 0},
-			{RST, Vol_Low, 1},
-			{AVDD2, Vol_2800, 0},
-			{DVDD, Vol_1050, 0},
-			{DOVDD, Vol_1800, 0},
-			{AFVDD, Vol_2800, 2},
-			{RST, Vol_High, 5},
-		},
-	},
-#endif
-#if defined(SALAA_QTECH_MAIN_S5KGM1SP)
-	{
-		SENSOR_DRVNAME_SALAA_QTECH_MAIN_S5KGM1SP,
 		{
 			{SensorMCLK, Vol_High, 0},
 			{RST, Vol_Low, 1},
@@ -776,7 +775,7 @@ struct CAMERA_DEVICE_INFO gImgEepromInfo_20730 = {
     .pCamModuleInfo = {
         {OV64B_SENSOR_ID,  0xA0, {0x00, 0x06}, 0xB0, 1, {0x92,0xFF,0xFF,0x94}, "Cam_r",  "ov64b"},
         {IMX471_SENSOR_ID2,  0xA8, {0x00, 0x06}, 0xB0, 0, {0xFF,0xFF,0xFF,0xFF}, "Cam_f", "imx471"},
-        {OV8856_SENSOR_ID2, 0xA2, {0x00, 0x06}, 0xB0, 0, {0xFF,0xFF,0xFF,0xFF}, "Cam_r1", "ov8856"},
+        {OV8856_SENSOR_ID2_20730, 0xA2, {0x00, 0x06}, 0xB0, 0, {0xFF,0xFF,0xFF,0xFF}, "Cam_r1", "ov8856"},
         {OV02B10_SENSOR_ID,  0xA4, {0x00, 0x06}, 0xB0, 0, {0xFF,0xFF,0xFF,0xFF}, "Cam_r2", "ov02b10"},
         {OV02B1B_SENSOR_ID, 0xFF, {0xFF, 0xFF}, 0xB0, 0, {0xFF,0xFF,0xFF,0xFF}, "Cam_r3", "ov02b1b"},
     },
@@ -785,7 +784,7 @@ struct CAMERA_DEVICE_INFO gImgEepromInfo_20730 = {
     .i4FrontDataIdx = 0xFF,
     .i4NormDataLen = 40,
     .i4MWDataLen = 3102,
-    .i4MWStereoAddr = {OV48B_STEREO_START_ADDR,HI846_STEREO_START_ADDR},
+    .i4MWStereoAddr = {OV64B_STEREO_START_ADDR_20730,OV8856_STEREO_START_ADDR_20730},
     .i4MTStereoAddr = {0xFFFF, 0xFFFF},
     .i4FrontStereoAddr = {0xFFFF, 0xFFFF},
 };

@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2019 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 /************************************************************************
@@ -28,6 +20,7 @@
  ************************************************************************/
 #ifndef _IMX481MIPI_SENSOR_H
 #define _IMX481MIPI_SENSOR_H
+#include "imgsensor_sensor.h"
 
 
 enum IMGSENSOR_MODE {
@@ -99,6 +92,7 @@ struct imgsensor_struct {
 	kal_uint8 hdr_mode;	/* HDR mode */
 	kal_uint8 pdaf_mode;	/* ihdr enable or disable */
 	kal_uint8 i2c_write_id;	/* record current sensor's i2c write id */
+	struct SENSOR_FUNCTION_STRUCT *psensor_func;
 };
 
 /* SENSOR PRIVATE STRUCT FOR CONSTANT*/

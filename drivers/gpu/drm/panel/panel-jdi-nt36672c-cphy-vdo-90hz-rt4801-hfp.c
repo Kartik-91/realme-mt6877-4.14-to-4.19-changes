@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2015 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <drm/drmP.h>
 #include <drm/drm_mipi_dsi.h>
@@ -93,7 +85,9 @@ static struct i2c_driver jdi_lcm_i2c_driver = {
  * Function
  *****************************************************************************/
 
+#ifdef VENDOR_EDIT
 extern void lcd_queue_load_tp_fw(void);
+#endif /*VENDOR_EDIT*/
 
 static int jdi_lcm_i2c_probe(struct i2c_client *client,
 			  const struct i2c_device_id *id)
@@ -631,7 +625,9 @@ static int jdi_prepare(struct drm_panel *panel)
 	jdi_panel_get_data(ctx);
 #endif
 
+#ifdef VENDOR_EDIT
 	lcd_queue_load_tp_fw();
+#endif
 
 	pr_info("%s-\n", __func__);
 	return ret;

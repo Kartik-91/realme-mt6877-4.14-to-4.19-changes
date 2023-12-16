@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef _LEDS_SW_H
 #define _LEDS_SW_H
@@ -19,14 +11,14 @@
  *****************************************************************************/
 
 enum mt65xx_led_type {
-	TYPE_RED = 0,
-	TYPE_GREEN,
-	TYPE_BLUE,
-	TYPE_JOGBALL,
-	TYPE_KEYBOARD,
-	TYPE_BUTTON,
-	TYPE_LCD,
-	TYPE_TOTAL,
+	MT65XX_LED_TYPE_RED = 0,
+	MT65XX_LED_TYPE_GREEN,
+	MT65XX_LED_TYPE_BLUE,
+	MT65XX_LED_TYPE_JOGBALL,
+	MT65XX_LED_TYPE_KEYBOARD,
+	MT65XX_LED_TYPE_BUTTON,
+	MT65XX_LED_TYPE_LCD,
+	MT65XX_LED_TYPE_TOTAL,
 };
 
 enum mt65xx_led_mode {
@@ -49,12 +41,7 @@ typedef int (*cust_set_brightness) (int level);
 /* 10bit backlight level */
 #define LED_INCREASE_LED_LEVEL_MTKPATCH
 #ifdef LED_INCREASE_LED_LEVEL_MTKPATCH
-#ifdef OPLUS_FEATURE_MULTIBITS_BL
-#define MT_LED_INTERNAL_LEVEL_BIT_CNT 11
-#define MT_LED_INTERNAL_LEVEL_BIT_CNT_SALA 12
-#else /* OPLUS_FEATURE_MULTIBITS_BL */
 #define MT_LED_INTERNAL_LEVEL_BIT_CNT 10
-#endif /* OPLUS_FEATURE_MULTIBITS_BL */
 #endif
 
 /******************************************************************************

@@ -1723,7 +1723,6 @@ static int cmdq_remove(struct platform_device *pdev)
 {
 	struct cmdq *cmdq = platform_get_drvdata(pdev);
 
-	wakeup_source_unregister(cmdq->wake_lock);
 	destroy_workqueue(cmdq->buf_dump_wq);
 	mbox_controller_unregister(&cmdq->mbox);
 	clk_unprepare(cmdq->clock_timer);
@@ -2022,7 +2021,7 @@ static int cmdq_probe(struct platform_device *pdev)
 	WARN_ON(clk_prepare(cmdq->clock) < 0);
 	WARN_ON(clk_prepare(cmdq->clock_timer) < 0);
 
-	cmdq->wake_lock = wakeup_source_register(dev, "cmdq_pm_lock");
+	cmdq->wake_lock = wakeup_source_register(NULL, "cmdq_wake_lock");
 
 	spin_lock_init(&cmdq->lock);
 	clk_enable(cmdq->clock);

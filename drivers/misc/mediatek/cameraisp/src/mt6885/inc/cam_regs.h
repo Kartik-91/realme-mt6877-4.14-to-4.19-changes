@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 /******************************************************************************
@@ -317,6 +309,9 @@ enum{
 #define CAM_REG_CTL_SEL2(module)                (isp_devs[module].regs + 0x0044)
 #define CAM_REG_CTL_FMT_SEL(module)             (isp_devs[module].regs + 0x0048)
 #define CAM_REG_CTL_FMT2_SEL(module)            (isp_devs[module].regs + 0x004C)
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+#define CAM_REG_CTL_FBC_GROUP(module)           (isp_devs[module].regs + 0x0060)
+#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 
 #define CAM_REG_CTL_START(module)               (isp_devs[module].regs + 0x0074)
 #define CAM_REG_CTL_START_ST(module)            (isp_devs[module].regs + 0x0078)

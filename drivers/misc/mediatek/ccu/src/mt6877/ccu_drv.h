@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2016 MediaTek Inc.
  */
 
 #ifndef __CCU_DRV_H__
@@ -369,5 +361,7 @@ struct ccu_reg_s {
 #define CCU_READ_STRUCT_SIZE                _IOWR(CCU_MAGICNO, 36, int)
 #define CCU_IOCTL_PRINT_REG                 _IOR(CCU_MAGICNO,  37, int)
 #define CCU_IOCTL_PRINT_SRAM_LOG            _IOR(CCU_MAGICNO,  38, int)
+
+#define CCU_MAGIC_CHK	0x3B7A5D9E
 
 #endif

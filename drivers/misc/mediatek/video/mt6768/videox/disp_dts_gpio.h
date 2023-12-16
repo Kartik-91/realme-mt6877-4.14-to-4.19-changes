@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef __DISP_DTS_GPIO_H__
 #define __DISP_DTS_GPIO_H__
@@ -30,23 +22,8 @@ enum DTS_GPIO_STATE {
 	DTS_GPIO_STATE_LCM_RST_OUT1,
 	DTS_GPIO_STATE_LCM1_RST_OUT0,
 	DTS_GPIO_STATE_LCM1_RST_OUT1,
-#ifdef OPLUS_BUG_STABILITY
-	DTS_GPIO_STATE_LCD_BIAS_ENP0,
-	DTS_GPIO_STATE_LCD_BIAS_ENP1,
-	DTS_GPIO_STATE_LCD_BIAS_ENN0,
-	DTS_GPIO_STATE_LCD_BIAS_ENN1,
-	DTS_GPIO_STATE_LCD_VDDIO18_EN0,
-	DTS_GPIO_STATE_LCD_VDDIO18_EN1,
-#else
-	DTS_GPIO_STATE_LCD_BIAS_ENP0,
-	DTS_GPIO_STATE_LCD_BIAS_ENP1,
-	DTS_GPIO_STATE_LCD_BIAS_ENN0,
-	DTS_GPIO_STATE_LCD_BIAS_ENN1,
-	DTS_GPIO_STATE_LCD_VDDIO18_EN0,
-	DTS_GPIO_STATE_LCD_VDDIO18_EN1,
 	DTS_GPIO_STATE_LCD_BIAS_ENN,
 	DTS_GPIO_STATE_LCD_BIAS_ENP,
-#endif
 	DTS_GPIO_STATE_TP_RST_OUT1,
 	DTS_GPIO_STATE_TP_RST_OUT0,
 	DTS_GPIO_STATE_6382_RST_OUT1,

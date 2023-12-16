@@ -21,8 +21,11 @@
 #include "mclk/mclk.h"
 #include "regulator/regulator.h"
 #include "gpio/gpio.h"
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #include <soc/oplus/device_info.h>
+
+//#include <linux/of_gpio.h>
+#include <linux/gpio.h>
 
 #define  OPLUS_SUPPORT_CAMERA_NUMMAX        (6)
 #define  OPLUS_STEREO_LENGTH_QCOMHEADER     (128)
@@ -143,13 +146,16 @@ extern struct IMGSENSOR_HW_CFG *oplus_imgsensor_custom_config;
 extern struct IMGSENSOR_SENSOR_LIST *oplus_gimgsensor_sensor_list;
 extern struct CAMERA_DEVICE_INFO gImgEepromInfo;
 extern void oplus_imgsensor_hwcfg(void);
-
-
+extern void oplus_imgsensor_delay_set(struct IMGSENSOR_HW_POWER_INFO *ppwr_info, struct IMGSENSOR_HW_POWER_SEQ *ppwr_seq);
 #ifdef SENSOR_PLATFORM_5G_A
 extern struct IMGSENSOR_HW_POWER_SEQ *oplus_platform_power_sequence;
 #endif
 
 #ifdef SENSOR_PLATFORM_4G_20682
+extern struct IMGSENSOR_HW_POWER_SEQ *oplus_platform_power_sequence;
+#endif
+
+#ifdef SENSOR_PLATFORM_5G_B
 extern struct IMGSENSOR_HW_POWER_SEQ *oplus_platform_power_sequence;
 #endif
 

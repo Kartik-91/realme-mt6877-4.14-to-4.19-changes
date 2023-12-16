@@ -70,7 +70,7 @@ typedef struct imgsensor_struct {
 
 	kal_uint16 current_fps;			//current max fps
 	kal_bool   autoflicker_en;		//record autoflicker enable or disable
-	kal_bool test_pattern;			//record test pattern mode or not
+	kal_uint8 test_pattern;			//record test pattern mode or not
 	enum MSDK_SCENARIO_ID_ENUM current_scenario_id;//current scenario id
 	kal_uint8  ihdr_mode;		    //ihdr mode 0: disable, 1: ihdr, 2:mVHDR, 9:zigzag
 
@@ -143,4 +143,6 @@ extern int iReadRegI2C(u8 *a_pSendData , u16 a_sizeSendData, u8 * a_pRecvData, u
 extern int iWriteRegI2C(u8 *a_pSendData , u16 a_sizeSendData, u16 i2cId);
 extern int iBurstWriteReg(u8 *pData, u32 bytes, u16 i2cId);
 extern int iBurstWriteReg_multi(u8 *pData, u32 bytes, u16 i2cId, u16 transfer_length, u16 timing);
+extern int iReadRegI2CTiming(u8 *a_pSendData, u16 a_sizeSendData, u8 *a_pRecvData, u16 a_sizeRecvData, u16 i2cId, u16 timing);
+extern int iWriteRegI2CTiming(u8 *a_pSendData, u16 a_sizeSendData, u16 i2cId, u16 timing);
 #endif

@@ -1,47 +1,70 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
  */
 
-#include <mt-plat/mtk_battery.h>
 #ifdef CONFIG_MTK_SIM_LOCK_POWER_ON_WRITE_PROTECT
-#include <mt-plat/env.h>
+/* #include <mt-plat/env.h> Fix me, header file not found */
+#endif
+#include <linux/platform_device.h>
+#include <linux/device.h>
+#include <linux/module.h>
+#include <linux/interrupt.h>
+#ifdef CONFIG_OF
+#include <linux/of.h>
+#include <linux/of_fdt.h>
+#include <linux/of_irq.h>
+#include <linux/of_address.h>
 #endif
 
+#include "ccci_auxadc.h"
 #include "ccci_fsm_internal.h"
-//#ifdef OPLUS_FEATURE_SWTP
-//Add for caple detect when SIM plug in
-#include "ccci_swtp.h"
-//#endif /* OPLUS_FEATURE_SWTP */
-//#ifdef OPLUS_FEATURE_SWTP
-#include <linux/proc_fs.h>
-//#endif  /*OPLUS_FEATURE_SWTP*/
+#include "ccci_platform.h"
+#include "modem_sys.h"
+#include "md_sys1_platform.h"
+
 signed int __weak battery_get_bat_voltage(void)
 {
 	pr_debug("[ccci/dummy] %s is not supported!\n", __func__);
 	return 0;
 }
 
+#ifdef CCCI_KMODULE_ENABLE
+int switch_sim_mode(int id, char *buf, unsigned int len)
+{
+	pr_debug("[ccci/dummy] %s is not supported!\n", __func__);
+	return 0;
+}
+
+unsigned int get_sim_switch_type(void)
+{
+	pr_debug("[ccci/dummy] %s is not supported!\n", __func__);
+	return 0;
+}
+#endif
+
 static int fsm_md_data_ioctl(int md_id, unsigned int cmd, unsigned long arg)
 {
-	int ret = 0, retry;
-	int data;
-	char buffer[64];
-	unsigned int sim_slot_cfg[4];
+	int ret = 0, retry = 0;
+	int data = 0;
+	char buffer[64] = {0};
+	unsigned int sim_slot_cfg[4] = {0};
+	char ap_platform[5] = {0};
+	int md_gen = 0;
+	struct device_node *node = NULL;
 	struct ccci_per_md *per_md_data = ccci_get_per_md_data(md_id);
 	struct ccci_per_md *other_per_md_data
 			= ccci_get_per_md_data(GET_OTHER_MD_ID(md_id));
 
+	node = of_find_compatible_node(NULL, NULL,
+		"mediatek,mddriver");
+	of_property_read_u32(node,
+		"mediatek,md_generation", &md_gen);
+
 	switch (cmd) {
 	case CCCI_IOC_GET_MD_PROTOCOL_TYPE:
+
+
 #if (MD_GENERATION < 6292)
 		if (copy_to_user((void __user *)arg, "DHL", sizeof("DHL"))) {
 			CCCI_ERROR_LOG(md_id, FSM,
@@ -57,8 +80,11 @@ static int fsm_md_data_ioctl(int md_id, unsigned int cmd, unsigned long arg)
 			ret = -EFAULT;
 		}
 		ret = 0;
-		if (copy_to_user((void __user *)arg, MD_PLATFORM_INFO,
-				sizeof(MD_PLATFORM_INFO))) {
+//		snprintf(buffer, sizeof(buffer), "%d",md_gen);
+
+		snprintf((void *)ap_platform, sizeof(ap_platform), "%d", md_gen);
+		if (copy_to_user((void __user *)arg,
+			ap_platform, sizeof(ap_platform))) {
 			CCCI_ERROR_LOG(md_id, FSM,
 				"CCCI_IOC_GET_MD_PROTOCOL_TYPE: copy_from_user fail\n");
 			return -EFAULT;
@@ -94,7 +120,8 @@ static int fsm_md_data_ioctl(int md_id, unsigned int cmd, unsigned long arg)
 		ret = 0;
 		break;
 #ifdef CONFIG_MTK_SIM_LOCK_POWER_ON_WRITE_PROTECT
-	case CCCI_IOC_SIM_LOCK_RANDOM_PATTERN:
+#ifdef ENABLE_SIM_LOCK_RANDOM
+	case CCCI_IOC_SIM_LOCK_RANDOM_PATTERN: /* Fix me */
 		if (copy_from_user(&val, (void __user *)arg,
 				sizeof(unsigned int)))
 			CCCI_ERROR_LOG(md_id, FSM,
@@ -113,6 +140,7 @@ static int fsm_md_data_ioctl(int md_id, unsigned int cmd, unsigned long arg)
 		ret = 0;
 		set_env("sml_sync", buffer);
 		break;
+#endif
 #endif
 	case CCCI_IOC_SET_MD_BOOT_MODE:
 		if (copy_from_user(&data, (void __user *)arg,
@@ -420,7 +448,6 @@ long ccci_fsm_ioctl(int md_id, unsigned int cmd, unsigned long arg)
 	int ret = 0;
 	enum MD_STATE_FOR_USER state_for_user;
 	unsigned int data;
-	static unsigned long boot_ready_count;
 	char *VALID_USER = "ccci_mdinit";
 
 	if (!ctl)
@@ -429,27 +456,15 @@ long ccci_fsm_ioctl(int md_id, unsigned int cmd, unsigned long arg)
 	switch (cmd) {
 	case CCCI_IOC_GET_MD_STATE:
 		state_for_user = ccci_fsm_get_md_state_for_user(md_id);
-		if (state_for_user >= 0) {
-			ret = put_user((unsigned int)state_for_user,
-					(unsigned int __user *)arg);
-		} else {
-			CCCI_ERROR_LOG(md_id, FSM,
-				"Get MD state fail: %d\n", state_for_user);
-			ret = state_for_user;
-		}
+		ret = put_user((unsigned int)state_for_user,
+				(unsigned int __user *)arg);
+
 		break;
 	case CCCI_IOC_GET_OTHER_MD_STATE:
 		state_for_user =
 		ccci_fsm_get_md_state_for_user(GET_OTHER_MD_ID(md_id));
-		if (state_for_user >= 0) {
-			ret = put_user((unsigned int)state_for_user,
-					(unsigned int __user *)arg);
-		} else {
-			CCCI_ERROR_LOG(md_id, FSM,
-				"Get other MD state fail: %d\n",
-				state_for_user);
-			ret = state_for_user;
-		}
+		ret = put_user((unsigned int)state_for_user,
+				(unsigned int __user *)arg);
 		break;
 	case CCCI_IOC_MD_RESET:
 		CCCI_NORMAL_LOG(md_id, FSM,
@@ -530,7 +545,7 @@ long ccci_fsm_ioctl(int md_id, unsigned int cmd, unsigned long arg)
 	case CCCI_IOC_LEAVE_DEEP_FLIGHT:
 		CCCI_NORMAL_LOG(md_id, FSM,
 		"MD leave flight mode ioctl called by %s\n", current->comm);
-		__pm_wakeup_event(&ctl->wakelock, jiffies_to_msecs(10 * HZ));
+		__pm_wakeup_event(ctl->wakelock, jiffies_to_msecs(10 * HZ));
 		ret = fsm_monitor_send_message(ctl->md_id,
 				CCCI_MD_MSG_FLIGHT_START_REQUEST, 0);
 		inject_md_status_event(md_id, MD_STA_EV_LEAVE_FLIGHT_REQUEST,
@@ -551,7 +566,7 @@ long ccci_fsm_ioctl(int md_id, unsigned int cmd, unsigned long arg)
 		CCCI_NORMAL_LOG(md_id, FSM,
 		"MD leave flight mode enhanced ioctl called by %s\n",
 		current->comm);
-		__pm_wakeup_event(&ctl->wakelock, jiffies_to_msecs(10 * HZ));
+		__pm_wakeup_event(ctl->wakelock, jiffies_to_msecs(10 * HZ));
 		ret = fsm_monitor_send_message(ctl->md_id,
 				CCCI_MD_MSG_FLIGHT_START_REQUEST, 0);
 		fsm_monitor_send_message(GET_OTHER_MD_ID(ctl->md_id),
@@ -561,14 +576,11 @@ long ccci_fsm_ioctl(int md_id, unsigned int cmd, unsigned long arg)
 		break;
 	/* RILD nodify ccci power off md */
 	case CCCI_IOC_RILD_POWER_OFF_MD:
-		if (ctl->boot_count == boot_ready_count || ctl->md_state != READY)
-			break;
 		CCCI_NORMAL_LOG(md_id, FSM,
-				"MD power off called by %s, boot_count %lu ,ready_count %lu\n",
-				current->comm, ctl->boot_count, boot_ready_count);
+				"MD will power off ioctl called by %s\n",
+				current->comm);
 		inject_md_status_event(md_id, MD_STA_EV_RILD_POWEROFF_START,
 				current->comm);
-		boot_ready_count = ctl->boot_count;
 		break;
 	case CCCI_IOC_SET_EFUN:
 		if (copy_from_user(&data, (void __user *)arg,
@@ -599,15 +611,6 @@ long ccci_fsm_ioctl(int md_id, unsigned int cmd, unsigned long arg)
 			"get modem exception type=%d ret=%d\n",
 			ctl->ee_ctl.ex_type, ret);
 		break;
-    //#ifdef OPLUS_FEATURE_SWTP
-    //Add for caple detect when SIM plug in
-    case CCCI_IOC_SIM_INSERTED_FOR_SWITCH_RF_SAR:
-        CCCI_NORMAL_LOG(md_id, FSM,
-            "SIM inserted notify to ioctl called by %s\n", current->comm);
-        ret = ccci_get_gpio175_value();
-    //Wrire the return value into Node file
-    //....
-    //#endif /* OPLUS_FEATURE_SWTP */
 	default:
 		ret = fsm_md_data_ioctl(md_id, cmd, arg);
 		break;

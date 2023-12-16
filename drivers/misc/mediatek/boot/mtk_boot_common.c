@@ -121,12 +121,7 @@ static void __init init_boot_common(unsigned int line)
 }
 
 /* return boot mode */
-/* #ifndef FEATURE_BUG_STABILITY */
-/* modify for conlict with oplus/kernel/system/boot_mode.h build error */
-/* unsigned int get_boot_mode(void) */
-/* #else */
-int get_boot_mode(void)
-/* #endif */
+unsigned int get_boot_mode(void)
 {
 	if (atomic_read(&g_boot_init) != BM_INITIALIZED) {
 		pr_warn("fail, %s (%d) state(%d,%d)\n", __func__, __LINE__,
@@ -231,14 +226,14 @@ static struct kobject *systeminfo_kobj;
 static ssize_t ftmmode_show(struct kobject *kobj, struct kobj_attribute *attr,
 				char *buf)
 {
-	if (oppo_boot_mode == OPPO_SILENCE_BOOT)
+	if (oplus_boot_mode == OPLUS_SILENCE_BOOT)
 		return sprintf(buf, "%d\n", SILENCE_BOOT);
-	else if (oppo_boot_mode == OPPO_SAFE_BOOT)
+	else if (oplus_boot_mode == OPLUS_SAFE_BOOT)
 		return sprintf(buf, "%d\n", SAFE_BOOT);
-	else if (oppo_boot_mode == OPPO_AGING_BOOT)
+	else if (oplus_boot_mode == OPLUS_AGING_BOOT)
 		return sprintf(buf, "%d\n", AGING_BOOT);
 	else
-		return sprintf(buf, "%d\n", get_boot_mode());
+		return sprintf(buf, "%u\n", get_boot_mode());
 }
 
 struct kobj_attribute ftmmode_attr = {
@@ -301,7 +296,7 @@ static int __init create_sysfs(void)
 
 #ifdef OPLUS_BUG_STABILITY
 	systeminfo_kobj = kobject_create_and_add("systeminfo", NULL);
-	printk("oppo create systeminto node suscess!\n");
+	printk("oplus create systeminto node suscess!\n");
 	if (systeminfo_kobj)
 		ret = sysfs_create_group(systeminfo_kobj, &attr_group);
 #endif /* OPLUS_BUG_STABILITY */
@@ -341,36 +336,36 @@ static int boot_mode_proc_show(struct seq_file *p, void *v)
 }
 
 #ifdef OPLUS_BUG_STABILITY
-OPPO_BOOTMODE oppo_boot_mode = OPPO_NORMAL_BOOT;
-static int oppo_get_boot_mode(char *oppo_boot_mode_char)
+OPLUS_BOOTMODE oplus_boot_mode = OPLUS_NORMAL_BOOT;
+static int oplus_get_boot_mode(char *oplus_boot_mode_char)
 {
 	int  boot_mode_temp = 0;
-	sscanf(oppo_boot_mode_char, "%d", &boot_mode_temp);
+	sscanf(oplus_boot_mode_char, "%d", &boot_mode_temp);
 	if(boot_mode_temp == 0)
 	{
-		oppo_boot_mode = OPPO_NORMAL_BOOT;
+		oplus_boot_mode = OPLUS_NORMAL_BOOT;
 	}
 	else if (boot_mode_temp == 1)
 	{
-		oppo_boot_mode = OPPO_SILENCE_BOOT;
+		oplus_boot_mode = OPLUS_SILENCE_BOOT;
 	}
 	else if (boot_mode_temp == 2)
 	{
-		oppo_boot_mode = OPPO_SAFE_BOOT;
+		oplus_boot_mode = OPLUS_SAFE_BOOT;
 	}
 	else if (boot_mode_temp == 3)
 	{
-		oppo_boot_mode = OPPO_AGING_BOOT;
+		oplus_boot_mode = OPLUS_AGING_BOOT;
 	}
 	else
 	{
-		oppo_boot_mode = OPPO_UNKNOWN_BOOT;
+		oplus_boot_mode = OPLUS_UNKNOWN_BOOT;
 	}
-    pr_err("oppo_boot_mode: %d ",oppo_boot_mode);
+    pr_err("oplus_boot_mode: %d ",oplus_boot_mode);
 
      return 1;
 }
-__setup("oplus_boot_mode=", oppo_get_boot_mode);
+__setup("oplus_boot_mode=", oplus_get_boot_mode);
 #endif /* OPLUS_BUG_STABILITY */
 static int boot_mode_proc_open(struct inode *inode, struct file *file)
 {

@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2019 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef _CUST_PMIC_H_
@@ -18,13 +10,9 @@
 
 #define LOW_POWER_LIMIT_LEVEL_1 15
 
-#ifndef OPLUS_FEATURE_CHG_BASIC
 #define PT_DLPT_BRINGUP 0
-#else
-#define PT_DLPT_BRINGUP 1
-#endif /*!OPLUS_FEATURE_CHG_BASIC*/
 
-//#if defined(CONFIG_FPGA_EARLY_PORTING) || PT_DLPT_BRINGUP
+#if defined(CONFIG_FPGA_EARLY_PORTING) || PT_DLPT_BRINGUP
 /* Define for disable low battery protect feature,
  * default no define for enable low battery protect.
  */
@@ -38,7 +26,7 @@
 
 /*Define for DLPT*/
 #define DISABLE_DLPT_FEATURE
-//#endif /* defined(CONFIG_FPGA_EARLY_PORTING) || PT_DLPT_BRINGUP */
+#endif /* defined(CONFIG_FPGA_EARLY_PORTING) || PT_DLPT_BRINGUP */
 
 /* if not support GM3, disable DLPT */
 #if defined(CONFIG_MTK_DISABLE_GAUGE)

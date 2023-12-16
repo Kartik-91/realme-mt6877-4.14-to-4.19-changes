@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2020 MediaTek Inc.
  */
 #include <linux/kernel.h>
 #include "cam_cal_list.h"
@@ -17,6 +9,31 @@
 #include "kd_imgsensor.h"
 
 struct stCAM_CAL_LIST_STRUCT g_camCalList[] = {
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	{ZHAOYUN_QTECH_MAIN_OV13B10_SENSOR_ID, 0xA0, Common_read_region},
+	{ZHAOYUNLITE_QTECH_MAIN_OV13B10_SENSOR_ID, 0xA0, Common_read_region},
+	{ZHAOYUN_SHINETECH_MAIN_S5KJN103_SENSOR_ID, 0xA0, Common_read_region},
+	{ZHAOYUN_SHINETECH_FRONT_OV08D10_SENSOR_ID, 0xA0, Common_read_region},
+	{ZHAOYUN_SHINETECH_MAIN_S5K3L6_SENSOR_ID, 0xA0, Common_read_region},
+	{ZHAOYUNLITE_QTECH_MAIN_S5K3L6_SENSOR_ID, 0xA0, Common_read_region},
+	{ZHAOYUN_OPTICS_FRONT_GC5035_SENSOR_ID, 0xA8, Common_read_region},
+	{LIMU_SHINETECH_MAIN_IMX355_SENSOR_ID, 0xA0, Common_read_region},
+	{LIMU_QTECH_MAIN_OV13B10_SENSOR_ID, 0xA0, Common_read_region},
+	{LIMU_SHINETECH_MAIN_S5KJN103_SENSOR_ID, 0xA0, Common_read_region},
+	{LIMU_OPTICS_FRONT_GC5035_SENSOR_ID, 0xA8, Common_read_region},
+	{PARKERA_QTECH_MAIN_OV13B10_SENSOR_ID, 0xA0, Common_read_region},
+	{PARKERA_QTECH_MAIN_OV13B2A_SENSOR_ID, 0xA0, Common_read_region},
+	{PARKERA_SHINETECH_MAIN_S5KJN103_SENSOR_ID, 0xA0, Common_read_region},
+	{PARKERA_SHINETECH_FRONT_OV08D10_SENSOR_ID, 0xA0, Common_read_region},
+	{PARKERA_QTECH_FRONT_IMX355_SENSOR_ID, 0xA8, Common_read_region},
+	{PARKERA_HOLITECH_MACRO_GC02M1_SENSOR_ID, 0xA4, Common_read_region},
+	{PARKERA_SHINETECH_MACRO_OV02B10_SENSOR_ID, 0xA4, Common_read_region},
+
+	{PARKERB_SHINETECH_MAIN_S5KJN103_SENSOR_ID, 0xA0, Common_read_region},
+	{PARKERB_SUNNY_FRONT_S5K3P9SP_SENSOR_ID, 0xA8, Common_read_region},
+	{PARKERB_HLT_MICRO_GC02M1_SENSOR_ID, 0xA4, Common_read_region},
+	{PARKERB_SHINETECH_MACRO_OV02B10_SENSOR_ID, 0xA4, Common_read_region},
+#endif /* OPLUS_FEATURE_CAMERA_COMMON */
 	/*Below is commom sensor */
 	{IMX230_SENSOR_ID, 0xA0, Common_read_region},
 	{S5K2T7SP_SENSOR_ID, 0xA4, Common_read_region},

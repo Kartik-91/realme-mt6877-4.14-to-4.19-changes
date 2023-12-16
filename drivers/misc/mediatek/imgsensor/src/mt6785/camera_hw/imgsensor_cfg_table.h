@@ -1,15 +1,8 @@
+
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/atomic.h>
 #include "imgsensor_common.h"
@@ -102,6 +95,7 @@ enum Voltage {
 #define	AVDD   IMGSENSOR_HW_PIN_AVDD
 #define	DVDD   IMGSENSOR_HW_PIN_DVDD
 #define	DOVDD  IMGSENSOR_HW_PIN_DOVDD
+#define	AFVDD  IMGSENSOR_HW_PIN_UNDEF
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
 #define	AFVDD  IMGSENSOR_HW_PIN_AFVDD
 #define	AVDD2  IMGSENSOR_HW_PIN_AVDD2
@@ -132,6 +126,7 @@ enum IMGSENSOR_HW_ID {
 	IMGSENSOR_HW_ID_MCLK,
 	IMGSENSOR_HW_ID_REGULATOR,
 	IMGSENSOR_HW_ID_GPIO,
+
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
 	IMGSENSOR_HW_ID_WL2864,
 #endif

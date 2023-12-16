@@ -1,15 +1,5 @@
-#
-# Copyright (C) 2015 MediaTek Inc.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
+# SPDX-License-Identifier: GPL-2.0
+
 #
 # Makefile for misc devices that really don't fit anywhere else.
 #
@@ -27,17 +17,13 @@ subdir-ccflags-y += -I$(IMGSENSOR_DRIVER_PATH)/common/$(COMMON_VERSION) \
 	-I$(srctree)/drivers/i2c/busses/
 
 obj-y				+= ../common/$(COMMON_VERSION)/imgsensor.o
+obj-y				+= ../common/$(COMMON_VERSION)/imgsensor.o
 obj-y				+= ../common/$(COMMON_VERSION)/imgsensor_hw.o
 obj-y				+= ../common/$(COMMON_VERSION)/imgsensor_i2c.o
 obj-y				+= ../common/$(COMMON_VERSION)/imgsensor_legacy.o
 obj-y				+= ../common/$(COMMON_VERSION)/imgsensor_proc.o
 obj-y				+= ../common/$(COMMON_VERSION)/imgsensor_sensor_list.o
 obj-y				+= ../common/$(COMMON_VERSION)/seninf.o
-#ifdef OPLUS_FEATURE_CAMERA_COMMON
-obj-y				+= ../OplusImgsensor/imgsensor_eeprom.o
-obj-y				+= ../OplusImgsensor/imgsensor_hwcfg_custom.o
-obj-y				+= ../OplusImgsensor/imgsensor_hwcfg_mt6781.o
-#endif /* OPLUS_FEATURE_CAMERA_COMMON */
 obj-y				+= ../common/v1_1/n3d_fsync/
 
 define FILTER_DRV
@@ -79,7 +65,7 @@ endif
 subdir-ccflags-y		+= -I$(IMGSENSOR_DRIVER_PATH)/common/$(COMMON_VERSION)/camera_hw
 
 # Enable parallelism
-subdir-ccflags-y += -DSENSOR_PARALLEISM
+# subdir-ccflags-y += -DSENSOR_PARALLEISM
 subdir-ccflags-y += -DSENINF_N3D_SUPPORT
 
 obj-y += seninf/
@@ -88,3 +74,5 @@ subdir-ccflags-y += -I$(IMGSENSOR_DRIVER_PATH)/$(CONFIG_MTK_PLATFORM_SENSOR)/sen
 $(info imgsensor subdir-ccflags-y = $(subdir-ccflags-y))
 
 subdir-ccflags-y += -DNEED_LATE_INITCALL
+
+subdir-ccflags-y += -DIMGSENSOR_MT6781

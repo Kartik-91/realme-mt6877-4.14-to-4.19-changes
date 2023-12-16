@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #define pr_fmt(fmt) "<STEP_COUNTER> " fmt
@@ -114,9 +106,9 @@ step_c_loop:
 	}
 }
 
-static void step_c_poll(unsigned long data)
+static void step_c_poll(struct timer_list *t)
 {
-	struct step_c_context *obj = (struct step_c_context *)data;
+	struct step_c_context *obj = from_timer(obj, t, timer);
 
 	if (obj != NULL)
 		schedule_work(&obj->report);
@@ -138,10 +130,8 @@ static struct step_c_context *step_c_context_alloc_object(void)
 #endif/*OPLUS_FEATURE_SENSOR*/
 	atomic_set(&obj->wake, 0);
 	INIT_WORK(&obj->report, step_c_work_func);
-	init_timer(&obj->timer);
+	timer_setup(&obj->timer, step_c_poll, 0);
 	obj->timer.expires = jiffies + atomic_read(&obj->delay) / (1000 / HZ);
-	obj->timer.function = step_c_poll;
-	obj->timer.data = (unsigned long)obj;
 	obj->is_first_data_after_enable = false;
 	obj->is_polling_run = false;
 	mutex_init(&obj->step_c_op_mutex);
@@ -438,7 +428,7 @@ int step_c_enable_nodata(int enable)
 }
 
 
-static ssize_t step_c_show_enable_nodata(struct device *dev,
+static ssize_t step_cenablenodata_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	int len = 0;
@@ -447,7 +437,7 @@ static ssize_t step_c_show_enable_nodata(struct device *dev,
 	return len;
 }
 
-static ssize_t step_c_store_enable_nodata(struct device *dev,
+static ssize_t step_cenablenodata_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	int err = 0;
@@ -471,7 +461,7 @@ static ssize_t step_c_store_enable_nodata(struct device *dev,
 	return err;
 }
 
-static ssize_t step_c_store_active(struct device *dev,
+static ssize_t step_cactive_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct step_c_context *cxt = NULL;
@@ -533,7 +523,7 @@ static ssize_t step_c_store_active(struct device *dev,
 }
 
 /*----------------------------------------------------------------------------*/
-static ssize_t step_c_show_active(struct device *dev,
+static ssize_t step_cactive_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	struct step_c_context *cxt = NULL;
@@ -545,7 +535,7 @@ static ssize_t step_c_show_active(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", div);
 }
 
-static ssize_t step_c_store_delay(struct device *dev,
+static ssize_t step_cdelay_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	int delay = 0, err = 0;
@@ -577,7 +567,7 @@ static ssize_t step_c_store_delay(struct device *dev,
 
 }
 
-static ssize_t step_c_show_delay(struct device *dev,
+static ssize_t step_cdelay_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	int len = 0;
@@ -587,7 +577,7 @@ static ssize_t step_c_show_delay(struct device *dev,
 }
 
 
-static ssize_t step_c_store_batch(struct device *dev,
+static ssize_t step_cbatch_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct step_c_context *cxt = NULL;
@@ -652,13 +642,13 @@ static ssize_t step_c_store_batch(struct device *dev,
 	return res;
 }
 
-static ssize_t step_c_show_batch(struct device *dev,
+static ssize_t step_cbatch_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	return snprintf(buf, PAGE_SIZE, "%d\n", 0);
 }
 
-static ssize_t step_c_store_flush(struct device *dev,
+static ssize_t step_cflush_store(struct device *dev,
 	struct device_attribute *attr,
 				  const char *buf, size_t count)
 {
@@ -710,13 +700,13 @@ static ssize_t step_c_store_flush(struct device *dev,
 	return err;
 }
 
-static ssize_t step_c_show_flush(struct device *dev,
+static ssize_t step_cflush_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	return snprintf(buf, PAGE_SIZE, "%d\n", 0);
 }
 
-static ssize_t step_c_show_devnum(struct device *dev,
+static ssize_t step_cdevnum_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	return snprintf(buf, PAGE_SIZE, "%d\n", 0);
@@ -849,13 +839,12 @@ static int step_c_misc_init(struct step_c_context *cxt)
 	return err;
 }
 
-DEVICE_ATTR(step_cenablenodata, 0644, step_c_show_enable_nodata,
-	    step_c_store_enable_nodata);
-DEVICE_ATTR(step_cactive, 0644, step_c_show_active, step_c_store_active);
-DEVICE_ATTR(step_cdelay, 0644, step_c_show_delay, step_c_store_delay);
-DEVICE_ATTR(step_cbatch, 0644, step_c_show_batch, step_c_store_batch);
-DEVICE_ATTR(step_cflush, 0644, step_c_show_flush, step_c_store_flush);
-DEVICE_ATTR(step_cdevnum, 0644, step_c_show_devnum, NULL);
+DEVICE_ATTR_RW(step_cenablenodata);
+DEVICE_ATTR_RW(step_cactive);
+DEVICE_ATTR_RW(step_cdelay);
+DEVICE_ATTR_RW(step_cbatch);
+DEVICE_ATTR_RW(step_cflush);
+DEVICE_ATTR_RO(step_cdevnum);
 
 
 static struct attribute *step_c_attributes[] = {
@@ -1101,6 +1090,7 @@ static int step_c_remove(void)
 	if (err)
 		pr_err("misc_deregister fail: %d\n", err);
 	kfree(step_c_context_obj);
+	platform_driver_unregister(&step_counter_driver);
 
 	return 0;
 }

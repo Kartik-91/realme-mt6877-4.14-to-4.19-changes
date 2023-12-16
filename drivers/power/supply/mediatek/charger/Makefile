@@ -33,27 +33,6 @@ obj-y += charger_class.o mtk_switch_charging.o mtk_pdc_intf.o\
          mtk_chg_type_det.o mtk_pe40_intf.o mtk_linear_charging.o\
          adapter_class.o mtk_pd_adapter.o\
          mtk_switch_charging2.o mtk_intf.o mtk_pe40.o mtk_pdc.o
-else ifeq ($(CONFIG_OPLUS_CHARGER_MTK6771),y)
-obj-y += charger_class.o oplus_mtk_charger.o mtk_switch_charging.o mtk_pdc_intf.o\
-	 mtk_chg_type_det.o mtk_pe40_intf.o mtk_linear_charging.o\
-	 adapter_class.o mtk_pd_adapter.o oplus_mt6771_charger.o
-else ifeq ($(CONFIG_OPLUS_CHARGER_MTK6781),y)
-obj-y += charger_class.o mtk_switch_charging.o mtk_pdc_intf.o\
-	 mtk_chg_type_det.o mtk_pe40_intf.o mtk_linear_charging.o\
-	 adapter_class.o mtk_pd_adapter.o\
-	 mtk_switch_charging2.o mtk_intf.o mtk_pe40.o mtk_pdc.o
-else ifeq ($(CONFIG_OPLUS_CHARGER_MTK6769),y)
-obj-y += charger_class.o oplus_mtk_charger.o mtk_switch_charging.o mtk_pdc_intf.o\
-	 mtk_chg_type_det.o mtk_pe40_intf.o mtk_linear_charging.o\
-	 adapter_class.o mtk_pd_adapter.o oplus_mt6769_charger.o mtk_hvdcp_intf.o
-else ifeq ($(CONFIG_OPLUS_CHARGER_MTK6768),y)
-obj-y += charger_class.o mtk_switch_charging.o mtk_pdc_intf.o\
-         oplus_chg_type_det.o mtk_pe40_intf.o mtk_linear_charging.o\
-         adapter_class.o mtk_pd_adapter.o mtk_hvdcp_intf.o
-else ifeq ($(CONFIG_OPLUS_CHARGER_MTK6769R),y)
-obj-y += charger_class.o mtk_switch_charging.o mtk_pdc_intf.o\
-		oplus_chg_type_det.o mtk_pe40_intf.o mtk_linear_charging.o\
-		adapter_class.o mtk_pd_adapter.o mtk_hvdcp_intf.o
 else
 obj-y += charger_class.o mtk_charger.o mtk_switch_charging.o mtk_pdc_intf.o\
 	 mtk_chg_type_det.o mtk_pe40_intf.o mtk_linear_charging.o\
@@ -70,9 +49,13 @@ obj-$(CONFIG_RT_PROP_CHGALGO) += prop_chgalgo_class.o pca_pps_ta.o \
 obj-$(CONFIG_CHARGER_RT9465) += rt9465.o
 obj-$(CONFIG_CHARGER_RT9466) += rt9466.o
 obj-$(CONFIG_CHARGER_RT9458) += rt9458.o
+obj-$(CONFIG_CHARGER_RT9467) += rt9467.o
+obj-$(CONFIG_CHARGER_RT9471) += rt9471.o
 obj-$(CONFIG_CHARGER_RT9759) += rt9759.o
 obj-$(CONFIG_CHARGER_HL7005) += hl7005.o
+obj-$(CONFIG_CHARGER_BQ25601) += bq25601.o
 obj-$(CONFIG_LOAD_SWITCH_RT9750) += rt9750.o
 obj-$(CONFIG_CHARGER_MT6362) += mt6362-chg.o
 obj-$(CONFIG_CHARGER_BQ25890) += bq2589x_charger.o
 obj-$(CONFIG_CHARGER_SGM41511) += sgm4151x.o
+obj-$(CONFIG_CHARGER_MM8013) += mm8013.o

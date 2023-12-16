@@ -16,6 +16,9 @@
 #ifndef _GC02M1B_MIPI_MONO_H
 #define _GC02M1B_MIPI_MONO_H
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 
 typedef enum{
     IMGSENSOR_MODE_INIT,
@@ -77,7 +80,9 @@ typedef struct imgsensor_struct {
 /* SENSOR PRIVATE STRUCT FOR CONSTANT*/
 typedef struct imgsensor_info_struct {
     kal_uint32 sensor_id;            //record sensor id defined in Kd_imgsensor.h
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
     kal_uint16 module_id;
+#endif
     kal_uint32 checksum_value;        //checksum value for Camera Auto Test
     imgsensor_mode_struct pre;        //preview scenario relative information
     imgsensor_mode_struct cap;        //capture scenario relative information

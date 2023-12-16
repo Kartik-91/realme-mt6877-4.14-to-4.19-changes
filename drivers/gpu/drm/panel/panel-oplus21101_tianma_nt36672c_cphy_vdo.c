@@ -549,6 +549,8 @@ static struct mtk_panel_params ext_params = {
 	.phy_timcon = {
 		.hs_prpr = 0x0B,
 	},
+	.vendor = "NT36672C_TM_Alice",
+	.manufacture = "Alice_nt_tm3276",
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -582,6 +584,8 @@ static struct mtk_panel_params ext_params_90hz = {
 	.phy_timcon = {
 		.hs_prpr = 0x0B,
 	},
+        .vendor = "NT36672C_TM_Alice",
+        .manufacture = "Alice_nt_tm3276",
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -615,6 +619,8 @@ static struct mtk_panel_params ext_params_30hz = {
 	.phy_timcon = {
 		.hs_prpr = 0x0B,
 	},
+        .vendor = "NT36672C_TM_Alice",
+        .manufacture = "Alice_nt_tm3276",
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -648,6 +654,8 @@ static struct mtk_panel_params ext_params_45hz = {
 	.phy_timcon = {
 		.hs_prpr = 0x0B,
 	},
+        .vendor = "NT36672C_TM_Alice",
+        .manufacture = "Alice_nt_tm3276",
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -681,6 +689,8 @@ static struct mtk_panel_params ext_params_48hz = {
 	.phy_timcon = {
 		.hs_prpr = 0x0B,
 	},
+        .vendor = "NT36672C_TM_Alice",
+        .manufacture = "Alice_nt_tm3276",
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -714,6 +724,8 @@ static struct mtk_panel_params ext_params_50hz = {
 	.phy_timcon = {
 		.hs_prpr = 0x0B,
 	},
+        .vendor = "NT36672C_TM_Alice",
+        .manufacture = "Alice_nt_tm3276",
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -784,17 +796,17 @@ static int mtk_panel_ext_param_set(struct drm_panel *panel,
 	struct mtk_panel_ext *ext = find_panel_ext(panel);
 	int ret = 0;
 
-	if (mode == 0)
+	if (ext && mode == 0)
 		ext->params = &ext_params;
-	else if (mode == 1)
+	else if (ext && mode == 1)
 		ext->params = &ext_params_90hz;
-	else if (mode == 2)
+	else if (ext && mode == 2)
 		ext->params = &ext_params_30hz;
-	else if (mode == 3)
+	else if (ext && mode == 3)
 		ext->params = &ext_params_45hz;
-	else if (mode == 4)
+	else if (ext && mode == 4)
 		ext->params = &ext_params_48hz;
-	else if (mode == 5)
+	else if (ext && mode == 5)
 		ext->params = &ext_params_50hz;
 	else
 		ret = 1;

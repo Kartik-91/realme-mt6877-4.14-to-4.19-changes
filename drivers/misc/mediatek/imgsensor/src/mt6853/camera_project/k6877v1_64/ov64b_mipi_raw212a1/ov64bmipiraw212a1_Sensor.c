@@ -44,7 +44,7 @@
 #include "imgsensor_eeprom.h"
 #include "ov64bmipiraw212a1_Sensor.h"
 #include "ov64b_Sensor212a1_setting.h"
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 
 #define _I2C_BUF_SIZE 4096
 static kal_uint16 _i2c_data [_I2C_BUF_SIZE];
@@ -2447,8 +2447,13 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
             break;
         }
         break;
+         /*its sensor_fusion test Need to use the test box to manually test to obtain the best offset value
+          *offset calculation process：
+          *Best correlation of 0.000011 at shift of 3.08ms
+          *According to the above log, the shift is 3.08,Test 5-10 times, take the average, use the average * 1000000 and then add to the previous offset
+          *then you can get the latest offset*/
     case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
-        *(MINT32 *)(signed long)(*(feature_data + 1)) = -17282000;
+        *(MINT32 *)(signed long)(*(feature_data + 1)) = -1697585;
         break;
     case SENSOR_FEATURE_GET_PIXEL_CLOCK_FREQ_BY_SCENARIO:
         switch (*feature_data) {

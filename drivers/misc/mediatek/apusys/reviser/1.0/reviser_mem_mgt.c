@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2019 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2020 MediaTek Inc.
  */
 
 #include <linux/errno.h>
@@ -322,7 +314,7 @@ int reviser_table_get_tcm(void *drvinfo,
 
 //	LOG_DEBUG("page_num %u tcm_pgtable %lx\n",
 //			page_num, tcm_pgtable->table_tcm[0]);
-	if (g_tcm_free == 0) {
+	if (g_tcm_free == 0 || TABLE_TCM_MAX == 0) {
 		LOG_DEBUG("No free TCM (%u/%u)\n",
 				page_num, g_tcm_free);
 		tcm_pgtable->page_num = 0;
@@ -452,6 +444,11 @@ void reviser_table_print_tcm(void *drvinfo, void *s_file)
 	DEBUG_TAG;
 	if (drvinfo == NULL) {
 		LOG_ERR("invalid argument\n");
+		return;
+	}
+
+	if (TABLE_TCM_MAX == 0) {
+		LOG_DEBUG("No TCM\n");
 		return;
 	}
 

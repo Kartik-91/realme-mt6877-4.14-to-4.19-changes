@@ -1,14 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2015 MediaTek Inc.
+ * Copyright (C) 2021 MediaTek Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
  */
 
 #define LOG_TAG "LCM"
@@ -597,14 +590,14 @@ static void lcm_get_params(struct LCM_PARAMS *params)
 	// params->dsi.dynamic_fps_levels = 4;
 	// params->max_refresh_rate = 60;
 	// params->min_refresh_rate = 30;
-#if 0
+//#if 0
 	/*vertical_frontporch should be related to the max fps*/
 	//params->dsi.vertical_frontporch = 20;
 	/*vertical_frontporch_for_low_power
 	 *should be related to the min fps
 	 */
-	params->dsi.vertical_frontporch_for_low_power = 750;
-#endif
+	//params->dsi.vertical_frontporch_for_low_power = 750;
+//#endif
 
 	// dynamic_fps_levels =
 		// sizeof(lcm_dynamic_fps_setting)/sizeof(struct dynamic_fps_info);
@@ -634,15 +627,15 @@ static void lcm_get_params(struct LCM_PARAMS *params)
 static void lcm_init_power(void)
 {
 	display_bias_enable();
-#if 0
-	if (lcm_util.set_gpio_lcd_enp_bias) {
-		lcm_util.set_gpio_lcd_enp_bias(1);
+//#if 0
+	//if (lcm_util.set_gpio_lcd_enp_bias) {
+		//lcm_util.set_gpio_lcd_enp_bias(1);
 
-		_lcm_i2c_write_bytes(0x0, 0xf);
-		_lcm_i2c_write_bytes(0x1, 0xf);
-	} else
-		LCM_LOGI("set_gpio_lcd_enp_bias not defined...\n");
-#endif
+		//_lcm_i2c_write_bytes(0x0, 0xf);
+		//_lcm_i2c_write_bytes(0x1, 0xf);
+	//} else
+		//LCM_LOGI("set_gpio_lcd_enp_bias not defined...\n");
+//#endif
 }
 
 static void lcm_suspend_power(void)

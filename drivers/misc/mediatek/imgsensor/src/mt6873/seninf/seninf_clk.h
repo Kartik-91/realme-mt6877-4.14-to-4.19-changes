@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef __SENINF_CLK_H__
@@ -34,6 +26,7 @@
 
 #define IMGSENSOR_DFS_CTRL_ENABLE
 #ifdef IMGSENSOR_DFS_CTRL_ENABLE
+#include <linux/soc/mediatek/mtk-pm-qos.h>
 #include <linux/pm_qos.h>
 #include <mmdvfs_pmqos.h>
 
@@ -121,11 +114,13 @@ struct SENINF_CLK {
 	atomic_t wakelock_cnt;
 
 #ifdef CONFIG_PM_SLEEP
-	struct wakeup_source seninf_wake_lock;
+	struct wakeup_source *seninf_wake_lock;
 #endif
 };
 
 enum SENINF_RETURN seninf_clk_init(struct SENINF_CLK *pclk);
+#define HAVE_SENINF_CLK_EXIT
+void seninf_clk_exit(struct SENINF_CLK *pclk);
 int seninf_clk_set(
 	struct SENINF_CLK *pclk, struct ACDK_SENSOR_MCLK_STRUCT *pmclk);
 void seninf_clk_open(struct SENINF_CLK *pclk);

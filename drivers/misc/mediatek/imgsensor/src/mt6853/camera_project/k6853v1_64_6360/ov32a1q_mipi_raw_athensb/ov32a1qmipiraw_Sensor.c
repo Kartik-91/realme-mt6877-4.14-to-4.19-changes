@@ -1667,8 +1667,8 @@ static void set_mirror_flip(kal_uint8 image_mirror)
     value_3821 = read_cmos_sensor(0x3821);
     switch (image_mirror) {
     case IMAGE_NORMAL:
-        write_cmos_sensor(0x3820, value_3820&(~(1<<2)));//bit2Çå0
-        write_cmos_sensor(0x3821, value_3821|(1<<2));//bit2ÖÃ1
+        write_cmos_sensor(0x3820, value_3820&(~(1<<2)));//bit2ï¿½ï¿½0
+        write_cmos_sensor(0x3821, value_3821|(1<<2));//bit2ï¿½ï¿½1
         break;
 
     case IMAGE_V_MIRROR:
@@ -3549,12 +3549,25 @@ static kal_uint32 get_default_framerate_by_scenario(
 
 static kal_uint32 set_test_pattern_mode(kal_bool enable)
 {
-    LOG_INF("%s enable: %d\n", __func__, enable);
+    LOG_INF("Jesse+ enable: %d\n", enable);
+    if (enable) {
 
-    if (enable)
-        write_cmos_sensor(0x5081, 0x80);//has been tested
-    else
-        write_cmos_sensor(0x5081, 0x00);
+        write_cmos_sensor(0x3019, 0xf0);
+        write_cmos_sensor(0x4308, 0x01);
+        write_cmos_sensor(0x4300, 0x00);
+        write_cmos_sensor(0x4302, 0x00);
+        write_cmos_sensor(0x4304, 0x00);
+        write_cmos_sensor(0x4306, 0x00);
+
+        } else {
+
+        write_cmos_sensor(0x3019, 0xd2);
+        write_cmos_sensor(0x4308, 0x00);
+        write_cmos_sensor(0x4300, 0x00);
+        write_cmos_sensor(0x4302, 0x00);
+        write_cmos_sensor(0x4304, 0x00);
+        write_cmos_sensor(0x4306, 0x00);
+        }
 
     spin_lock(&imgsensor_drv_lock);
     imgsensor.test_pattern = enable;

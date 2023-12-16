@@ -1,14 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
+
 /*
- *  Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include <linux/module.h>
@@ -26,23 +19,6 @@
 
 #define MT6370_PMU_IRQ_EVT_MAX (128)
 
-#ifdef CONFIG_OPLUS_CHARGER_MTK6781
-/* hzl, Add for charging */
-extern int oplus_chg_get_mmi_status(void);
-extern bool mt6370_get_vbus_status(void);
-extern int mt6370_chg_enable(bool en);
-extern int mt6370_chg_enable_wdt(bool enable);
-extern bool oplus_chg_wake_update_work(void);
-extern bool oplus_vooc_get_fastchg_started(void);
-extern int oplus_vooc_get_adapter_update_status(void);
-extern void oplus_vooc_reset_fastchg_after_usbout(void);
-extern void oplus_chg_clear_chargerid_info(void);
-extern void oplus_chg_set_chargerid_switch_val(int);
-extern bool oplus_vooc_get_fastchg_to_normal(void);
-extern bool oplus_vooc_get_fastchg_to_warm(void);
-extern void oplus_chg_set_charger_type_unknown(void);
-extern void oplus_wake_up_usbtemp_thread(void);
-#endif
 struct irq_mapping_tbl {
 	const char *name;
 	const int id;
@@ -196,9 +172,7 @@ static int mt6370_pmu_irq_domain_map(struct irq_domain *d, unsigned int virq,
 	irq_set_chip_data(virq, chip);
 	irq_set_chip_and_handler(virq, &mt6370_pmu_irq_chip, handle_simple_irq);
 	irq_set_nested_thread(virq, true);
-#if 1	/*(LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)) */
 	irq_set_parent(virq, chip->irq);
-#endif
 	irq_set_noprobe(virq);
 	return 0;
 }
@@ -226,9 +200,6 @@ static irqreturn_t mt6370_pmu_irq_handler(int irq, void *priv)
 	u8 valid_chg[16] = { 0 };
 	int i = 0, j = 0, ret = 0;
 
-#ifdef CONFIG_OPLUS_CHARGER_MTK6781
-	bool vbus_status = false;
-#endif
 	pr_info_ratelimited("%s\n", __func__);
 	pm_runtime_get_sync(chip->dev);
 	ret = mt6370_pmu_reg_write(chip, MT6370_PMU_REG_IRQMASK, 0xFE);
@@ -296,44 +267,6 @@ static irqreturn_t mt6370_pmu_irq_handler(int irq, void *priv)
 				dev_info_ratelimited(chip->dev,
 				"%s: handler irq_domain = (%d, %d)\n",
 				__func__, i, j);
-#ifdef CONFIG_OPLUS_CHARGER_MTK6781
-/* hzl, Modify for charging */
-				if (i == 7) {
-					vbus_status = mt6370_get_vbus_status();
-					mt6370_chg_enable_wdt(vbus_status);
-					if (oplus_vooc_get_fastchg_started() == true
-						&& oplus_vooc_get_adapter_update_status() != 1) {
-						if (vbus_status) {
-							/*vooc adapters MCU vbus reset time is about 800ms(default standard),
-							 * but some adapters reset time is about 350ms, so when vbus plugin irq
-							 * was trigger, fastchg_started is true(default standard is false).
-							 */
-							mt6370_chg_enable(false);
-						}
-					} else {
-						if (!vbus_status) {
-							oplus_vooc_reset_fastchg_after_usbout();
-							if (oplus_vooc_get_fastchg_started() == false) {
-								oplus_chg_set_chargerid_switch_val(0);
-								oplus_chg_clear_chargerid_info();
-							}
-							oplus_chg_set_charger_type_unknown();
-						} else {
-							if ((oplus_vooc_get_fastchg_to_normal() == true)
-								|| (oplus_vooc_get_fastchg_to_warm() == true)
-								|| (oplus_chg_get_mmi_status() == 0)) {
-								mt6370_chg_enable(false);
-							}
-						}
-							oplus_chg_wake_update_work();
-					}
-					if (vbus_status) {
-						oplus_wake_up_usbtemp_thread();
-					}
-				} else {
-					dev_dbg(chip->dev, "handle_irq [%d,%d]\n", i, j);
-				}
-#endif /*CONFIG_OPLUS_CHARGER_MTK6781*/
 				handle_nested_irq(ret);
 			} else
 				dev_err(chip->dev, "unmapped %d %d\n", i, j);
@@ -460,9 +393,7 @@ void mt6370_pmu_irq_unregister(struct mt6370_pmu_chip *chip)
 
 	device_init_wakeup(chip->dev, false);
 	devm_free_irq(chip->dev, chip->irq, chip);
-#if 1	/* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)) */
 	irq_domain_remove(chip->irq_domain);
-#endif
 	gpio_free(pdata->intr_gpio);
 }
 EXPORT_SYMBOL(mt6370_pmu_irq_unregister);

@@ -26,6 +26,4 @@ int oplus_display_panel_get_dimlayer_enable(void *buf);
 int oplus_display_panel_set_dimlayer_enable(void *buf);
 int oplus_display_panel_set_dim_alpha(void *buf);
 int oplus_display_panel_get_dim_alpha(void *buf);
-//int oplus_display_panel_set_dim_dc_alpha(void *buf);
-//int oplus_display_panel_get_dim_dc_alpha(void *buf);
 #endif /*_OPLUS_DISPLAY_DC_H_*/

@@ -1,16 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2015 MediaTek Inc.
- * Author: YT SHEN <yt.shen@mediatek.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <drm/drmP.h>
 #include <drm/drm_atomic_helper.h>
@@ -62,6 +53,11 @@
 #include <mt-plat/mtk_boot_common.h>
 extern unsigned long silence_mode;
 #endif
+#ifdef CONFIG_OPLUS_OFP_V2
+/* add for ofp init */
+#include "oplus_display_onscreenfingerprint.h"
+#endif
+
 /* *******Panel Master******** */
 #include "mtk_fbconfig_kdebug.h"
 #ifdef CONFIG_MTK_HDMI_SUPPORT
@@ -103,6 +99,7 @@ static int manual_shift;
 static bool no_shift;
 #ifdef OPLUS_BUG_STABILITY
 int is_shutdown_flow = 0;
+extern unsigned int is_project(int project);
 #endif
 
 int mtk_atoi(const char *str)
@@ -247,7 +244,7 @@ static void mtk_atomic_wait_for_fences(struct drm_atomic_state *state)
 	struct drm_plane_state *plane_state;
 	int i;
 
-	for_each_plane_in_state(state, plane, plane_state, i)
+	for_each_old_plane_in_state(state, plane, plane_state, i)
 		mtk_fb_wait(plane->state->fb);
 }
 
@@ -358,12 +355,12 @@ static void mtk_atomic_rsz_calc_dual_params(
 		int_offset[1] = offset[1] / UNIT;
 		sub_offset[1] = offset[1] - UNIT * int_offset[1];
 		/*
-		if (int_offset[1] & 0x1) {
-			int_offset[1]++;
-			tile_in_len[1]++;
-			DDPINFO("%s :right tile int_offset: make odd to even\n", __func__);
-		}
-		*/
+		 * if (int_offset[1] & 0x1) {
+		 *	int_offset[1]++;
+		 *	tile_in_len[1]++;
+		 *	DDPINFO("%s :right tile int_offset: make odd to even\n", __func__);
+		 * }
+		 */
 		param[1].step = step;
 		param[1].out_x = 0;
 		param[1].int_offset = (u32)(int_offset[1] & 0xffff);
@@ -399,7 +396,7 @@ static void mtk_atomic_disp_rsz_roi(struct drm_device *dev,
 	bool rsz_enable[MAX_CRTC] = {false};
 	struct mtk_plane_comp_state comp_state[MAX_CRTC][OVL_LAYER_NR];
 
-	for_each_crtc_in_state(old_state, crtc, old_crtc_state, i) {
+	for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
 		struct mtk_drm_crtc *mtk_crtc = to_mtk_crtc(crtc);
 
 		for (i = 0 ; i < mtk_crtc->layer_nr; i++) {
@@ -411,7 +408,7 @@ static void mtk_atomic_disp_rsz_roi(struct drm_device *dev,
 		}
 	}
 
-	for_each_plane_in_state(old_state, plane, old_plane_state, i) {
+	for_each_old_plane_in_state(old_state, plane, old_plane_state, i) {
 		struct drm_plane_state *plane_state = plane->state;
 		int src_w = drm_rect_width(&plane_state->src) >> 16;
 		int src_h = drm_rect_height(&plane_state->src) >> 16;
@@ -431,8 +428,8 @@ static void mtk_atomic_disp_rsz_roi(struct drm_device *dev,
 		else
 			idx = i - (OVL_LAYER_NR + EXTERNAL_INPUT_LAYER_NR);
 
-		if (comp_state[drm_crtc_index(crtc)][idx].layer_caps
-			& MTK_DISP_RSZ_LAYER) {
+		if (crtc && (comp_state[drm_crtc_index(crtc)][idx].layer_caps
+			& MTK_DISP_RSZ_LAYER)) {
 			mtk_rect_make(&src_layer_roi,
 				((dst_x * src_w * 10) / dst_w + 5) / 10,
 				((dst_y * src_h * 10) / dst_h + 5) / 10,
@@ -454,7 +451,7 @@ static void mtk_atomic_disp_rsz_roi(struct drm_device *dev,
 		}
 	}
 
-	for_each_crtc_in_state(old_state, crtc, old_crtc_state, i) {
+	for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
 		struct mtk_crtc_state *state = to_mtk_crtc_state(crtc->state);
 		struct mtk_drm_crtc *mtk_crtc = to_mtk_crtc(crtc);
 		int disp_idx;
@@ -514,7 +511,7 @@ mtk_atomic_calculate_plane_enabled_number(struct drm_device *dev,
 	struct drm_crtc_state *old_crtc_state;
 	unsigned int cnt[MAX_CRTC] = {0};
 
-	for_each_plane_in_state(old_state, plane, old_plane_state, i) {
+	for_each_old_plane_in_state(old_state, plane, old_plane_state, i) {
 		if (plane->state->crtc) {
 			struct mtk_drm_crtc *mtk_crtc =
 					to_mtk_crtc(plane->state->crtc);
@@ -522,7 +519,7 @@ mtk_atomic_calculate_plane_enabled_number(struct drm_device *dev,
 		}
 	}
 
-	for_each_crtc_in_state(old_state, crtc, old_crtc_state, i) {
+	for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
 		struct mtk_crtc_state *state = to_mtk_crtc_state(crtc->state);
 
 		atomic_set(&state->plane_enabled_num, cnt[i]);
@@ -540,13 +537,13 @@ static void mtk_atomic_check_plane_sec_state(struct drm_device *dev,
 	struct drm_crtc *crtc;
 	struct drm_crtc_state *new_crtc_state;
 #endif
-	for_each_plane_in_state(new_state, plane, new_plane_state, i) {
+	for_each_old_plane_in_state(new_state, plane, new_plane_state, i) {
 		if (plane->state->crtc) {
 			struct mtk_drm_crtc *mtk_crtc =
 					to_mtk_crtc(plane->state->crtc);
 
 			if (plane->state->fb
-				&& plane->state->fb->pixel_format
+				&& plane->state->fb->format->format
 					!= DRM_FORMAT_C8
 				&& mtk_drm_fb_is_secure(plane->state->fb))
 				sec_on[drm_crtc_index(&mtk_crtc->base)] = true;
@@ -554,7 +551,7 @@ static void mtk_atomic_check_plane_sec_state(struct drm_device *dev,
 	}
 
 #if defined(CONFIG_MTK_SEC_VIDEO_PATH_SUPPORT)
-	for_each_crtc_in_state(new_state, crtc, new_crtc_state, i) {
+	for_each_old_crtc_in_state(new_state, crtc, new_crtc_state, i) {
 		struct mtk_drm_crtc *mtk_crtc = to_mtk_crtc(crtc);
 
 		/* check output buffer is secure or not */
@@ -624,10 +621,12 @@ static void mtk_atomic_force_doze_switch(struct drm_device *dev,
 		/* blocking flush before stop trigger loop */
 		mtk_crtc_pkt_create(&handle, &mtk_crtc->base,
 			mtk_crtc->gce_obj.client[CLIENT_CFG]);
-		if (mtk_crtc_is_frame_trigger_mode(crtc))
+		if (mtk_crtc_is_frame_trigger_mode(crtc)) {
+			/* cmdq sleep 1ms */
+			cmdq_pkt_sleep(handle, 26000, CMDQ_GPR_R03);
 			cmdq_pkt_wait_no_clear(handle,
 				mtk_crtc->gce_obj.event[EVENT_STREAM_EOF]);
-		else
+		} else
 			cmdq_pkt_wait_no_clear(handle,
 				mtk_crtc->gce_obj.event[EVENT_VDO_EOF]);
 		cmdq_pkt_flush(handle);
@@ -727,8 +726,7 @@ static void mtk_atomic_doze_update_dsi_state(struct drm_device *dev,
 			mtk_state->prop_val[CRTC_PROP_DOZE_ACTIVE]);
 }
 
-/* #ifdef OPLUS_BUG_STABILITY */
-#if 0
+#ifndef OPLUS_BUG_STABILITY
 static void pq_bypass_cmdq_cb(struct cmdq_cb_data data)
 {
 	struct mtk_cmdq_cb_data *cb_data = data.data;
@@ -811,13 +809,15 @@ static void mtk_atomit_doze_enable_pq(struct drm_crtc *crtc)
 	DDPINFO("%s\n", __func__);
 	mtk_state = to_mtk_crtc_state(crtc->state);
 
+	// suspend state will return to avoid cmdq timeout
 	if (!crtc->state->active) {
 		DDPINFO("%s: crtc is not active\n", __func__);
 		return;
 	}
-
-	if (mtk_state->doze_changed &&
-		!mtk_state->prop_val[CRTC_PROP_DOZE_ACTIVE]) {
+	/* only current state is not doze, will enable pq
+	 * state change: doze->resume, doze suspend->resume, supsend->resume
+	 */
+	if (!mtk_state->prop_val[CRTC_PROP_DOZE_ACTIVE]) {
 		DDPINFO("%s: disable doze, enable pq\n", __func__);
 
 		cb_data = kmalloc(sizeof(*cb_data), GFP_KERNEL);
@@ -860,8 +860,7 @@ static void mtk_atomit_doze_enable_pq(struct drm_crtc *crtc)
 			DDPPR_ERR("failed to flush user_cmd\n");
 	}
 }
-#endif
-//#endif /* OPLUS_BUG_STABILITY */
+#endif /* OPLUS_BUG_STABILITY */
 
 static void mtk_atomic_doze_preparation(struct drm_device *dev,
 					 struct drm_atomic_state *old_state)
@@ -876,12 +875,12 @@ static void mtk_atomic_doze_preparation(struct drm_device *dev,
 
 		crtc = connector->state->crtc;
 		if (!crtc) {
-			DDPPR_ERR("%s connector has no crtc\n", __func__);
+			DDPPR_ERR("%s connector %d has no crtc\n", __func__, i);
 			continue;
 		}
-		/* #ifdef OPLUS_BUG_STABILITY */
-		//mtk_atomit_doze_bypass_pq(crtc);
-		/* #endif */
+		#ifndef OPLUS_BUG_STABILITY
+		mtk_atomit_doze_bypass_pq(crtc);
+		#endif
 
 		mtk_atomic_doze_update_dsi_state(dev, crtc, 1);
 
@@ -903,14 +902,14 @@ static void mtk_atomic_doze_finish(struct drm_device *dev,
 
 		crtc = connector->state->crtc;
 		if (!crtc) {
-			DDPPR_ERR("%s connector has no crtc\n", __func__);
+			DDPPR_ERR("%s connector %d has no crtc\n", __func__, i);
 			continue;
 		}
 
 		mtk_atomic_doze_update_dsi_state(dev, crtc, 0);
-		/* #ifdef OPLUS_BUG_STABILITY */
-		//mtk_atomit_doze_enable_pq(crtc);
-		/* #endif */
+		#ifndef OPLUS_BUG_STABILITY
+		mtk_atomit_doze_enable_pq(crtc);
+		#endif
 	}
 
 }
@@ -942,7 +941,7 @@ static bool mtk_atomic_skip_plane_update(struct mtk_drm_private *private,
 	 * CRTC state and skip the whole frame update. If the behavior
 	 * above changed, the statement below should be modified.
 	 */
-	for_each_crtc_in_state(state, crtc, old_crtc_state, i) {
+	for_each_old_crtc_in_state(state, crtc, old_crtc_state, i) {
 		struct mtk_crtc_state *mtk_state =
 			to_mtk_crtc_state(crtc->state);
 		if (mtk_state->doze_changed ||
@@ -953,7 +952,7 @@ static bool mtk_atomic_skip_plane_update(struct mtk_drm_private *private,
 			return true;
 		}
 	}
-
+#ifdef IF_ZERO
 	/* The CRTC would be enabled in LK stage and the content of
 	 * corresponding display
 	 *  may modified unexpected when first set crtc. If the case occur, we
@@ -969,12 +968,12 @@ static bool mtk_atomic_skip_plane_update(struct mtk_drm_private *private,
 	 * from LK, then
 	 * skip the plane update.
 	 */
-	for_each_crtc_in_state(state, crtc, old_crtc_state, i) {
+	for_each_old_crtc_in_state(state, crtc, old_crtc_state, i) {
 		if (!mtk_drm_is_enable_from_lk(crtc))
 			return false;
 	}
-
-	return true;
+#endif
+	return false;
 }
 
 #ifdef MTK_DRM_ESD_SUPPORT
@@ -988,7 +987,7 @@ static void drm_atomic_esd_chk_first_enable(struct drm_device *dev,
 
 
 	if (is_first) {
-		for_each_crtc_in_state(old_state, crtc, old_crtc_state, i) {
+		for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
 			if (drm_crtc_index(crtc) == 0) {
 				if  (mtk_drm_lcm_is_connect())
 					mtk_disp_esd_check_switch(crtc, true);
@@ -1098,7 +1097,7 @@ static int mtk_atomic_check(struct drm_device *dev,
 	if (ret)
 		return ret;
 
-	for_each_crtc_in_state(state, crtc, crtc_state, i) {
+	for_each_new_crtc_in_state(state, crtc, crtc_state, i) {
 		old_state = to_mtk_crtc_state(crtc->state);
 		new_state = to_mtk_crtc_state(crtc_state);
 
@@ -3116,6 +3115,12 @@ static int mtk_drm_kms_init(struct drm_device *drm)
 #endif
 	disp_dbg_init(drm);
 	PanelMaster_Init(drm);
+
+#ifdef CONFIG_OPLUS_OFP_V2
+	/* add for ofp */
+	oplus_ofp_init(private);
+#endif
+
 #ifdef MTK_FB_MMDVFS_SUPPORT
 	mtk_drm_mmdvfs_init();
 #endif
@@ -3194,6 +3199,12 @@ static const struct drm_ioctl_desc mtk_ioctls[] = {
 			  DRM_UNLOCKED),
 	DRM_IOCTL_DEF_DRV(MTK_SUPPORT_COLOR_TRANSFORM,
 				mtk_drm_ioctl_support_color_matrix,
+				DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(MTK_SUPPORT_SLD,
+				mtk_drm_ioctl_enable_sld,
+				DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(MTK_SET_SLD_PARAM,
+				mtk_drm_ioctl_set_sld_param,
 				DRM_UNLOCKED),
 	DRM_IOCTL_DEF_DRV(MTK_SET_GAMMALUT, mtk_drm_ioctl_set_gammalut,
 			  DRM_UNLOCKED),
@@ -3276,6 +3287,8 @@ static const struct drm_ioctl32_desc mtk_compat_ioctls[] = {
 	DRM_IOCTL32_DEF_DRV(MTK_CCORR_EVENTCTL, NULL),
 	DRM_IOCTL32_DEF_DRV(MTK_CCORR_GET_IRQ, NULL),
 	DRM_IOCTL32_DEF_DRV(MTK_SUPPORT_COLOR_TRANSFORM, NULL),
+	DRM_IOCTL32_DEF_DRV(MTK_SUPPORT_SLD, NULL),
+	DRM_IOCTL32_DEF_DRV(MTK_SET_SLD_PARAM, NULL),
 	DRM_IOCTL32_DEF_DRV(MTK_SET_GAMMALUT, NULL),
 	DRM_IOCTL32_DEF_DRV(MTK_SET_PQPARAM, NULL),
 	DRM_IOCTL32_DEF_DRV(MTK_SET_PQINDEX, NULL),
@@ -3953,9 +3966,9 @@ static int mtk_drm_probe(struct platform_device *pdev)
 	disp_dts_gpio_init(dev, private);
 
 #ifdef OPLUS_BUG_STABILITY
-	pr_err("oppo_boot_mode=%d, get_boot_mode() is %d\n", oppo_boot_mode, get_boot_mode());
-	if ((oppo_boot_mode == OPPO_SILENCE_BOOT)
-			||(get_boot_mode() == OPPO_SAU_BOOT)) {
+	pr_err("oplus_boot_mode=%d, get_boot_mode() is %d\n", oplus_boot_mode, get_boot_mode());
+	if ((oplus_boot_mode == OPLUS_SILENCE_BOOT)
+			||(get_boot_mode() == OPLUS_SAU_BOOT)) {
 		pr_err("%s OPPO_SILENCE_BOOT set silence_mode to 1\n", __func__);
 		silence_mode = 1;
 	}
@@ -4048,6 +4061,10 @@ static int mtk_drm_sys_resume(struct device *dev)
 	drm_atomic_helper_resume(drm, private->suspend_state);
 	drm_kms_helper_poll_enable(drm);
 
+#ifdef CONFIG_OPLUS_OFP_V2
+	/* add for fix 3713857 */
+	private->suspend_state = NULL;
+#endif
 	DRM_DEBUG_DRIVER("mtk_drm_sys_resume\n");
 	return 0;
 }

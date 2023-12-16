@@ -146,9 +146,9 @@ static void mddp_f_del_nat_tuple_w_unlock(struct nat_tuple *t, unsigned long fla
 	kmem_cache_free(mddp_f_nat_tuple_cache, t);
 }
 
-static void mddp_f_timeout_nat_tuple(unsigned long data)
+static void mddp_f_timeout_nat_tuple(struct timer_list *timer)
 {
-	struct nat_tuple *t = (struct nat_tuple *)data;
+	struct nat_tuple *t = from_timer(t, timer, timeout_used);
 	unsigned long flag;
 
 	if (unlikely(atomic_read(&mddp_filter_quit))) {
@@ -234,8 +234,7 @@ static bool mddp_f_add_nat_tuple(struct nat_tuple *t)
 			__func__, t, t->list.next, t->list.prev);
 
 	/* init timer and start it */
-	setup_timer(&t->timeout_used,
-			mddp_f_timeout_nat_tuple, (unsigned long)t);
+	timer_setup(&t->timeout_used, mddp_f_timeout_nat_tuple, 0);
 	t->timeout_used.expires = jiffies + HZ * USED_TIMEOUT;
 
 	add_timer(&t->timeout_used);
@@ -526,7 +525,10 @@ static void mddp_f_out_nf_ipv4(struct sk_buff *skb, struct mddp_f_cb *cb)
 		if (cb->is_uplink) {
 			struct nf_conntrack_tuple *nf_tuple;
 
-			nf_tuple = &nat_ip_conntrack->tuplehash[IP_CT_DIR_ORIGINAL].tuple;
+			if (nat_ip_conntrack->status & IPS_DST_NAT)
+				nf_tuple = &nat_ip_conntrack->tuplehash[IP_CT_DIR_REPLY].tuple;
+			else
+				nf_tuple = &nat_ip_conntrack->tuplehash[IP_CT_DIR_ORIGINAL].tuple;
 			cb->src[0] = nf_tuple->src.u3.ip;
 			cb->dst[0] = t.nat.dst;
 			cb->sport = nf_tuple->src.u.all;
@@ -534,7 +536,10 @@ static void mddp_f_out_nf_ipv4(struct sk_buff *skb, struct mddp_f_cb *cb)
 		} else {
 			struct nf_conntrack_tuple *nf_tuple;
 
-			nf_tuple = &nat_ip_conntrack->tuplehash[IP_CT_DIR_REPLY].tuple;
+			if (nat_ip_conntrack->status & IPS_DST_NAT)
+				nf_tuple = &nat_ip_conntrack->tuplehash[IP_CT_DIR_ORIGINAL].tuple;
+			else
+				nf_tuple = &nat_ip_conntrack->tuplehash[IP_CT_DIR_REPLY].tuple;
 			cb->src[0] = t.nat.src;
 			cb->dst[0] = nf_tuple->dst.u3.ip;
 			cb->sport = nf_tuple->src.u.all;
@@ -623,7 +628,10 @@ static void mddp_f_out_nf_ipv4(struct sk_buff *skb, struct mddp_f_cb *cb)
 		if (cb->is_uplink) {
 			struct nf_conntrack_tuple *nf_tuple;
 
-			nf_tuple = &nat_ip_conntrack->tuplehash[IP_CT_DIR_ORIGINAL].tuple;
+			if (nat_ip_conntrack->status & IPS_DST_NAT)
+				nf_tuple = &nat_ip_conntrack->tuplehash[IP_CT_DIR_REPLY].tuple;
+			else
+				nf_tuple = &nat_ip_conntrack->tuplehash[IP_CT_DIR_ORIGINAL].tuple;
 			cb->src[0] = nf_tuple->src.u3.ip;
 			cb->dst[0] = t.nat.dst;
 			cb->sport = nf_tuple->src.u.all;
@@ -631,7 +639,10 @@ static void mddp_f_out_nf_ipv4(struct sk_buff *skb, struct mddp_f_cb *cb)
 		} else {
 			struct nf_conntrack_tuple *nf_tuple;
 
-			nf_tuple = &nat_ip_conntrack->tuplehash[IP_CT_DIR_REPLY].tuple;
+			if (nat_ip_conntrack->status & IPS_DST_NAT)
+				nf_tuple = &nat_ip_conntrack->tuplehash[IP_CT_DIR_ORIGINAL].tuple;
+			else
+				nf_tuple = &nat_ip_conntrack->tuplehash[IP_CT_DIR_REPLY].tuple;
 			cb->src[0] = t.nat.src;
 			cb->dst[0] = nf_tuple->dst.u3.ip;
 			cb->sport = nf_tuple->src.u.all;

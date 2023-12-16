@@ -1,15 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2018 MediaTek Inc.
  */
+
+
 /*****************************************************************************
  *
  * Filename:
@@ -74,9 +68,9 @@
 #define LSC1_FLAG1_ADDRESS  0x0A04
 #define LSC2_FLAG2_ADDRESS  0x0A2C
 
-static struct OTP otp_data_info = {0};
+struct OTP otp_data_info = {0};
 
-unsigned char g_reg_data[33];
+unsigned char g_reg_data[34];
 
 /*********  S5K4H7 otp end  *************************************/
 #define LOG_INF(fmt, args...)	pr_debug(PFX "[%s] " fmt, __func__, ##args)
@@ -119,37 +113,6 @@ static struct imgsensor_info_struct imgsensor_info = {
 		/*following for GetDefaultFramerateByScenario()  */
 		.max_framerate = 300,
 		},
-#if   0
-	.cap1 = {
-		.pclk = 279919200,	/*record different mode's pclk */
-		.linelength = 3688,	/*record different mode's linelength */
-		.framelength = 2530,	/*record different mode's framelength */
-		.startx = 0,	/*record different mode's startx of grabwindow */
-		.starty = 0,	/*record different mode's starty of grabwindow */
-		.grabwindow_width = 1632,	/*record different mode's width of grabwindow */
-		.grabwindow_height = 1224,	/*record different mode's height of grabwindow */
-		/*  following for MIPIDataLowPwr2HighSpeedSettleDelayCount*/
-		/*by different scenario   */
-		.mipi_data_lp2hs_settle_dc = 85,
-		.mipi_pixel_rate = 700000000,
-		/*following for*/
-		/*GetDefaultFramerateByScenario()  */
-		.max_framerate = 300,
-		},
-	.cap2 = {
-		.pclk = 279919200,	/*record different mode's pclk */
-		.linelength = 3688,	/*record different mode's linelength */
-		.framelength = 2530,	/*record different mode's framelength */
-		.startx = 0,
-		.starty = 0,
-		.grabwindow_width = 1632,	/*record different mode's width of grabwindow */
-		.grabwindow_height = 1224,	/*record different mode's height of grabwindow */
-		.mipi_data_lp2hs_settle_dc = 85,
-		.mipi_pixel_rate = 700000000,
-		/*following for GetDefaultFramerateByScenario()  */
-		.max_framerate = 300,
-		},
-#endif
 	.normal_video = {
 		.pclk = 280000000,	/*record different mode's pclk */
 		.linelength = 3688,	/*record different mode's linelength */
@@ -233,7 +196,7 @@ static struct imgsensor_struct imgsensor = {
 	.dummy_line = 0,	/* current dummyline */
 	.current_fps = 0,	/* full size current fps : 24fps for PIP, 30fps for Normal or ZSD */
 	.autoflicker_en = KAL_FALSE,
-	.test_pattern = KAL_FALSE,
+	.test_pattern = 0,
 	.current_scenario_id = MSDK_SCENARIO_ID_CAMERA_PREVIEW,	/* current scenario id */
 	.ihdr_en = 0,		/* sensor need support LE, SE with HDR feature */
 
@@ -599,15 +562,16 @@ static bool update_otp(void)
 		return false;
 	if (!zte_s5k4h7_127_lsc())
 		return false;
-	zte_s5k4h7_127_af();
-
+	if (!zte_s5k4h7_127_af())
+		return false;
+	g_reg_data[33] = 1;
 	return true;
 }
 
 unsigned int zte_s5k4h7_read_region(struct i2c_client *client, unsigned int addr,
 			unsigned char *data, unsigned int size)
 {
-	memcpy(data, g_reg_data, 33*sizeof(kal_uint8));
+	memcpy(data, g_reg_data, 34*sizeof(kal_uint8));
 	return 5376;
 }
 
@@ -920,18 +884,6 @@ static void sensor_init(void)
 	write_cmos_sensor_8(0x3C09, 0xFF);
 	write_cmos_sensor_8(0x3C31, 0xFF);
 	write_cmos_sensor_8(0x3C32, 0xFF);
-#if 0
-	write_cmos_sensor_8(0x300A, 0x50);
-	write_cmos_sensor_8(0x3012, 0x50);
-	write_cmos_sensor_8(0x3013, 0x35);
-	write_cmos_sensor_8(0x3019, 0x56);
-	write_cmos_sensor_8(0x301A, 0x4E);
-	write_cmos_sensor_8(0x3024, 0x10);
-	write_cmos_sensor_8(0x3025, 0x4C);
-	write_cmos_sensor_8(0x3026, 0x95);
-	write_cmos_sensor_8(0x302D, 0x0A);
-	write_cmos_sensor_8(0x302E, 0x09);
-#endif
 
 	write_cmos_sensor_8(0x0100, 0x00);
 
@@ -1397,7 +1349,7 @@ static kal_uint32 open(void)
 	imgsensor.dummy_pixel = 0;
 	imgsensor.dummy_line = 0;
 	imgsensor.ihdr_en = 0;
-	imgsensor.test_pattern = KAL_FALSE;
+	imgsensor.test_pattern = 0;
 	imgsensor.current_fps = imgsensor_info.pre.max_framerate;
 	spin_unlock(&imgsensor_drv_lock);
 
@@ -1891,21 +1843,40 @@ static kal_uint32 get_default_framerate_by_scenario(enum MSDK_SCENARIO_ID_ENUM s
 	return ERROR_NONE;
 }
 
-static kal_uint32 set_test_pattern_mode(kal_bool enable)
+static kal_uint32 set_test_pattern_mode(kal_uint32 modes,
+	struct SET_SENSOR_PATTERN_SOLID_COLOR *pdata)
 {
-	LOG_INF("enable: %d\n", enable);
-	/* enable = false; */
-	if (enable) {
+	kal_uint16 Color_R, Color_Gr, Color_Gb, Color_B;
 
-		/* 0x0601[2:0]; 0=no pattern,1=solid colour,*/
-		/*2 = 100% colour bar ,3 = Fade to gray' colour bar */
-		write_cmos_sensor_8(0x0601, 0x02);
-	} else {
-		write_cmos_sensor_8(0x0601, 0x00);
-	}
-	/* write_cmos_sensor(0x3200, 0x00); */
+	LOG_INF("set_test_pattern modes: %d,\n", modes);
+
+	if (modes) {
+		write_cmos_sensor_8(0x0100, 0x00);
+		write_cmos_sensor_8(0x0601, modes);
+		if (modes == 1 && (pdata != NULL)) { //Solid Color
+			LOG_INF("R=0x%x,Gr=0x%x,B=0x%x,Gb=0x%x",
+				pdata->COLOR_R, pdata->COLOR_Gr, pdata->COLOR_B, pdata->COLOR_Gb);
+			Color_R = (pdata->COLOR_R >> 16) & 0xFFFF;
+			Color_Gr = (pdata->COLOR_Gr >> 16) & 0xFFFF;
+			Color_B = (pdata->COLOR_B >> 16) & 0xFFFF;
+			Color_Gb = (pdata->COLOR_Gb >> 16) & 0xFFFF;
+			write_cmos_sensor_8(0x0602, Color_R >> 8);
+			write_cmos_sensor_8(0x0603, Color_R & 0xFF);
+			write_cmos_sensor_8(0x0604, Color_Gr >> 8);
+			write_cmos_sensor_8(0x0605, Color_Gr & 0xFF);
+			write_cmos_sensor_8(0x0606, Color_B >> 8);
+			write_cmos_sensor_8(0x0607, Color_B & 0xFF);
+			write_cmos_sensor_8(0x0608, Color_Gb >> 8);
+			write_cmos_sensor_8(0x0609, Color_Gb & 0xFF);
+			write_cmos_sensor_8(0x0100, 0x01);
+		}
+	} else
+		write_cmos_sensor(0x0601, 0x00); /*No pattern*/
+
+	write_cmos_sensor_8(0x3200, 0x00);
+
 	spin_lock(&imgsensor_drv_lock);
-	imgsensor.test_pattern = enable;
+	imgsensor.test_pattern = modes;
 	spin_unlock(&imgsensor_drv_lock);
 	return ERROR_NONE;
 }
@@ -1983,7 +1954,8 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 						  (MUINT32 *) (uintptr_t) (*(feature_data + 1)));
 		break;
 	case SENSOR_FEATURE_SET_TEST_PATTERN:
-		set_test_pattern_mode((BOOL) * feature_data);
+		set_test_pattern_mode((UINT32)*feature_data,
+		(struct SET_SENSOR_PATTERN_SOLID_COLOR *)(uintptr_t)(*(feature_data + 1)));
 		break;
 	case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE:
 		/* for factory mode auto testing */

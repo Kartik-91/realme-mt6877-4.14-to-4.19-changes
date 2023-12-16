@@ -14,7 +14,6 @@
 #ifdef OPLUS_BUG_STABILITY
 #include <soc/oplus/system/oplus_mm_kevent_fb.h>
 #endif
-
 #if IS_ENABLED(CONFIG_MTK_CMDQ_MBOX_EXT)
 #include "cmdq-util.h"
 
@@ -525,7 +524,17 @@ EXPORT_SYMBOL(cmdq_pkt_create);
 
 void cmdq_pkt_destroy(struct cmdq_pkt *pkt)
 {
+#ifdef OPLUS_BUG_STABILITY
+	struct cmdq_client *client = NULL;
+	if (!pkt) {
+		cmdq_err("cmdq_pkt is NULL");
+		return;
+	} else {
+		client = pkt->cl;
+	}
+#else
 	struct cmdq_client *client = pkt->cl;
+#endif
 
 	if (client)
 		mutex_lock(&client->chan_mutex);
@@ -608,7 +617,7 @@ void *cmdq_pkt_get_curr_buf_va(struct cmdq_pkt *pkt)
 
 	if (unlikely(!pkt->avail_buf_size))
 		if (cmdq_pkt_add_cmd_buffer(pkt) < 0)
-			return -ENOMEM;
+			return NULL;
 
 	buf = list_last_entry(&pkt->buf, typeof(*buf), list_entry);
 
@@ -1693,12 +1702,12 @@ void cmdq_pkt_err_dump_cb(struct cmdq_cb_data data)
 		cmdq_util_error_enable();
 
 	cmdq_util_user_err(client->chan, "Begin of Error %u", err_num);
+
 	#ifdef OPLUS_BUG_STABILITY
 	if (err_num < 5) {
 		mm_fb_display_kevent("DisplayDriverID@@508$$", MM_FB_KEY_RATELIMIT_1H, "cmdq timeout Begin of Error %u", err_num);
 	}
 	#endif
-
 	cmdq_dump_core(client->chan);
 
 #if IS_ENABLED(CONFIG_MTK_SEC_VIDEO_PATH_SUPPORT) || \

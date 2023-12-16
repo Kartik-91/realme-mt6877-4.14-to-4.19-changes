@@ -46,7 +46,7 @@ static DEFINE_SPINLOCK(imgsensor_drv_lock);
 /*add by zhangyang for lost of bsp oppo proect, should be remove if normal publish.*/
 
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
-#include "soc/oppo/oppo_project.h"
+#include <soc/oplus/system/oplus_project.h>
 #include "imgsensor_eeprom.h"
 #endif
 
@@ -2868,7 +2868,7 @@ static kal_uint32 open(void)
 	imgsensor.test_pattern = KAL_FALSE;
 	imgsensor.current_fps = imgsensor_info.pre.max_framerate;
         #ifdef OPLUS_FEATURE_CAMERA_COMMON
-	if(is_project(OPPO_20075)||is_project(OPPO_20076)){
+	if(is_project(20075)||is_project(20076)){
 	printk("wenjun 20075");
 	imgsensor.mirror = IMAGE_V_MIRROR;
 	project_20075 = true ;
@@ -3134,7 +3134,7 @@ static kal_uint32 get_info(enum MSDK_SCENARIO_ID_ENUM scenario_id,
 	sensor_info->MIPIsensorType = imgsensor_info.mipi_sensor_type;
 	sensor_info->SettleDelayMode = imgsensor_info.mipi_settle_delay_mode;
         #ifdef OPLUS_FEATURE_CAMERA_COMMON
-	if(is_project(OPPO_20075)||is_project(OPPO_20076))
+	if(is_project(20075)||is_project(20076))
 	imgsensor_info.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_Gr ;
         #endif
 	sensor_info->SensorOutputDataFormat = imgsensor_info.sensor_output_dataformat;

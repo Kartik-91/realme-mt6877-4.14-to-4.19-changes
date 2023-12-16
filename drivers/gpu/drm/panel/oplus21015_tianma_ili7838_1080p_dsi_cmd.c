@@ -40,11 +40,10 @@
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 #include "../mediatek/mtk_corner_pattern/oplus20171_TM_NT37701_data_hw_roundedpattern.h"
 #endif
-
 extern int is_fan53870_pmic(void);
 extern int pmic_ldo_2_set_voltage_uv(unsigned int set_uV);
 extern int pmic_ldo_2_set_disable(void);
-extern void lcdinfo_notify(unsigned long val, void *v);
+extern void __attribute__((weak)) lcdinfo_notify(unsigned long val, void *v) { return; };
 
 static int esd_brightness;
 static bool aod_state = false;
@@ -800,6 +799,10 @@ static int mtk_panel_ext_param_set(struct drm_panel *panel,
 
 	if (!m) {
 		pr_err("%s, get mode failed\n", __func__);
+		return 1;
+	}
+	if (!ext) {
+		pr_err("%s, find_panel_ext failed\n", __func__);
 		return 1;
 	}
 

@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2021 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include <linux/clk.h>
@@ -37,15 +29,24 @@ void n3d_clk_init(struct SENINF_N3D_CLK *pclk)
 						gn3d_clk_name[i].pctrl);
 		atomic_set(&pclk->enable_cnt[i], 0);
 
-		if (IS_ERR(pclk->clk_sel[i])) {
-			LOG_E("cannot get %d clock\n", i);
-			return;
-		}
+		if (IS_ERR(pclk->clk_sel[i]))
+			LOG_D("skip get %d clock\n", i);
 	}
 #ifdef CONFIG_PM_SLEEP
-	wakeup_source_init(&pclk->n3d_wake_lock, "seninf_lock_wakelock");
+	pclk->n3d_wake_lock = wakeup_source_register(
+			NULL, "n3d_lock_wakelock");
+	if (!pclk->n3d_wake_lock)
+		LOG_E("failed to get n3d_wake_lock\n");
 #endif
 	atomic_set(&pclk->wakelock_cnt, 0);
+}
+
+void n3d_clk_exit(struct SENINF_N3D_CLK *pclk)
+{
+#ifdef CONFIG_PM_SLEEP
+	if (pclk->n3d_wake_lock)
+		wakeup_source_unregister(pclk->n3d_wake_lock);
+#endif
 }
 
 void n3d_clk_open(struct SENINF_N3D_CLK *pclk)
@@ -56,15 +57,17 @@ void n3d_clk_open(struct SENINF_N3D_CLK *pclk)
 
 	if (atomic_inc_return(&pclk->wakelock_cnt) == 1) {
 #ifdef CONFIG_PM_SLEEP
-		__pm_stay_awake(&pclk->n3d_wake_lock);
+		if (pclk->n3d_wake_lock)
+			__pm_stay_awake(pclk->n3d_wake_lock);
 #endif
 	}
 
 	for (i = N3D_CLK_IDX_SYS_MIN_NUM;
 		i < N3D_CLK_IDX_SYS_MAX_NUM;
 		i++) {
-		if (pclk->clk_sel[i] && IS_ERR(pclk->clk_sel[i])) {
-			LOG_D("skip clk\n");
+		if (!pclk->clk_sel[i] ||
+		    (pclk->clk_sel[i] && IS_ERR(pclk->clk_sel[i]))) {
+			LOG_D("skip clk %d\n", i);
 			continue;
 		}
 		if (clk_prepare_enable(pclk->clk_sel[i]))
@@ -90,7 +93,8 @@ void n3d_clk_release(struct SENINF_N3D_CLK *pclk)
 
 	if (atomic_dec_and_test(&pclk->wakelock_cnt)) {
 #ifdef CONFIG_PM_SLEEP
-		__pm_relax(&pclk->n3d_wake_lock);
+		if (pclk->n3d_wake_lock)
+			__pm_relax(pclk->n3d_wake_lock);
 #endif
 	}
 }

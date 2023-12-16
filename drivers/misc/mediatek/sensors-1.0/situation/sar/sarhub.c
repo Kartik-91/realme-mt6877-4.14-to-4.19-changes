@@ -1,15 +1,6 @@
-/* sarhub motion sensor driver
- *
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #define pr_fmt(fmt) "[sarhub] " fmt
@@ -19,8 +10,7 @@
 #include <situation.h>
 #include <SCP_sensorHub.h>
 #include <linux/notifier.h>
-#include "scp_helper.h"
-#include "scp_helper.h"
+#include "include/scp.h"
 #include "sar_factory.h"
 
 static struct situation_init_info sarhub_init_info;
@@ -61,6 +51,29 @@ static int sar_factory_enable_sensor(bool enabledisable,
 	return 0;
 }
 
+#ifdef OPLUS_FEATURE_SENSOR
+static int sar_factory_get_data(int32_t sensor_data[8])
+{
+	int err = 0;
+	struct data_unit_t data;
+
+	err = sensor_get_data_from_hub(ID_SAR, &data);
+	if (err < 0) {
+		pr_err_ratelimited("sensor_get_data_from_hub fail!!\n");
+		return -1;
+	}
+	sensor_data[0] = data.data[0];
+	sensor_data[1] = data.data[1];
+	sensor_data[2] = data.data[2];
+	sensor_data[3] = data.data[3];
+	sensor_data[4] = data.data[4];
+	sensor_data[5] = data.data[5];
+	sensor_data[6] = data.data[6];
+	sensor_data[7] = data.data[7];
+
+	return err;
+}
+#else
 static int sar_factory_get_data(int32_t sensor_data[3])
 {
 	int err = 0;
@@ -77,6 +90,7 @@ static int sar_factory_get_data(int32_t sensor_data[3])
 
 	return err;
 }
+#endif
 
 static int sar_factory_enable_calibration(void)
 {

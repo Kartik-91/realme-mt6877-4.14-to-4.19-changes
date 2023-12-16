@@ -10,6 +10,10 @@
 **  JianBin.Zhang   2020/07/01        1.0           Build this moudle
 ******************************************************************/
 #include "oplus_display_dc.h"
+#ifdef CONFIG_OPLUS_OFP_V2
+/* add for ofp */
+#include "oplus_display_onscreenfingerprint.h"
+#endif
 
 extern int oplus_panel_alpha;
 extern int oplus_dc_alpha;
@@ -22,7 +26,11 @@ int oplus_display_panel_get_dim_alpha(void *buf)
 {
 	unsigned int *dim_alpha = buf;
 
+#ifdef CONFIG_OPLUS_OFP_V2
+	if (!oplus_ofp_get_hbm_state()) {
+#else
 	if (!oplus_mtk_drm_get_hbm_state()) {
+#endif
 		(*dim_alpha) = 0;
 		return 0;
 	}

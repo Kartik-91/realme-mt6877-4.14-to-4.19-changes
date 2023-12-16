@@ -1,16 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * Richtek RT1711H Type-C Port Control Driver
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include <linux/init.h>
@@ -39,9 +29,7 @@
 #include <mt-plat/rt-regmap.h>
 #endif /* CONFIG_RT_REGMAP */
 
-#if 1 /*  #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 9, 0))*/
 #include <linux/sched/rt.h>
-#endif /* #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 9, 0)) */
 
 /* #define DEBUG_GPIO	66 */
 
@@ -542,6 +530,7 @@ static void rt1711_irq_work_handler(struct kthread_work *work)
 	int regval = 0;
 	int gpio_val;
 
+	printk("%s: start.\n", __func__);
 	rt1711_poll_ctrl(chip);
 	/* make sure I2C bus had resumed */
 	down(&chip->suspend_lock);
@@ -1112,7 +1101,8 @@ static int rt1711_set_low_power_mode(
 		struct tcpc_device *tcpc, bool en, int pull)
 {
 	int ret = 0;
-	uint8_t data;
+	int rv = 0;
+	uint8_t data,temp;
 
 	ret = rt1711_i2c_write8(tcpc, RT1711H_REG_IDLE_CTRL,
 		RT1711H_REG_IDLE_SET(0, 1, en ? 0 : 1, 0));
@@ -1128,14 +1118,31 @@ static int rt1711_set_low_power_mode(
 			data |= RT1711H_REG_BMCIO_LPRPRD;
 
 #ifdef CONFIG_TYPEC_CAP_NORP_SRC
-		data |= RT1711H_REG_BMCIO_BG_EN | RT1711H_REG_VBUS_DET_EN;
+		if (logic_cc_id == ET7303)
+			data |= RT1711H_REG_VBUS_DET_EN; /*RT1711H_REG_BMCIO_BG_EN | RT1711H_REG_VBUS_DET_EN;*/
+		else
+			data |= RT1711H_REG_BMCIO_BG_EN | RT1711H_REG_VBUS_DET_EN;
 #endif
+		if (logic_cc_id == ET7303) {
+			temp = rt1711_i2c_read8(tcpc, 0x10);
+			pr_info("%s 0x10=%d  0x10\n", __func__,temp);
+
+			rv = rt1711_i2c_write8(tcpc, 0x10, temp);
+
+			rv = rt1711_i2c_write8(tcpc, RT1711H_REG_BMC_CTRL, 0X0E);
+			temp = rt1711_i2c_read8(tcpc, 0x90);
+			pr_info("%s 0x90=%d  0x90\n", __func__,temp);
+		}
+
 	} else {
 		data = RT1711H_REG_BMCIO_BG_EN |
 			RT1711H_REG_VBUS_DET_EN | RT1711H_REG_BMCIO_OSC_EN;
 	}
 
-	return rt1711_i2c_write8(tcpc, RT1711H_REG_BMC_CTRL, data);
+	if (logic_cc_id != ET7303)
+		ret = rt1711_i2c_write8(tcpc, RT1711H_REG_BMC_CTRL, data);
+
+	return ret;
 }
 #endif	/* CONFIG_TCPC_LOW_POWER_MODE */
 
@@ -1464,13 +1471,9 @@ static int rt1711_tcpcdev_init(struct rt1711_chip *chip, struct device *dev)
 		desc->role_def = TYPEC_ROLE_DRP;
 	}
 
-	if (of_property_read_u32(
-		np, "rt-tcpc,notifier_supply_num", &val) >= 0) {
-		if (val < 0)
-			desc->notifier_supply_num = 0;
-		else
-			desc->notifier_supply_num = val;
-	} else
+	if (of_property_read_u32(np, "rt-tcpc,notifier_supply_num", &val) >= 0)
+		desc->notifier_supply_num = val;
+	else
 		desc->notifier_supply_num = 0;
 
 	if (of_property_read_u32(np, "rt-tcpc,rp_level", &val) >= 0) {
@@ -1547,7 +1550,7 @@ static int rt1711_tcpcdev_init(struct rt1711_chip *chip, struct device *dev)
 }
 
 #define RICHTEK_1711_VID	0x29cf
-#define RICHTEK_7303_VID	0x6dcf
+#define ET7303_VID		0x6dcf
 #define RICHTEK_1711_PID	0x1711
 
 static inline int rt1711h_check_revision(struct i2c_client *client)
@@ -1562,15 +1565,15 @@ static inline int rt1711h_check_revision(struct i2c_client *client)
 		return -EIO;
 	}
 
-	if ((vid != RICHTEK_1711_VID) && (vid != RICHTEK_7303_VID)) {
-		pr_err("%s failed, VID=0x%04x\n", __func__, vid);
+	if (vid != RICHTEK_1711_VID && vid != ET7303_VID) {
+		pr_info("%s failed, VID=0x%04x\n", __func__, vid);
 		return -ENODEV;
 	}
 
-	if (vid == RICHTEK_7303_VID) {
+	if (vid == ET7303_VID) {
 		logic_cc_id = ET7303;
 		pr_err("%s found ET7303\n", __func__);
-	}else {
+	} else {
 		logic_cc_id = RT1711;
 		pr_err("%s found RT1711\n", __func__);
 	}
@@ -1724,12 +1727,41 @@ static int rt1711_i2c_resume(struct device *dev)
 static void rt1711_shutdown(struct i2c_client *client)
 {
 	struct rt1711_chip *chip = i2c_get_clientdata(client);
+	uint8_t temp, count = 0;
 
 	/* Please reset IC here */
 	if (chip != NULL) {
 		if (chip->irq)
 			disable_irq(chip->irq);
 		tcpm_shutdown(chip->tcpc);
+
+		if (logic_cc_id == ET7303) {
+			for (count = 0; count < 5; count++) {
+				temp = i2c_smbus_read_byte_data(client, 0x10);
+				pr_info("%s read(after write) %d 0x10 = %d\n", __func__, count, temp);
+				i2c_smbus_write_byte_data(client, 0x10, temp);
+
+				temp = i2c_smbus_read_byte_data(client, 0x90);
+				pr_info("%s read(befor write) %d 0x90 = %d\n", __func__, count, temp);
+				i2c_smbus_write_byte_data(client, RT1711H_REG_BMC_CTRL, 0X08);
+				temp = i2c_smbus_read_byte_data(client, 0x90);
+				pr_info("%s read(after write) %d 0x90 = %d\n", __func__, count, temp);
+
+				i2c_smbus_write_byte_data(client, 0x1a, 0x0a);
+				temp = i2c_smbus_read_byte_data(client, 0x1a);
+				pr_info("%s read(after write) %d 0x1a = %d\n", __func__, count, temp);
+
+				i2c_smbus_write_byte_data(client, 0x9e, 0x00);
+				temp = i2c_smbus_read_byte_data(client, 0x9e);
+				pr_info("%s read(after write) %d 0x9e = %d\n", __func__, count, temp);
+
+				i2c_smbus_write_byte_data(client, 0x9c, 0x00);
+				temp = i2c_smbus_read_byte_data(client, 0x9c);
+				pr_info("%s read(after write) %d 0x9c = %d\n", __func__, count, temp);
+
+				mdelay(50);
+			}
+		}
 	} else {
 		i2c_smbus_write_byte_data(
 			client, RT1711H_REG_SWRESET, 0x01);

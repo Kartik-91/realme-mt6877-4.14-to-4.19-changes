@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (C) 2019 MediaTek Inc.
  */
 
 #ifndef __MTK_BOOT_COMMON_H__
@@ -28,24 +20,25 @@ enum boot_mode_t {
 	LOW_POWER_OFF_CHARGING_BOOT = 9,
 	DONGLE_BOOT = 10,
 #ifdef OPLUS_BUG_STABILITY
-	OPPO_SAU_BOOT = 11,
+	OPLUS_SAU_BOOT = 11,
 	SILENCE_BOOT = 12,
 	AGING_BOOT = 998,
 	SAFE_BOOT = 999,
 #endif /* OPLUS_BUG_STABILITY */
 	UNKNOWN_BOOT
 };
+
 #ifdef OPLUS_BUG_STABILITY
 typedef enum
 {
-	OPPO_NORMAL_BOOT = 0,
-	OPPO_SILENCE_BOOT = 1,
-	OPPO_SAFE_BOOT = 2,
-	OPPO_AGING_BOOT = 3,
-	OPPO_UNKNOWN_BOOT
-}OPPO_BOOTMODE;
+	OPLUS_NORMAL_BOOT = 0,
+	OPLUS_SILENCE_BOOT = 1,
+	OPLUS_SAFE_BOOT = 2,
+	OPLUS_AGING_BOOT = 3,
+	OPLUS_UNKNOWN_BOOT
+}OPLUS_BOOTMODE;
 
-extern OPPO_BOOTMODE oppo_boot_mode;
+extern OPLUS_BOOTMODE oplus_boot_mode;
 #endif /* OPLUS_BUG_STABILITY */
 
 
@@ -59,11 +52,7 @@ extern OPPO_BOOTMODE oppo_boot_mode;
 #define BOOT_MODE_SYSFS_ATTR    "boot_mode"
 #define BOOT_TYPE_SYSFS_ATTR    "boot_type"
 
-/* #ifndef FEATURE_BUG_STABILITY */
-/* extern enum boot_mode_t get_boot_mode(void); */
-/* #else */
-extern int get_boot_mode(void); 
-/* #endif */
+extern enum boot_mode_t get_boot_mode(void);
 extern unsigned int get_boot_type(void);
 extern bool is_meta_mode(void);
 extern bool is_advanced_meta_mode(void);

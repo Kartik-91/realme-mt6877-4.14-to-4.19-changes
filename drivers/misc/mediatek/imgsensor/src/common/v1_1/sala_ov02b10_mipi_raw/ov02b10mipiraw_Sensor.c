@@ -21,7 +21,7 @@
 #include <linux/atomic.h>
 #include <linux/types.h>
 #include "ov02b10mipiraw_Sensor.h"
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #include <soc/oplus/system/oplus_project_oldcdt.h>
 
 #ifndef OPLUS_FEATURE_CAMERA_COMMON
@@ -1858,16 +1858,23 @@ static kal_uint32 set_test_pattern_mode(kal_bool enable)
 {
 	LOG_INF("enable: %d\n", enable);
 
-	if(enable)
-	{
-		write_cmos_sensor(0xfd,0x03);
-		write_cmos_sensor(0x81,0x01);
-	}
-	else
-	{
-		write_cmos_sensor(0xfd,0x03);
-		write_cmos_sensor(0x81,0x00);
-	}
+    if (enable) { // for solid color
+        write_cmos_sensor(0xfd, 0x03);
+        write_cmos_sensor(0x8c, 0x00);
+        write_cmos_sensor(0x8e, 0x00);
+        write_cmos_sensor(0x90, 0x00);
+        write_cmos_sensor(0x92, 0x00);
+        write_cmos_sensor(0x9b, 0x00);
+        write_cmos_sensor(0xfe, 0x02);
+    } else {
+        write_cmos_sensor(0xfd, 0x03);
+        write_cmos_sensor(0x8c, 0x40);
+        write_cmos_sensor(0x8e, 0x40);
+        write_cmos_sensor(0x90, 0x40);
+        write_cmos_sensor(0x92, 0x40);
+        write_cmos_sensor(0x9b, 0x46);
+        write_cmos_sensor(0xfe, 0x02);
+    }
 
 	spin_lock(&imgsensor_drv_lock);
 	imgsensor.test_pattern = enable;

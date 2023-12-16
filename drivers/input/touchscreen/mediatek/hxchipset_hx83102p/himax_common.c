@@ -1,17 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-/*  Himax Android Driver Sample Code for common functions
- *
- *  Copyright (C) 2019 Himax Corporation.
- *
- *  This software is licensed under the terms of the GNU General Public
- *  License version 2,  as published by the Free Software Foundation,  and
- *  may be copied,  distributed,  and modified under those terms.
- *
- *  This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- */
+/*
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 /*#include "himax_common.h"*/
 /*#include "himax_ic_core.h"*/
@@ -19,13 +9,41 @@
 #include "himax_modular_table.h"
 /*rotate*/
 
-
+#if defined(CONFIG_MTK_LCM_PHYSICAL_ROTATION_HW)
 static void tpd_rotate_180(int *x, int *y)
 {
 	*x = TPD_RES_X - *x;
 	*y = TPD_RES_Y - *y;
 }
+#endif
 
+static inline void wakeup_source_prepare(struct wakeup_source *ws, const char *name)
+{
+	if (ws) {
+		memset(ws, 0, sizeof(*ws));
+		ws->name = name;
+	}
+}
+
+static inline void wakeup_source_drop(struct wakeup_source *ws)
+{
+	if (!ws)
+		return;
+	__pm_relax(ws);
+}
+
+static inline void wakeup_source_init(struct wakeup_source *ws,
+				      const char *name)
+{
+	wakeup_source_prepare(ws, name);
+	wakeup_source_add(ws);
+}
+
+static inline void wakeup_source_trash(struct wakeup_source *ws)
+{
+	wakeup_source_remove(ws);
+	wakeup_source_drop(ws);
+}
 
 #if defined(__HIMAX_MOD__)
 int (*hx_msm_drm_register_client)(struct notifier_block *nb);
@@ -2416,7 +2434,10 @@ static void himax_finger_report(struct himax_ts_data *ts)
 			input_report_abs(ts->input_dev, ABS_MT_TRACKING_ID,
 					i + 1);
 #endif
+
+#if defined(CONFIG_MTK_LCM_PHYSICAL_ROTATION_HW)
 			tpd_rotate_180(&g_target_report_data->x[i], &g_target_report_data->y[i]);
+#endif
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_X,
 					g_target_report_data->x[i]);
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_Y,

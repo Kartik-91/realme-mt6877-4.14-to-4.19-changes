@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -18,7 +10,9 @@
 #include <linux/list.h>
 #include <linux/slab.h>
 #include <linux/cpufreq.h>
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 #include <linux/cpumask.h>
+#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 
 #define TAG "[LT]"
 
@@ -123,10 +117,15 @@ static int lt_update_loading(struct LT_USER_DATA *lt_data)
 	lt_lockprove(__func__);
 	for_each_possible_cpu(cpu) {
 		cur_idle_time_i = get_cpu_idle_time(cpu, &cur_wall_time_i, 1);
+		#ifndef OPLUS_FEATURE_CAMERA_COMMON
+		cpu_idle_time += cur_idle_time_i - lt_data->prev_idle_time[cpu];
+		cpu_wall_time += cur_wall_time_i - lt_data->prev_wall_time[cpu];
+		#else /*OPLUS_FEATURE_CAMERA_COMMON*/
 		if (!cpu_isolated(cpu)) {
 			cpu_idle_time += cur_idle_time_i - lt_data->prev_idle_time[cpu];
 			cpu_wall_time += cur_wall_time_i - lt_data->prev_wall_time[cpu];
 		}
+		#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 		lt_data->prev_idle_time[cpu] = cur_idle_time_i;
 		lt_data->prev_wall_time[cpu] = cur_wall_time_i;
 	}

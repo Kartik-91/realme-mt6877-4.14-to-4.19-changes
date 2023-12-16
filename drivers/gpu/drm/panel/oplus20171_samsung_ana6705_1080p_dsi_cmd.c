@@ -857,6 +857,16 @@ static int mtk_panel_ext_param_set(struct drm_panel *panel,
 	int ret = 0;
 	struct drm_display_mode *m = get_mode_by_id(panel, mode);
 
+	if (!m) {
+		pr_err("%s, get mode failed\n", __func__);
+		return 1;
+	}
+
+	if (!ext) {
+		pr_err("%s, find_panel_ext failed\n", __func__);
+		return 1;
+	}
+
 	if (mode == 0)
 		ext->params = &ext_params;
 	else if (mode == 1)
@@ -1184,6 +1194,7 @@ static struct LCM_setting_table lcm_normal_to_aod_sam[] = {
 static int panel_doze_enable(struct drm_panel *panel, void *dsi, dcs_write_gce cb, void *handle)
 {
 	unsigned int i=0;
+//#ifdef VENDOR_EDIT
 	pr_err("debug for lcm %s\n", __func__);
 	aod_state = true;
 //#endif

@@ -44,7 +44,7 @@
 extern int is_fan53870_pmic(void);
 extern int pmic_ldo_2_set_voltage_uv(unsigned int set_uV);
 extern int pmic_ldo_2_set_disable(void);
-extern void lcdinfo_notify(unsigned long val, void *v);
+extern void __attribute__((weak)) lcdinfo_notify(unsigned long val, void *v) { return; };
 
 static int esd_brightness;
 static bool aod_state = false;
@@ -862,6 +862,7 @@ static struct mtk_panel_params ext_params = {
     },
     .vendor = "21015_TM_NT37701_42",
     .manufacture = "TM_nt37701_2048",
+    .oplus_serial_para0 = 0xD8,
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -933,6 +934,7 @@ static struct mtk_panel_params ext_params_90hz = {
     },
     .vendor = "21015_TM_NT37701_42",
     .manufacture = "TM_nt37701_2048",
+    .oplus_serial_para0 = 0xD8,
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,

@@ -44,8 +44,8 @@
 #include <linux/gpio.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
-#include <linux/of_irq.h>
 #endif
+#include <linux/of_irq.h>
 #include "st21nfc.h"
 #include "../oplus_nfc/oplus_nfc.h"
 
@@ -72,7 +72,7 @@
 #ifdef KRNMTKLEGACY_CLK
 #include <mt_clkbuf_ctl.h>
 #else
-#include <mtk_clkbuf_ctl.h>
+#include <mtk-clkbuf-bridge.h>
 #endif
 #endif
 #endif // ST21NFCD_MTK
@@ -209,7 +209,7 @@ static int st21nfc_clock_select(struct st21nfc_device *st21nfc_dev) {
   st21nfc_dev->s_clk = clk_get(&st21nfc_dev->client->dev, "nfc_ref_clk");
 
   /* if NULL we assume external crystal and dont fail */
-  if ((st21nfc_dev->s_clk == NULL) || IS_ERR(st21nfc_dev->s_clk)) return 0;
+  if (IS_ERR_OR_NULL(st21nfc_dev->s_clk)) return 0;
 
   if (st21nfc_dev->clk_run == false) {
     ret = clk_prepare_enable(st21nfc_dev->s_clk);
@@ -236,7 +236,7 @@ static int st21nfc_clock_deselect(struct st21nfc_device *st21nfc_dev) {
   return 0;
 #else   // ST21NFCD_MTK
   /* if NULL we assume external crystal and dont fail */
-  if ((st21nfc_dev->s_clk == NULL) || IS_ERR(st21nfc_dev->s_clk)) return 0;
+  if (IS_ERR_OR_NULL(st21nfc_dev->s_clk)) return 0;
 
   if (st21nfc_dev->clk_run == true) {
     clk_disable_unprepare(st21nfc_dev->s_clk);
@@ -418,7 +418,7 @@ static void st21nfc_power_stats_filter(struct st21nfc_device *st21nfc_dev,
   uint64_t current_time_ms = ktime_to_ms(ktime_get_boottime());
   __u16 ntf_opcode = nci_opcode(buf);
 
-  if (IS_ERR(st21nfc_dev->gpiod_pidle)) return;
+  if (IS_ERR_OR_NULL(st21nfc_dev->gpiod_pidle)) return;
 
   /* In order to avoid counting active state on PAYLOAD where it would
    * match a possible header, power states are filtered only on NCI
@@ -575,7 +575,7 @@ static ssize_t st21nfc_dev_write(struct file *filp, const char __user *buf,
   if (count > MAX_BUFFER_SIZE) count = MAX_BUFFER_SIZE;
 
   tmp = memdup_user(buf, count);
-  if (IS_ERR(tmp)) {
+  if (IS_ERR_OR_NULL(tmp)) {
     pr_err("%s : memdup_user failed\n", __func__);
     return -EFAULT;
   }
@@ -680,7 +680,7 @@ static long st21nfc_dev_ioctl(struct file *filp, unsigned int cmd,
     case ST21NFC_PULSE_RESET:
     case ST21NFC_LEGACY_PULSE_RESET:
       pr_info("%s Double Pulse Request\n", __func__);
-      if (!IS_ERR(st21nfc_dev->gpiod_reset)) {
+      if (!IS_ERR_OR_NULL(st21nfc_dev->gpiod_reset)) {
         if (st21nfc_st54spi_cb != 0)
           (*st21nfc_st54spi_cb)(ST54SPI_CB_RESET_START, st21nfc_st54spi_data);
         /* pulse low for 20 millisecs */
@@ -720,7 +720,7 @@ static long st21nfc_dev_ioctl(struct file *filp, unsigned int cmd,
     case ST21NFC_LEGACY_RECOVERY:
       /* For ST21NFCD usage only */
       pr_info("%s Recovery Request\n", __func__);
-      if (!IS_ERR(st21nfc_dev->gpiod_reset)) {
+      if (!IS_ERR_OR_NULL(st21nfc_dev->gpiod_reset)) {
         if (st21nfc_dev->irq_is_attached) {
           devm_free_irq(&st21nfc_dev->client->dev, st21nfc_dev->client->irq,
                         st21nfc_dev);
@@ -977,57 +977,20 @@ static const struct acpi_gpio_mapping acpi_st21nfc_gpios[] = {
 };
 #endif
 
-#ifdef ST21NFCD_MTK
-static int st21nfc_parse_dt(struct device *dev,
-    struct st21nfc_i2c_platform_data *data) {
-    struct device_node *np = dev->of_node;
-    int errorno = 0;
-
-    data->irq_gpio = of_get_named_gpio(np, "gpio-irq-std", 0);
-    if ((!gpio_is_valid(data->irq_gpio))) {
-        pr_err("%s: get NFC IRQ GPIO failed", __func__);
-        return -EINVAL;
-    }
-
-    data->rst_gpio = of_get_named_gpio(np, "gpio-rst-std", 0);
-    if ((!gpio_is_valid(data->rst_gpio))) {
-        pr_err("%s: get NFC RST GPIO failed", __func__);
-        return -EINVAL;
-    }
-
-    data->pidle_gpio = of_get_named_gpio(np, "gpio-pidle-std", 0);
-    if ((!gpio_is_valid(data->pidle_gpio))) {
-        pr_err("%s: get NFC pidle GPIO failed, skip pidle", __func__);
-        //return -EINVAL;
-    }
-
-    data->clkreq_gpio = of_get_named_gpio(np, "gpio-clkreq-std", 0);
-    if ((!gpio_is_valid(data->clkreq_gpio))) {
-        pr_err("%s: get NFC CLKREQ GPIO failed", __func__);
-        return -EINVAL;
-    }
-
-    pr_info("%s: %d, %d, %d, %d, %d error:%d\n", __func__,
-        data->irq_gpio, data->rst_gpio, data->pidle_gpio,
-        data->clkreq_gpio, errorno);
-    return errorno;
-}
-#endif  // ST21NFCD_MTK
-
 static int st21nfc_probe(struct i2c_client *client,
                          const struct i2c_device_id *id) {
-  pr_info("%s : st21nfc_probe start\n", __func__);
-
   int ret;
   struct st21nfc_device *st21nfc_dev;
   struct device *dev = &client->dev;
 #ifdef ST21NFCD_MTK
+  int r;
   struct device_node *np = dev->of_node;
-  struct st21nfc_i2c_platform_data *platform_data;
 #endif  // ST21NFCD_MTK
-  //Add for : ST NXP chip common software
-  CHECK_NFC_CHIP(ST21H);
-  //#endif /* VENDOR_EDIT */
+
+    //#ifdef VENDOR_EDIT
+   //Add for : ST NXP chip common software
+    CHECK_NFC_CHIP(ST21H);
+   //#endif /* VENDOR_EDIT */
 
   if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
     pr_err("%s : need I2C_FUNC_I2C\n", __func__);
@@ -1073,32 +1036,23 @@ static int st21nfc_probe(struct i2c_client *client,
   ret = acpi_dev_add_driver_gpios(ACPI_COMPANION(dev), acpi_st21nfc_gpios);
   if (ret) pr_debug("Unable to add GPIO mapping table\n");
 #else   // ST21NFCD_MTK
-  // np = of_find_compatible_node(NULL, NULL, "mediatek,nfc-gpio-v2");
-  // np = of_find_compatible_node(NULL, NULL, "mediatek,nfc");
+  np = of_find_compatible_node(NULL, NULL, "mediatek,nfc-gpio-v2");
   if (!np) {
-    pr_err("%s : cannot find st,st21nfc node in DTS.\n", __func__);
+    pr_err("%s : cannot find mediatek,nfc-gpio-v2 in DTS.\n", __func__);
     return -ENODEV;
-  } else {
-    platform_data = devm_kzalloc(&client->dev,
-            sizeof(struct st21nfc_i2c_platform_data), GFP_KERNEL);
-    if (!platform_data) {
-            dev_err(&client->dev,
-                "st21nfc-nci probe: Failed to allocate memory\n");
-            return -ENOMEM;
-    }
-    ret = st21nfc_parse_dt(&client->dev, platform_data);
-    if (ret)
-    {
-        pr_info("%s st21nfc_parse_dt failed", __func__);
-    }
   }
 #endif  // ST21NFCD_MTK
 
 #ifndef ST21NFCD_MTK
   st21nfc_dev->gpiod_irq = devm_gpiod_get(dev, "irq", GPIOD_IN);
 #else  // ST21NFCD_MTK
-  st21nfc_dev->gpiod_irq = gpio_to_desc(platform_data->irq_gpio);
-  ret = gpio_request(platform_data->irq_gpio,
+  r = of_get_named_gpio(np, "gpio-irq-std", 0);
+  if (!gpio_is_valid(r)) {
+    pr_err("%s: get NFC IRQ GPIO failed (%d)", __FILE__, r);
+    return -ENODEV;
+  }
+  st21nfc_dev->gpiod_irq = gpio_to_desc(r);
+  ret = gpio_request(r,
 #if (!defined(CONFIG_MTK_GPIO) || defined(CONFIG_MTK_GPIOLIB_STAND))
                      "gpio-irq-std"
 #else
@@ -1109,8 +1063,8 @@ static int st21nfc_probe(struct i2c_client *client,
     pr_err("%s : gpio_request failed\n", __FILE__);
     return -ENODEV;
   }
-  pr_info("%s : IRQ GPIO = %d\n", __func__, platform_data->irq_gpio);
-  ret = gpio_direction_input(platform_data->irq_gpio);
+  pr_info("%s : IRQ GPIO = %d\n", __func__, r);
+  ret = gpio_direction_input(r);
   if (ret) {
     pr_err("%s : gpio_direction_input failed\n", __FILE__);
     return -ENODEV;
@@ -1124,8 +1078,13 @@ static int st21nfc_probe(struct i2c_client *client,
 #ifndef ST21NFCD_MTK
   st21nfc_dev->gpiod_reset = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
 #else  // ST21NFCD_MTK
-  st21nfc_dev->gpiod_reset = gpio_to_desc(platform_data->rst_gpio);
-  ret = gpio_request(platform_data->rst_gpio,
+  r = of_get_named_gpio(np, "gpio-rst-std", 0);
+  if (!gpio_is_valid(r)) {
+    pr_err("%s: get NFC RST GPIO failed (%d)", __FILE__, r);
+    return -ENODEV;
+  }
+  st21nfc_dev->gpiod_reset = gpio_to_desc(r);
+  ret = gpio_request(r,
 #if (!defined(CONFIG_MTK_GPIO) || defined(CONFIG_MTK_GPIOLIB_STAND))
                      "gpio-rst-std"
 #else
@@ -1136,13 +1095,13 @@ static int st21nfc_probe(struct i2c_client *client,
     pr_err("%s : gpio_request failed\n", __FILE__);
     return -ENODEV;
   }
-  pr_info("%s : RST GPIO = %d\n", __func__, platform_data->rst_gpio);
-  ret = gpio_direction_output(platform_data->rst_gpio, 1);
+  pr_info("%s : RST GPIO = %d\n", __func__, r);
+  ret = gpio_direction_output(r, 1);
   if (ret) {
     pr_err("%s : gpio_direction_output failed\n", __FILE__);
     return -ENODEV;
   }
-  gpio_set_value(platform_data->rst_gpio, 1);
+  gpio_set_value(r, 1);
 #endif  // ST21NFCD_MTK
   if (IS_ERR_OR_NULL(st21nfc_dev->gpiod_reset)) {
     pr_warn("%s : Unable to request reset-gpios\n", __func__);
@@ -1152,7 +1111,10 @@ static int st21nfc_probe(struct i2c_client *client,
 #ifndef ST21NFCD_MTK
   st21nfc_dev->gpiod_pidle = devm_gpiod_get(dev, "pidle", GPIOD_IN);
 #else   // ST21NFCD_MTK
-  st21nfc_dev->gpiod_pidle = gpio_to_desc(platform_data->pidle_gpio);
+  ret = of_get_named_gpio(np, "gpio-pidle-std", 0);
+  if (gpio_is_valid(ret)) {
+    st21nfc_dev->gpiod_pidle = gpio_to_desc(ret);
+  }
 #endif  // ST21NFCD_MTK
   if (IS_ERR_OR_NULL(st21nfc_dev->gpiod_pidle)) {
     pr_warn("[OPTIONAL] %s: Unable to request pidle-gpio\n", __func__);
@@ -1191,7 +1153,7 @@ static int st21nfc_probe(struct i2c_client *client,
 
 #ifndef ST21NFCD_MTK
   st21nfc_dev->gpiod_clkreq = devm_gpiod_get(dev, "clkreq", GPIOD_IN);
-  if (IS_ERR(st21nfc_dev->gpiod_clkreq)) {
+  if (IS_ERR_OR_NULL(st21nfc_dev->gpiod_clkreq)) {
     pr_warn("[OPTIONAL] %s : Unable to request clkreq-gpios\n", __func__);
     ret = 0;
   } else {
@@ -1220,7 +1182,7 @@ static int st21nfc_probe(struct i2c_client *client,
   }
 #endif  // ST21NFCD_MTK
 
-#ifdef ST21NFCD_MTK
+#ifndef ST21NFCD_MTK
   client->irq = gpiod_to_irq(st21nfc_dev->gpiod_irq);
 #else   // ST21NFCD_MTK
   np = of_find_compatible_node(NULL, NULL, "mediatek,irq_nfc-eint");
@@ -1236,9 +1198,9 @@ static int st21nfc_probe(struct i2c_client *client,
   spin_lock_init(&st21nfc_dev->irq_enabled_lock);
   pr_debug(
       "%s : debug irq_gpio = %d, client-irq =  %d, pidle_gpio = %d\n", __func__,
-      st21nfc_dev->gpiod_irq ? desc_to_gpio(st21nfc_dev->gpiod_irq) : -1,
+      IS_ERR_OR_NULL(st21nfc_dev->gpiod_irq) ? -1 : desc_to_gpio(st21nfc_dev->gpiod_irq),
       client->irq,
-      st21nfc_dev->gpiod_pidle ? desc_to_gpio(st21nfc_dev->gpiod_pidle) : -1);
+      IS_ERR_OR_NULL(st21nfc_dev->gpiod_pidle) ? -1 : desc_to_gpio(st21nfc_dev->gpiod_pidle));
   st21nfc_dev->st21nfc_device.minor = MISC_DYNAMIC_MINOR;
   st21nfc_dev->st21nfc_device.name = "st21nfc";
   st21nfc_dev->st21nfc_device.fops = &st21nfc_dev_fops;
@@ -1267,7 +1229,7 @@ err_sysfs_create_group_failed:
 err_misc_register:
   mutex_destroy(&st21nfc_dev->read_mutex);
 err_sysfs_power_stats:
-  if (!IS_ERR(st21nfc_dev->gpiod_pidle)) {
+  if (!IS_ERR_OR_NULL(st21nfc_dev->gpiod_pidle)) {
     sysfs_remove_file(&client->dev.kobj, &dev_attr_power_stats.attr);
     mutex_destroy(&st21nfc_dev->pidle_mutex);
   }
@@ -1303,7 +1265,7 @@ static int st21nfc_remove(struct i2c_client *client) {
 
   st21nfc_clock_deselect(st21nfc_dev);
   misc_deregister(&st21nfc_dev->st21nfc_device);
-  if (!IS_ERR(st21nfc_dev->gpiod_pidle)) {
+  if (!IS_ERR_OR_NULL(st21nfc_dev->gpiod_pidle)) {
     sysfs_remove_file(&client->dev.kobj, &dev_attr_power_stats.attr);
     mutex_destroy(&st21nfc_dev->pidle_mutex);
   }
@@ -1322,7 +1284,7 @@ static int st21nfc_suspend(struct device *device) {
     if (!enable_irq_wake(client->irq)) st21nfc_dev->irq_wake_up = true;
   }
 
-  if (!IS_ERR(st21nfc_dev->gpiod_pidle)) {
+  if (!IS_ERR_OR_NULL(st21nfc_dev->gpiod_pidle)) {
     st21nfc_dev->p_idle_last = gpiod_get_value(st21nfc_dev->gpiod_pidle);
   }
 
@@ -1338,7 +1300,7 @@ static int st21nfc_resume(struct device *device) {
     if (!disable_irq_wake(client->irq)) st21nfc_dev->irq_wake_up = false;
   }
 
-  if (!IS_ERR(st21nfc_dev->gpiod_pidle)) {
+  if (!IS_ERR_OR_NULL(st21nfc_dev->gpiod_pidle)) {
     pidle = gpiod_get_value(st21nfc_dev->gpiod_pidle);
     if ((st21nfc_dev->p_idle_last != pidle) ||
         (st21nfc_dev->pw_current == ST21NFC_IDLE && pidle != 0) ||

@@ -48,8 +48,13 @@
 #define LOG_INF(format, args...)    \
 	pr_debug(PFX "[%s] " format, __func__, ##args)
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 static kal_uint8 xtalk_flag = 0;
+#endif
 
 
 #define MULTI_WRITE 1
@@ -328,6 +333,7 @@ static void write_cmos_sensor(kal_uint32 addr, kal_uint32 para)
 	iWriteRegI2C(pusendcmd, 3, imgsensor.i2c_write_id);
 }
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 static kal_uint16 read_cmos_eeprom_8(kal_uint16 addr)
 {
 	kal_uint16 get_byte=0;
@@ -367,6 +373,7 @@ static void write_sensor_xtalk(void)
 
 }
 
+#endif
 
 static void set_dummy(void)
 {
@@ -2891,7 +2898,9 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 				*sensor_id = imgsensor_info.sensor_id;
 				LOG_INF("ov32a1q read[%s] sensor id: 0x%x\n",
 					__func__, *sensor_id);
+				#ifdef OPLUS_FEATURE_CAMERA_COMMON
 				read_sensor_xtalk();
+				#endif
 				return ERROR_NONE;
 			}
 
@@ -2963,7 +2972,9 @@ static kal_uint32 open(void) //check out
 
 static kal_uint32 close(void)
 {
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	xtalk_flag = 0;
+	#endif
 	return ERROR_NONE;
 }   /*  close  */
 
@@ -3106,6 +3117,7 @@ static kal_uint32 custom3(
 	imgsensor.min_frame_length = imgsensor_info.custom3.framelength;
 	imgsensor.autoflicker_en = KAL_FALSE;
 	spin_unlock(&imgsensor_drv_lock);
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	if (!xtalk_flag) {
 		pr_debug("write_sensor_xtalk Start\n");
                 mdelay(67);  //add delay to ensure xtalk wirte success
@@ -3113,6 +3125,7 @@ static kal_uint32 custom3(
 		pr_debug("write_sensor_xtlak End\n");
 		xtalk_flag = 1;
 	}
+	#endif
 	custom3_setting();
 	return ERROR_NONE;
 }

@@ -1,7 +1,7 @@
 #ifndef _OPLUS_TEMPNTC_H_
 #define _OPLUS_TEMPNTC_H_
 
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 
 extern bool oplus_voocphy_get_bidirect_cp_support(void);
 

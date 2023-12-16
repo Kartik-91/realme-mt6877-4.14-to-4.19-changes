@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2021 MediaTek Inc.
+*/
 
 #ifndef __MTK_PD_INTF_H
 #define __MTK_PD_INTF_H
@@ -56,9 +48,11 @@ extern void mtk_pdc_plugout(struct charger_manager *info);
 extern void mtk_pdc_check_cable_impedance(struct charger_manager *info);
 extern void mtk_pdc_reset(struct charger_manager *info);
 extern bool mtk_pdc_check_leave(struct charger_manager *info);
+#ifdef OPLUS_FEATURE_CHG_BASIC
 extern int oplus_pdc_setup(int *vbus_mv, int *ibus_ma);
 extern int oplus_pdc_get(int *vbus_mv, int *ibus_ma);
-/*end*/
+#endif
+
 #ifdef CONFIG_MTK_PUMP_EXPRESS_PLUS_SUPPORT
 
 

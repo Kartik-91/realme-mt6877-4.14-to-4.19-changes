@@ -1,15 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (C) 2016 MediaTek Inc.
  */
+
 
 #include "kd_imgsensor.h"
 
@@ -45,7 +38,7 @@ struct IMGSENSOR_HW_POWER_SEQ sensor_power_sequence[] = {
 #ifdef CONFIG_REGULATOR_RT5133
 			{AVDD1, Vol_1800, 0},
 #endif
-		//	{AFVDD, Vol_2800, 0},
+			{AFVDD, Vol_2800, 0},
 			{DVDD, Vol_1100, 0},
 			{SensorMCLK, Vol_High, 1},
 			{RST, Vol_High, 3}
@@ -194,7 +187,7 @@ struct IMGSENSOR_HW_POWER_SEQ sensor_power_sequence[] = {
 			//PMIC output 1.1V
 			{DVDD, Vol_1100, 0},
 #endif
-//			{AFVDD, Vol_2800, 1},
+			{AFVDD, Vol_2800, 1},
 			{SensorMCLK, Vol_High, 1},
 			{PDN, Vol_High, 0},
 			{RST, Vol_High, 10}

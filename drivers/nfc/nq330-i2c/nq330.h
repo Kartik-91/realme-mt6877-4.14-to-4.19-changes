@@ -121,6 +121,7 @@ typedef enum p61_access_state{
     P61_STATE_DWP_SVDD_SYNC_START = 0x0004, /*ESE_VDD  Low req by Nfc*/
     P61_STATE_DWP_SVDD_SYNC_END = 0x0008, /*ESE_VDD is Low by Nfc*/
     P61_STATE_SPI_FAILED = 0x0010, /*SPI open/close failed*/
+    //#ifdef VENDOR_EDIT
     P61_STATE_JCP_DWNLD_INIT = 0x8010, /*copy from jcop_dwnld_state*/
     P61_STATE_JCP_DWP_DWNLD_COMPLETE = 0x8080, /*copy from jcop_dwnld_state*/
     //#endif /* VENDOR_EDIT */

@@ -59,11 +59,21 @@ ssize_t sdcard_remove_store(struct device *dev,
 	pr_err("mmc sdcard_remove value: %u\n", value);
 	if (value) {
 		switch(value) {
-		case SET_SDCARD_QUICK_RETURN : remove_sdcard = value; sdinfo.vold_timeout_count += 1; break;
-		case RESET_SDCARD_QUICK_RETURN : schedule_delayed_work(&remove_sdcard_reset_work, msecs_to_jiffies(2000)); break;
-		case SET_DMA_DATA_TIMEOUT : set_dma_data_timeout = 1; break;
-		case RESET_DMA_DATA_TIMEOUT : set_dma_data_timeout = 0; break;
-		default : pr_err("mmc sdinfo: value(%d) error\n", value);
+		case SET_SDCARD_QUICK_RETURN :
+			remove_sdcard = value;
+			sdinfo.vold_timeout_count += 1;
+			break;
+		case RESET_SDCARD_QUICK_RETURN :
+			schedule_delayed_work(&remove_sdcard_reset_work, msecs_to_jiffies(2000));
+			break;
+		case SET_DMA_DATA_TIMEOUT :
+			set_dma_data_timeout = 1;
+			break;
+		case RESET_DMA_DATA_TIMEOUT :
+			set_dma_data_timeout = 0;
+			break;
+		default :
+			pr_err("mmc sdinfo: value(%d) error\n", value);
 		}
 	} else
 		remove_sdcard = 0;

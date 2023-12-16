@@ -57,13 +57,13 @@
                 <sensitive_level>Edge</sensitive_level>
                 <debounce_en>Disable</debounce_en>
             </eint4>
-            <eint8>
+            <eint11>
                 <varName>IRQ_NFC</varName>
                 <debounce_time>0</debounce_time>
                 <polarity>High</polarity>
                 <sensitive_level>Level</sensitive_level>
                 <debounce_en>Disable</debounce_en>
-            </eint8>
+            </eint11>
             <eint14>
                 <varName>TOUCH_PANEL</varName>
                 <debounce_time>0</debounce_time>
@@ -176,13 +176,12 @@
                 <ies>true</ies>
             </gpio7>
             <gpio8>
-                <eint_mode>true</eint_mode>
+                <eint_mode>false</eint_mode>
                 <def_mode>0</def_mode>
                 <inpull_en>true</inpull_en>
-                <inpull_selhigh>true</inpull_selhigh>
+                <inpull_selhigh>false</inpull_selhigh>
                 <def_dir>IN</def_dir>
                 <out_high>false</out_high>
-                <varName0>GPIO_NFC_EINT_PIN</varName0>
                 <smt>false</smt>
                 <ies>true</ies>
             </gpio8>
@@ -209,13 +208,13 @@
                 <ies>true</ies>
             </gpio10>
             <gpio11>
-                <eint_mode>false</eint_mode>
+                <eint_mode>true</eint_mode>
                 <def_mode>0</def_mode>
                 <inpull_en>true</inpull_en>
                 <inpull_selhigh>false</inpull_selhigh>
                 <def_dir>IN</def_dir>
                 <out_high>false</out_high>
-                <varName0>GPIO_IRQ_NFC_PIN</varName0>
+                <varName0>GPIO_NFC_EINT_PIN</varName0>
                 <smt>false</smt>
                 <ies>true</ies>
             </gpio11>
@@ -2099,9 +2098,8 @@
                 <inpull_en>true</inpull_en>
                 <inpull_selhigh>false</inpull_selhigh>
                 <def_dir>OUT</def_dir>
-                <out_high>false</out_high>
-                <varName0>GPIO_ANT_SEL1_PIN</varName0>
-                <varName1>GPIO_GPS_L5_LNA_EN_PIN</varName1>
+                <out_high>true</out_high>
+                <varName0>GPIO_NFC_RST_PIN</varName0>
                 <smt>false</smt>
                 <ies>true</ies>
             </gpio189>
@@ -2373,7 +2371,7 @@
             <device10>
                 <varName>NFC</varName>
                 <channel>I2C_CHANNEL_8</channel>
-                <address>0x28</address>
+                <address>0x8</address>
             </device10>
             <device11>
                 <varName>CAMERA_SUB</varName>

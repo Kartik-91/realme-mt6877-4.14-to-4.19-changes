@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2021 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/clk-provider.h>
 #include <linux/syscore_ops.h>
@@ -19,7 +11,7 @@
 #include "clk-mt6877-pg.h"
 #include "clkchk.h"
 #include "clkchk-mt6877.h"
-
+#include "clkdbg.h"
 #define TAG			"[clkchk] "
 #define	BUG_ON_CHK_ENABLE	1
 
@@ -600,6 +592,12 @@ static const char *get_vf_name(int id)
 
 static int get_vf_opp(int id, int opp)
 {
+	if (id < 0 || id >= ARRAY_SIZE(vf_table))
+		return -1;
+
+	if(opp < 0 || opp >= 5)
+		return -2;
+
 	return vf_table[id].freq_table[opp];
 }
 

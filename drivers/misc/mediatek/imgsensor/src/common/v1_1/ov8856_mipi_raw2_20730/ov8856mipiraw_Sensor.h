@@ -14,6 +14,9 @@
 #ifndef _OV8856MIPI_SENSOR_H
 #define _OV8856MIPI_SENSOR_H
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 
 enum IMGSENSOR_MODE {
 	IMGSENSOR_MODE_INIT,
@@ -82,7 +85,9 @@ struct imgsensor_struct {
 
 /* SENSOR PRIVATE STRUCT FOR CONSTANT*/
 struct imgsensor_info_struct {
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	kal_uint16 module_id;
+#endif
 	kal_uint16 sensor_id;	/*record sensor id defined in Kd_imgsensor.h*/
 	kal_uint32 checksum_value;	/*checksum value for Camera Auto Test*/
 

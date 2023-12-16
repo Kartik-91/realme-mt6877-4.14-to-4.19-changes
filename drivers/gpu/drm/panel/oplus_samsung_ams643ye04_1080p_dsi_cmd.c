@@ -907,9 +907,9 @@ static int mtk_panel_ext_param_set(struct drm_panel *panel,
 {
 	struct mtk_panel_ext *ext = find_panel_ext(panel);
 	int ret = 0;
-	if (mode == 0)
+	if (ext && mode == 0)
 		ext->params = &ext_params;
-	else if (mode == 1)
+	else if (ext && mode == 1)
 		ext->params = &ext_params_120hz;
 	else
 		ret = 1;

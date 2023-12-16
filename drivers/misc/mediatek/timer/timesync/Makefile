@@ -11,8 +11,6 @@
 # GNU General Public License for more details.
 #
 
-
-
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/include
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/$(MTK_PLATFORM)/include
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat
@@ -46,4 +44,4 @@ endif
 
 
 obj-$(CONFIG_MTK_TIMER_TIMESYNC)	+= mtk_sys_timer.o
-obj-$(CONFIG_MTK_ARCHCOUNTER_TIMESYNC)	+= archcounter_timesync.o
+obj-y += archcounter_timesync.o

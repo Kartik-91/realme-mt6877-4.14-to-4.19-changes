@@ -16,6 +16,10 @@
 #include "cmdq-sec-tl-api.h"
 #include "cmdq-util.h"
 
+#ifdef OPLUS_BUG_STABILITY
+#include <soc/oplus/system/oplus_mm_kevent_fb.h>
+#endif
+
 #ifdef CMDQ_SECURE_MTEE_SUPPORT
 #include "cmdq_sec_mtee.h"
 #endif
@@ -1517,10 +1521,9 @@ static int cmdq_sec_mbox_send_data(struct mbox_chan *chan, void *data)
 	return 0;
 }
 
-static void cmdq_sec_thread_timeout(unsigned long data)
+static void cmdq_sec_thread_timeout(struct timer_list *t)
 {
-	struct cmdq_sec_thread *thread =
-		(struct cmdq_sec_thread *)data;
+	struct cmdq_sec_thread *thread = from_timer(thread, t, timeout);
 	struct cmdq_sec *cmdq =
 		container_of(thread->chan->mbox, struct cmdq_sec, mbox);
 
@@ -1576,9 +1579,7 @@ static int cmdq_sec_mbox_startup(struct mbox_chan *chan)
 	char name[32];
 	int len;
 
-	thread->timeout.function = cmdq_sec_thread_timeout;
-	thread->timeout.data = (unsigned long)thread;
-	init_timer(&thread->timeout);
+	timer_setup(&thread->timeout, cmdq_sec_thread_timeout, 0);
 
 	INIT_WORK(&thread->timeout_work, cmdq_sec_task_timeout_work);
 	len = snprintf(name, sizeof(name), "task_exec_wq_%u", thread->idx);
@@ -1762,11 +1763,7 @@ static int __init cmdq_sec_init(void)
 	return err;
 }
 
-//#ifdef OPLUS_BUG_STABILITY
 #if defined(CMDQ_GP_SUPPORT) || defined(CMDQ_SECURE_MTEE_SUPPORT)
-//#else
-//#ifdef CMDQ_GP_SUPPORT
-//#endif /* OPLUS_BUG_STABILITY */
 static s32 cmdq_sec_late_init_wsm(void *data)
 {
 	struct cmdq_sec *cmdq;
@@ -1800,6 +1797,9 @@ static s32 cmdq_sec_late_init_wsm(void *data)
 		err = cmdq_sec_session_init(cmdq->context);
 		mutex_unlock(&cmdq->exec_lock);
 		if (err) {
+			#ifdef OPLUS_BUG_STABILITY
+			mm_fb_display_kevent("DisplayDriverID@@509$$", MM_FB_KEY_RATELIMIT_1H, "cmdq sec session init failed:%d", err);
+			#endif
 			err = -CMDQ_ERR_SEC_CTX_SETUP;
 			cmdq_err("session init failed:%d", err);
 			continue;

@@ -1,15 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2019 MediaTek Inc.
- * Author: Wen Su <wen.su@mediatek.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
  */
 
 #include <linux/interrupt.h>
@@ -372,7 +363,6 @@ static const u32 vfe28_voltages[] = {
 	2800000,
 };
 
-#ifndef OPLUS_FEATURE_CAMERA_COMMON
 static const u32 vcn13_voltages[] = {
 	900000,
 	1000000,
@@ -380,15 +370,6 @@ static const u32 vcn13_voltages[] = {
 	1200000,
 	1300000,
 };
-#else /*OPLUS_FEATURE_CAMERA_COMMON*/
-static const u32 vcn13_voltages[] = {
-	900000,
-	1000000,
-	1100000,
-	1200000,
-	1300000,
-};
-#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 
 static const u32 vcn33_1_bt_voltages[] = {
 	0,
@@ -1323,7 +1304,7 @@ static irqreturn_t mt6359_oc_irq(int irq, void *data)
 	struct regulator_dev *rdev = (struct regulator_dev *)data;
 	struct mt6359_regulator_info *info = rdev_get_drvdata(rdev);
 
-	if (info == NULL)
+	if (info == NULL || info->oc_work.timer.function == NULL)
 		return IRQ_NONE;
 	disable_irq_nosync(info->irq);
 	if (!regulator_is_enabled_regmap(rdev))

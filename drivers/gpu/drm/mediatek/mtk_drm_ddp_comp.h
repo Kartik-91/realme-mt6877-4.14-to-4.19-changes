@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2015 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef MTK_DRM_DDP_COMP_H
 #define MTK_DRM_DDP_COMP_H
@@ -249,6 +241,10 @@ enum mtk_ddp_io_cmd {
 	DSI_LFR_STATUS_CHECK,
 	WDMA_WRITE_DST_ADDR0,
 	WDMA_READ_DST_SIZE,
+	#ifdef OPLUS_BUG_STABILITY
+#ifdef CONFIG_OPLUS_OFP_V2
+	DSI_SET_DOZE,
+#endif
 	DSI_READ,
 	LCM_HBM,
 	LCM_CABC,
@@ -257,7 +253,7 @@ enum mtk_ddp_io_cmd {
 	PANEL_SN_SET,
 	DC_POST_EXIT,
 	DISP_OFF,
-	//#endif
+	#endif
 };
 
 struct golden_setting_context {

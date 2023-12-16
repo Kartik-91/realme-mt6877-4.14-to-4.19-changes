@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/kernel.h>
 #include <linux/memblock.h>
@@ -990,6 +982,11 @@ bool cmdq_core_profile_pqreadback_once_enabled(void)
 bool cmdq_core_profile_pqreadback_enabled(void)
 {
 	return cmdq_ctx.enableProfile & (1 << CMDQ_PROFILE_PQRB);
+}
+
+bool cmdq_core_ftrace2_enabled(void)
+{
+	return cmdq_ctx.enableProfile & (1 << CMDQ_PROFILE_FTRACE2);
 }
 
 void cmdq_long_string_init(bool force, char *buf, u32 *offset, s32 *max_size)
@@ -3712,10 +3709,15 @@ void cmdq_core_release_handle_by_file_node(void *file_node)
 		 * immediately, but we cannot do so due to SMI hang risk.
 		 */
 		client = cmdq_clients[(u32)handle->thread];
-#if defined(CMDQ_SECURE_PATH_SUPPORT)
+#if IS_ENABLED(CONFIG_MTK_CMDQ_MBOX_EXT)
+#if defined(CONFIG_MTK_SEC_VIDEO_PATH_SUPPORT) || \
+			defined(CONFIG_MTK_CAM_SECURITY_SUPPORT)
+#ifdef CMDQ_SECURE_PATH_SUPPORT
 		if (handle->pkt->sec_data)
 			cmdq_sec_mbox_stop(client);
 		else
+#endif
+#endif
 #endif
 			cmdq_mbox_thread_remove_task(client->chan, handle->pkt);
 		cmdq_pkt_auto_release_task(handle, true);
@@ -3821,12 +3823,6 @@ s32 cmdq_core_resume(void)
 {
 	CMDQ_VERBOSE("[RESUME] do nothing\n");
 	/* do nothing */
-	return 0;
-}
-
-s32 cmdq_core_remove(void)
-{
-	wakeup_source_unregister(mdp_wake_lock);
 	return 0;
 }
 
@@ -4503,6 +4499,20 @@ s32 cmdq_pkt_wait_flush_ex_result(struct cmdqRecStruct *handle)
 
 	status = cmdq_pkt_wait_complete(handle->pkt);
 
+	if (status != -EINVAL) {
+		u64 submit_sec, wait_sec;
+		unsigned long submit_rem, wait_rem;
+
+		submit_sec = handle->pkt->rec_submit;
+		submit_rem = do_div(submit_sec, 1000000000);
+		wait_sec = handle->pkt->rec_wait;
+		wait_rem = do_div(wait_sec, 1000000000);
+		CMDQ_SYSTRACE2_BEGIN("%s %u %llu.%06lu %llu.%06lu\n", __func__,
+			handle->pkt->cmd_buf_size, submit_sec, submit_rem / 1000,
+			wait_sec, wait_rem / 1000);
+		CMDQ_SYSTRACE2_END();
+	}
+
 	if (handle->profile_exec && cmdq_util_is_feature_en(CMDQ_LOG_FEAT_PERF)) {
 		u32 *va = cmdq_pkt_get_perf_ret(handle->pkt);
 
@@ -5015,13 +5025,14 @@ void cmdq_core_initialize(void)
 	cmdq_test_init_setting();
 #endif
 
-	cmdq_ctx.enableProfile = 1 << CMDQ_PROFILE_EXEC;
+	/* Initialize enableProfile disable */
+	cmdq_ctx.enableProfile = CMDQ_PROFILE_OFF;
 
 	mdp_rb_pool = dma_pool_create("mdp_rb", cmdq_dev_get(),
 		CMDQ_BUF_ALLOC_SIZE, 0, 0);
 	atomic_set(&mdp_rb_pool_cnt, 0);
 
-	mdp_wake_lock = wakeup_source_register(cmdq_dev_get(), "mdp_pm_lock");
+	mdp_wake_lock = wakeup_source_register(NULL, "mdp_wake_lock");
 }
 
 #ifdef CMDQ_DAPC_DEBUG

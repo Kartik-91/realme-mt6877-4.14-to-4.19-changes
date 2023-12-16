@@ -45,7 +45,7 @@
 extern int is_fan53870_pmic(void);
 extern int pmic_ldo_2_set_voltage_uv(unsigned int set_uV);
 extern int pmic_ldo_2_set_disable(void);
-extern void lcdinfo_notify(unsigned long val, void *v);
+extern void __attribute__((weak)) lcdinfo_notify(unsigned long val, void *v) { return; };
 
 static int esd_brightness;
 static bool aod_state = false;
@@ -789,6 +789,10 @@ static int mtk_panel_ext_param_set(struct drm_panel *panel,
 		return 1;
 	}
 
+	if (!ext) {
+		pr_err("%s, find_panel_ext failed\n", __func__);
+		return 1;
+	}
 	if (mode == 0)
 		ext->params = &ext_params;
 	else if (mode == 1)
@@ -934,7 +938,7 @@ static int panel_doze_disable(struct drm_panel *panel, void *dsi, dcs_write_gce 
 {
 	//struct lcm *ctx = panel_to_lcm(panel);
 	unsigned int i=0;
-	pr_err("debug for lcm %s, oplus_fp_notify_down_delay=%d\n", __func__, oplus_fp_notify_down_delay);
+	//pr_err("debug for lcm %s, oplus_fp_notify_down_delay=%d\n", __func__, oplus_fp_notify_down_delay);
 
 	/*if (oplus_fp_notify_down_delay)
 		aod_finger_unlock_flag = 1;*/

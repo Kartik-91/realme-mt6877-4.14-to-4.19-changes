@@ -41,11 +41,10 @@
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 #include "../mediatek/mtk_corner_pattern/oplus20171_BOE_NT37701_data_hw_roundedpattern.h"
 #endif
-
 extern int is_fan53870_pmic(void);
 extern int pmic_ldo_2_set_voltage_uv(unsigned int set_uV);
 extern int pmic_ldo_2_set_disable(void);
-extern void lcdinfo_notify(unsigned long val, void *v);
+extern void __attribute__((weak)) lcdinfo_notify(unsigned long val, void *v) { return; };
 
 static int esd_brightness;
 static bool aod_state = false;
@@ -683,6 +682,7 @@ static struct mtk_panel_params ext_params = {
     },
     .vendor = "21015_2FTP_NT37800",
     .manufacture = "boe_nt37800_2048",
+    .oplus_serial_para0 = 0xD8,
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -754,6 +754,7 @@ static struct mtk_panel_params ext_params_90hz = {
     },
     .vendor = "21015_2FTP_NT37800",
     .manufacture = "boe_nt37800_2048",
+    .oplus_serial_para0 = 0xD8,
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -789,6 +790,10 @@ static int mtk_panel_ext_param_set(struct drm_panel *panel,
 		return 1;
 	}
 
+	if (!ext) {
+		pr_err("%s, find_panel_ext failed\n", __func__);
+		return 1;
+	}
 	if (mode == 0)
 		ext->params = &ext_params;
 	else if (mode == 1)
@@ -934,7 +939,7 @@ static int panel_doze_disable(struct drm_panel *panel, void *dsi, dcs_write_gce 
 {
 	//struct lcm *ctx = panel_to_lcm(panel);
 	unsigned int i=0;
-	pr_err("debug for lcm %s, oplus_fp_notify_down_delay=%d\n", __func__, oplus_fp_notify_down_delay);
+	//pr_err("debug for lcm %s, oplus_fp_notify_down_delay=%d\n", __func__, oplus_fp_notify_down_delay);
 
 	/*if (oplus_fp_notify_down_delay)
 		aod_finger_unlock_flag = 1;*/

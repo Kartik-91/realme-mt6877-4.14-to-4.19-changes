@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include "mdp_common.h"
 #include "mdp_cmdq_device.h"
@@ -28,7 +20,7 @@
 #endif	/* CONFIG_MTK_SMI_EXT */
 
 #include <linux/slab.h>
-#include <linux/pm_qos.h>
+#include <linux/soc/mediatek/mtk-pm-qos.h>
 #include <linux/math64.h>
 #include "mdp_pmqos.h"
 #ifdef CONFIG_MTK_SMI_EXT
@@ -64,8 +56,8 @@
 #include "mmpath.h"
 #endif	/* MDP_MMPATH */
 
-static struct pm_qos_request mdp_clk_qos_request[MDP_TOTAL_THREAD];
-static struct pm_qos_request isp_clk_qos_request[MDP_TOTAL_THREAD];
+static struct mtk_pm_qos_request mdp_clk_qos_request[MDP_TOTAL_THREAD];
+static struct mtk_pm_qos_request isp_clk_qos_request[MDP_TOTAL_THREAD];
 
 #ifdef CONFIG_MTK_SMI_EXT
 static u64 g_freq_steps[MAX_FREQ_STEP];
@@ -1508,7 +1500,7 @@ s32 cmdq_mdp_handle_flush(struct cmdqRecStruct *handle)
 {
 	s32 status;
 
-	CMDQ_TRACE_FORCE_BEGIN("%s %llx\n", __func__, handle->engineFlag);
+	CMDQ_TRACE_FORCE_BEGIN("%s 0x%p %llx\n", __func__, handle, handle->engineFlag);
 	CMDQ_MSG("%s %llx\n", __func__, handle->engineFlag);
 
 #ifdef CMDQ_SECURE_PATH_SUPPORT
@@ -1725,8 +1717,8 @@ s32 cmdq_mdp_wait(struct cmdqRecStruct *handle,
 	u32 i;
 	u64 exec_cost;
 
-	CMDQ_TRACE_FORCE_BEGIN("%s %d %llx\n",
-		__func__, handle->thread, handle->engineFlag);
+	CMDQ_TRACE_FORCE_BEGIN("%s 0x%p %d %llx\n",
+		__func__, handle, handle->thread, handle->engineFlag);
 
 	/* we have to wait handle has valid thread first */
 	if (handle->thread == CMDQ_INVALID_THREAD) {
@@ -2032,9 +2024,9 @@ static void cmdq_mdp_init_pmqos(void)
 		cmdq_mdp_get_func()->initPmqosIsp(i,
 			qos_isp_module_request_list);
 
-		pm_qos_add_request(&mdp_clk_qos_request[i],
+		mtk_pm_qos_add_request(&mdp_clk_qos_request[i],
 		  PM_QOS_MDP_FREQ, PM_QOS_DEFAULT_VALUE);
-		pm_qos_add_request(&isp_clk_qos_request[i],
+		mtk_pm_qos_add_request(&isp_clk_qos_request[i],
 		  PM_QOS_IMG_FREQ, PM_QOS_DEFAULT_VALUE);
 		result = snprintf(mdp_clk_qos_request[i].owner,
 		  sizeof(mdp_clk_qos_request[i].owner) - 1, "mdp_clk_%d", i);
@@ -2122,8 +2114,8 @@ void cmdq_mdp_deinit(void)
 		mm_qos_remove_all_request(&qos_mdp_module_request_list[i]);
 		mm_qos_remove_all_request(&qos_isp_module_request_list[i]);
 #endif	/* CONFIG_MTK_SMI_EXT */
-		pm_qos_remove_request(&isp_clk_qos_request[i]);
-		pm_qos_remove_request(&mdp_clk_qos_request[i]);
+		mtk_pm_qos_remove_request(&isp_clk_qos_request[i]);
+		mtk_pm_qos_remove_request(&mdp_clk_qos_request[i]);
 	}
 
 	cmdq_mdp_pool_clear();
@@ -2564,6 +2556,16 @@ static void cmdq_mdp_begin_task_virtual(struct cmdqRecStruct *handle,
 		mdp_curr_pmqos->isp_total_datasize,
 		pmqos_curr_record->submit_tm.tv_usec,
 		pmqos_curr_record->end_tm.tv_usec);
+	CMDQ_SYSTRACE2_BEGIN(
+		"%s%s handle:%p engine:%#llx thread:%d cur:%lu.%lu end:%lu.%lu list:%u mdp:%u %u, isp:%u %u\n",
+		__func__, expired ? " expired" : "",
+		handle, handle->engineFlag, handle->thread,
+		curr_time.tv_sec, curr_time.tv_usec,
+		mdp_curr_pmqos->tv_sec, mdp_curr_pmqos->tv_usec,
+		size,
+		mdp_curr_pmqos->mdp_total_pixel, mdp_curr_pmqos->mdp_total_datasize,
+		mdp_curr_pmqos->isp_total_pixel, mdp_curr_pmqos->isp_total_datasize);
+	CMDQ_SYSTRACE2_END();
 
 	if (size > 1) {/*handle_list includes the current task*/
 		for (i = 0; i < size; i++) {
@@ -2578,9 +2580,8 @@ static void cmdq_mdp_begin_task_virtual(struct cmdqRecStruct *handle,
 			mdp_list_pmqos = (struct mdp_pmqos *)curTask->prop_addr;
 			pmqos_list_record =
 			    (struct mdp_pmqos_record *)curTask->user_private;
-			total_pixel = mdp_list_pmqos->mdp_total_pixel ?
-				mdp_list_pmqos->mdp_total_pixel :
-				mdp_list_pmqos->isp_total_pixel;
+			total_pixel = max(mdp_list_pmqos->mdp_total_pixel,
+					mdp_list_pmqos->isp_total_pixel);
 
 			if (first_task) {
 				target_pmqos = mdp_list_pmqos;
@@ -2647,9 +2648,8 @@ static void cmdq_mdp_begin_task_virtual(struct cmdqRecStruct *handle,
 	} else {
 		DP_TIMER_GET_DURATION_IN_US(pmqos_curr_record->submit_tm,
 			pmqos_curr_record->end_tm, denominator);
-		total_pixel = mdp_curr_pmqos->mdp_total_pixel ?
-			mdp_curr_pmqos->mdp_total_pixel :
-			mdp_curr_pmqos->isp_total_pixel;
+		total_pixel = max(mdp_curr_pmqos->mdp_total_pixel,
+				mdp_curr_pmqos->isp_total_pixel);
 		pmqos_curr_record->mdp_throughput =
 			total_pixel / denominator;
 		target_pmqos = mdp_curr_pmqos;
@@ -2667,13 +2667,14 @@ static void cmdq_mdp_begin_task_virtual(struct cmdqRecStruct *handle,
 		act_throughput = g_freq_steps[0];
 	else
 		act_throughput = max_throughput;
-	total_pixel = target_pmqos->mdp_total_pixel ?
-		target_pmqos->mdp_total_pixel :
-		target_pmqos->isp_total_pixel;
+	total_pixel = max(target_pmqos->mdp_total_pixel,
+			target_pmqos->isp_total_pixel);
 
 	CMDQ_LOG_PMQOS(
 		"[%d]begin task act_throughput %u total_pixel %u\n",
 		thread_id, act_throughput, total_pixel);
+	CMDQ_SYSTRACE2_COUNTER("isp_pix%d", target_pmqos->isp_total_pixel, thread_id);
+	CMDQ_SYSTRACE2_COUNTER("mdp_pix%d", target_pmqos->mdp_total_pixel, thread_id);
 
 	/* update isp bandwidth and clock */
 	if (target_pmqos->isp_total_datasize) {
@@ -2694,8 +2695,9 @@ static void cmdq_mdp_begin_task_virtual(struct cmdqRecStruct *handle,
 		mm_qos_update_all_request(
 			&qos_isp_module_request_list[thread_id]);
 
-		pm_qos_update_request(&isp_clk_qos_request[thread_id],
+		mtk_pm_qos_update_request(&isp_clk_qos_request[thread_id],
 			act_throughput);
+		CMDQ_SYSTRACE2_COUNTER("isp_tput%d", act_throughput, thread_id);
 		CMDQ_LOG_PMQOS(
 			"[%d]begin task qos update throughput isp %u\n",
 			thread_id, act_throughput);
@@ -2722,13 +2724,17 @@ static void cmdq_mdp_begin_task_virtual(struct cmdqRecStruct *handle,
 				mdp_curr_bandwidth);
 			mm_qos_set_request(request, mdp_curr_bandwidth, 0,
 				comp_type);
+			CMDQ_LOG_PMQOS(
+				"[%d]begin task qos update mdp bandwidth:%u, port:%u\n",
+				thread_id, mdp_curr_bandwidth, target_pmqos->qos2_mdp_port[i]);
 		}
 		CMDQ_SYSTRACE_BEGIN("%s qos mdp %d\n", __func__, thread_id);
 		mm_qos_update_all_request(
 			&qos_mdp_module_request_list[thread_id]);
 
-		pm_qos_update_request(&mdp_clk_qos_request[thread_id],
+		mtk_pm_qos_update_request(&mdp_clk_qos_request[thread_id],
 			act_throughput);
+		CMDQ_SYSTRACE2_COUNTER("mdp_tput%d", act_throughput, thread_id);
 		CMDQ_LOG_PMQOS(
 			"[%d]begin task qos update throughput mdp %u\n",
 			thread_id, act_throughput);
@@ -2766,11 +2772,6 @@ static void cmdq_mdp_begin_task_virtual(struct cmdqRecStruct *handle,
 	} while (0);
 #endif	/* MDP_MMPATH */
 
-#if 0
-#if IS_ENABLED(CONFIG_MTK_SMI_EXT) && IS_ENABLED(CONFIG_MACH_MT6771)
-	smi_larb_mon_act_cnt();
-#endif
-#endif
 
 done:
 
@@ -2813,11 +2814,6 @@ static void cmdq_mdp_end_task_virtual(struct cmdqRecStruct *handle,
 	u32 total_pixel = 0;
 	bool expired;
 
-#if 0
-#if IS_ENABLED(CONFIG_MTK_SMI_EXT) && IS_ENABLED(CONFIG_MACH_MT6771)
-	smi_larb_mon_act_cnt();
-#endif
-#endif
 	if (!handle->prop_addr)
 		return;
 
@@ -2842,6 +2838,16 @@ static void cmdq_mdp_end_task_virtual(struct cmdqRecStruct *handle,
 		size,
 		mdp_curr_pmqos->mdp_total_pixel,
 		mdp_curr_pmqos->isp_total_pixel);
+	CMDQ_SYSTRACE2_BEGIN(
+		"%s%s handle:%p engine:%#llx thread:%d cur:%lu.%lu end:%lu.%lu list:%u mdp:%u isp:%u\n",
+		__func__, expired ? " expired" : "",
+		handle, handle->engineFlag, handle->thread,
+		curr_time.tv_sec, curr_time.tv_usec,
+		mdp_curr_pmqos->tv_sec, mdp_curr_pmqos->tv_usec,
+		size,
+		mdp_curr_pmqos->mdp_total_pixel,
+		mdp_curr_pmqos->isp_total_pixel);
+	CMDQ_SYSTRACE2_END();
 
 	for (i = 0; i < size; i++) {
 		struct cmdqRecStruct *curTask = handle_list[i];
@@ -2858,9 +2864,8 @@ static void cmdq_mdp_end_task_virtual(struct cmdqRecStruct *handle,
 
 		if (first_task) {
 			target_pmqos = mdp_list_pmqos;
-			curr_pixel_size = mdp_list_pmqos->mdp_total_pixel ?
-				mdp_list_pmqos->mdp_total_pixel :
-				mdp_list_pmqos->isp_total_pixel;
+			curr_pixel_size = max(mdp_list_pmqos->mdp_total_pixel,
+						mdp_list_pmqos->isp_total_pixel);
 			first_task = false;
 		}
 
@@ -2901,9 +2906,8 @@ static void cmdq_mdp_end_task_virtual(struct cmdqRecStruct *handle,
 				(struct mdp_pmqos_record *)
 					curTask->user_private;
 
-			total_pixel = mdp_list_pmqos->mdp_total_pixel ?
-				mdp_list_pmqos->mdp_total_pixel :
-				mdp_list_pmqos->isp_total_pixel;
+			total_pixel = max(mdp_list_pmqos->mdp_total_pixel,
+					mdp_list_pmqos->isp_total_pixel);
 
 			if (first_task) {
 				DP_TIMER_GET_DURATION_IN_US(
@@ -2957,6 +2961,10 @@ static void cmdq_mdp_end_task_virtual(struct cmdqRecStruct *handle,
 		target_pmqos ? target_pmqos->mdp_total_pixel : 0,
 		mdp_curr_pmqos->isp_total_pixel,
 		target_pmqos ? target_pmqos->mdp_total_pixel : 0);
+	CMDQ_SYSTRACE2_COUNTER("isp_pix%d",
+		(target_pmqos ? target_pmqos->mdp_total_pixel : 0), thread_id);
+	CMDQ_SYSTRACE2_COUNTER("mdp_pix%d",
+		(target_pmqos ? target_pmqos->mdp_total_pixel : 0), thread_id);
 
 	kfree(handle->user_private);
 	handle->user_private = NULL;
@@ -3001,8 +3009,9 @@ static void cmdq_mdp_end_task_virtual(struct cmdqRecStruct *handle,
 		mm_qos_update_all_request(
 			&qos_isp_module_request_list[thread_id]);
 
-		pm_qos_update_request(&isp_clk_qos_request[thread_id],
+		mtk_pm_qos_update_request(&isp_clk_qos_request[thread_id],
 			act_throughput);
+		CMDQ_SYSTRACE2_COUNTER("isp_tput%d", act_throughput, thread_id);
 		CMDQ_LOG_PMQOS(
 			"[%d]end task qos update throughput isp %u\n",
 			thread_id, act_throughput);
@@ -3013,7 +3022,8 @@ static void cmdq_mdp_end_task_virtual(struct cmdqRecStruct *handle,
 		mm_qos_update_all_request_zero(
 			&qos_isp_module_request_list[thread_id]);
 
-		pm_qos_update_request(&isp_clk_qos_request[thread_id], 0);
+		mtk_pm_qos_update_request(&isp_clk_qos_request[thread_id], 0);
+		CMDQ_SYSTRACE2_COUNTER("isp_tput%d", 0, thread_id);
 		CMDQ_LOG_PMQOS(
 			"[%d]end task qos update throughput isp off %u\n",
 			thread_id, 0);
@@ -3056,14 +3066,18 @@ static void cmdq_mdp_end_task_virtual(struct cmdqRecStruct *handle,
 				mdp_curr_bandwidth);
 			mm_qos_set_request(request, mdp_curr_bandwidth, 0,
 				comp_type);
+			CMDQ_LOG_PMQOS(
+				"[%d]end task qos update bandwidth:%u, port:%u\n",
+				thread_id, mdp_curr_bandwidth, target_pmqos->qos2_mdp_port[i]);
 		}
 
 		CMDQ_SYSTRACE_BEGIN("%s qos mdp %d\n", __func__, thread_id);
 		mm_qos_update_all_request(
 			&qos_mdp_module_request_list[thread_id]);
 
-		pm_qos_update_request(&mdp_clk_qos_request[thread_id],
+		mtk_pm_qos_update_request(&mdp_clk_qos_request[thread_id],
 			act_throughput);
+		CMDQ_SYSTRACE2_COUNTER("mdp_tput%d", act_throughput, thread_id);
 		CMDQ_LOG_PMQOS(
 			"[%d]end task qos update throughput mdp %u\n",
 			thread_id, act_throughput);
@@ -3073,7 +3087,8 @@ static void cmdq_mdp_end_task_virtual(struct cmdqRecStruct *handle,
 			__func__, thread_id);
 		mm_qos_update_all_request_zero(
 			&qos_mdp_module_request_list[thread_id]);
-		pm_qos_update_request(&mdp_clk_qos_request[thread_id], 0);
+		mtk_pm_qos_update_request(&mdp_clk_qos_request[thread_id], 0);
+		CMDQ_SYSTRACE2_COUNTER("mdp_tput%d", 0, thread_id);
 		CMDQ_LOG_PMQOS(
 			"[%d]end task qos update throughput mdp off %u\n",
 			thread_id, 0);

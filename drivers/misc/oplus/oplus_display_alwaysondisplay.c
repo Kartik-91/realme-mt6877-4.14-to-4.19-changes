@@ -1,5 +1,6 @@
 /***************************************************************
-** Copyright (C),  2020,  OPPO Mobile Comm Corp.,  Ltd
+** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
+** OPLUS_BUG_STABILITY
 ** File : oppo_display_alwaysondisplay.h
 ** Description : oppo_display_alwaysondisplay. implement
 ** Version : 1.0
@@ -14,9 +15,11 @@
 #include <linux/fb.h>
 #include <linux/time.h>
 #include <linux/timekeeping.h>
-#include <linux/oppo_mm_kevent_fb.h>
+#ifdef OPLUS_FEATURE_MM_FEEDBACK
+#include <soc/oplus/system/oplus_mm_kevent_fb.h>
+#endif /* OPLUS_FEATURE_MM_FEEDBACK */
 #include <linux/delay.h>
-#include <soc/oppo/oppo_project.h>
+/* #include <soc/oppo/oppo_project.h> */
 #include "ddp_dsi.h"
 #include "fbconfig_kdebug.h"
 #include "oplus_display_alwaysondisplay.h"
@@ -29,30 +32,22 @@ extern int primary_display_def_dst_mode;
 extern int primary_display_cur_dst_mode;
 extern unsigned char aod_area_cmd[];
 extern void set_is_dc(unsigned int is_dc);
+extern void oppo_cmdq_reset_config_handle(void);
+extern void oppo_cmdq_build_trigger_loop(void);
 /* #endif */ /* OPLUS_FEATURE_RAMLESS_AOD */
 
  /*
  * modify for support aod state.
  */
-extern unsigned int aod_light_mode;
+unsigned int aod_light_mode = 0;
 extern bool oplus_display_aodlight_support;
 extern bool primary_display_get_fp_hbm_state(void);
 extern int primary_display_aod_backlight(int level);
 int disp_lcm_aod_from_display_on(struct disp_lcm_handle *plcm);
+int disp_lcm_set_aod_mode(struct disp_lcm_handle *plcm, void *handle, unsigned int mode);
 int _set_aod_mode_by_cmdq(unsigned int mode);
 int primary_display_set_aod_mode_nolock(unsigned int mode);
 void oppo_display_aod_backlight(void);
-extern bool oplus_flag_lcd_off;
-extern void oplus_cmdq_flush_config_handle_mira(void *handle, int blocking);
-extern void oplus_cmdq_handle_clear_dirty(struct cmdqRecStruct *cmdq_handle);
-extern void oplus_delayed_trigger_kick_set(int params);
-extern enum lcm_power_state primary_display_get_lcm_power_state_nolock(void );
-extern enum lcm_power_state
-primary_display_set_lcm_power_state_nolock(enum lcm_power_state new_state);
-extern enum DISP_POWER_STATE oplus_primary_set_state(enum DISP_POWER_STATE new_state);
-extern enum mtkfb_power_mode primary_display_get_power_mode_nolock(void );
-extern void oplus_cmdq_build_trigger_loop(void);
-extern void oplus_cmdq_reset_config_handle(void);
 
 int disp_lcm_aod_from_display_on(struct disp_lcm_handle *plcm)
 {
@@ -72,7 +67,7 @@ int disp_lcm_aod_from_display_on(struct disp_lcm_handle *plcm)
 			 return -1;
 		 }
 
-		 oplus_flag_lcd_off = false;
+		 flag_lcd_off = false;
 
 		 return 0;
 	 }
@@ -122,20 +117,20 @@ int _set_aod_mode_by_cmdq(unsigned int mode)
 			MMPROFILE_FLAG_PULSE, 1, 2);
 		cmdqRecReset(cmdq_handle_aod_mode);
 		ret = disp_lcm_set_aod_mode(pgc->plcm,cmdq_handle_aod_mode,mode);
-		oplus_cmdq_flush_config_handle_mira(cmdq_handle_aod_mode, 1);
+		oppo_cmdq_flush_config_handle_mira(cmdq_handle_aod_mode, 1);
 	} else {
 		mmprofile_log_ex(ddp_mmp_get_events()->primary_set_bl,
 			MMPROFILE_FLAG_PULSE, 1, 3);
 		cmdqRecReset(cmdq_handle_aod_mode);
 		cmdqRecWait(cmdq_handle_aod_mode, CMDQ_SYNC_TOKEN_CABC_EOF);
-		oplus_cmdq_handle_clear_dirty(cmdq_handle_aod_mode);
+		oppo_cmdq_handle_clear_dirty(cmdq_handle_aod_mode);
 		_cmdq_insert_wait_frame_done_token_mira(cmdq_handle_aod_mode);
 		ret = disp_lcm_set_aod_mode(pgc->plcm,cmdq_handle_aod_mode,mode);
 		cmdqRecSetEventToken(cmdq_handle_aod_mode, CMDQ_SYNC_TOKEN_CONFIG_DIRTY);
 		cmdqRecSetEventToken(cmdq_handle_aod_mode, CMDQ_SYNC_TOKEN_CABC_EOF);
 		mmprofile_log_ex(ddp_mmp_get_events()->primary_set_bl,
 			MMPROFILE_FLAG_PULSE, 1, 4);
-		oplus_cmdq_flush_config_handle_mira(cmdq_handle_aod_mode, 1);
+		oppo_cmdq_flush_config_handle_mira(cmdq_handle_aod_mode, 1);
 		mmprofile_log_ex(ddp_mmp_get_events()->primary_set_bl,
 			MMPROFILE_FLAG_PULSE, 1, 6);
 	}
@@ -151,7 +146,7 @@ int primary_display_set_aod_mode_nolock(unsigned int mode)
 {
 	int ret = 0;
 
-	if (oplus_flag_lcd_off)
+	if (flag_lcd_off)
 	{
 		pr_err("lcd is off,don't allow to set aod\n");
 		return 0;
@@ -178,7 +173,7 @@ int primary_display_set_aod_mode_nolock(unsigned int mode)
 				_set_aod_mode_by_cmdq(mode);
 			}
 			//atomic_set(&delayed_trigger_kick, 1);
-			oplus_delayed_trigger_kick_set(1);
+			oppo_delayed_trigger_kick_set(1);
 		}
 	}
 	mmprofile_log_ex(ddp_mmp_get_events()->primary_set_bl,
@@ -206,7 +201,7 @@ void oppo_display_aod_backlight()
 				DISP_PR_ERR("wait frame done in suspend timeout\n");
 				mmprofile_log_ex(ddp_mmp_get_events()->primary_suspend,
 					 MMPROFILE_FLAG_PULSE, 3, 2);
-				primary_display_diagnose(__func__, __LINE__);
+				primary_display_diagnose();
 				ret = -1;
 			}
 	}
@@ -237,10 +232,10 @@ void oppo_display_aod_backlight()
 	dpmgr_path_power_off(pgc->dpmgr_handle, CMDQ_DISABLE);
 	pgc->lcm_refresh_rate = 60;
 	/* pgc->state = DISP_SLEPT; */
-	oplus_primary_set_state(DISP_SLEPT);
+	oppo_primary_set_state(DISP_SLEPT);
 }
 
-int oppo_panel_get_aod_light_mode(void *buf)
+int oplus_panel_get_aod_light_mode(void *buf)
 {
 	unsigned int *aod_mode = buf;
 	(*aod_mode) = aod_light_mode;
@@ -248,12 +243,11 @@ int oppo_panel_get_aod_light_mode(void *buf)
 	return 0;
 }
 
-int oppo_panel_set_aod_light_mode(void *buf)
+int oplus_panel_set_aod_light_mode(void *buf)
 {
 	unsigned int *temp_save = buf;
 	int ret = 0;
 
-	pr_info("%s, oplus_display_aodlight_support = %d, aod_light_mode = %d\n", __func__, oplus_display_aodlight_support, *temp_save);
 	if (oplus_display_aodlight_support) {
 
 		if (primary_display_get_fp_hbm_state()) {
@@ -365,12 +359,12 @@ int _set_aod_area_by_cmdq(unsigned char *area)
 		mmprofile_log_ex(ddp_mmp_get_events()->primary_set_bl, MMPROFILE_FLAG_PULSE, 1, 3);
 		cmdqRecReset(cmdq_handle_area);
 		cmdqRecWait(cmdq_handle_area, CMDQ_SYNC_TOKEN_CABC_EOF);
-		oplus_cmdq_handle_clear_dirty(cmdq_handle_area);
+		oppo_cmdq_handle_clear_dirty(cmdq_handle_area);
 		_cmdq_insert_wait_frame_done_token_mira(cmdq_handle_area);
 		disp_lcm_set_aod_area(pgc->plcm, cmdq_handle_area, area);
 		cmdqRecSetEventToken(cmdq_handle_area, CMDQ_SYNC_TOKEN_CABC_EOF);
 		mmprofile_log_ex(ddp_mmp_get_events()->primary_set_bl, MMPROFILE_FLAG_PULSE, 1, 4);
-		oplus_cmdq_flush_config_handle_mira(cmdq_handle_area, 1);
+		oppo_cmdq_flush_config_handle_mira(cmdq_handle_area, 1);
 		mmprofile_log_ex(ddp_mmp_get_events()->primary_set_bl, MMPROFILE_FLAG_PULSE, 1, 6);
 		DISPMSG("[BL]_set_aod_area_by_cmdq ret=%d\n", ret);
 	}
@@ -419,7 +413,7 @@ int primary_display_set_aod_area(unsigned char *area, int use_cmdq)
 				}
 			}
 			/* atomic_set(&delayed_trigger_kick, 1); */
-			oplus_delayed_trigger_kick_set(1);
+			oppo_delayed_trigger_kick_set(1);
 		}
 	}
 
@@ -452,7 +446,7 @@ int primary_display_switch_aod_mode(int mode)
 	mmprofile_log_ex(ddp_mmp_get_events()->primary_display_switch_dst_mode,
 			 MMPROFILE_FLAG_START, primary_display_cur_dst_mode,
 			 mode);
-	DISPCHECK("[C2V][cmd/video]aod cur_mode:%d, dst_mode:%d\n", primary_display_cur_dst_mode,
+	DISP_PR_INFO("[C2V][cmd/video]aod cur_mode:%d, dst_mode:%d\n", primary_display_cur_dst_mode,
 		mode);
 
 	if (pgc->plcm->params->type != LCM_TYPE_DSI) {
@@ -466,7 +460,7 @@ int primary_display_switch_aod_mode(int mode)
 		mmprofile_log_ex(
 			ddp_mmp_get_events()->primary_display_switch_dst_mode,
 			MMPROFILE_FLAG_PULSE, 6, pgc->state);
-		DISPCHECK("%s: primary display path is already slept, skip\n",
+		DISP_PR_INFO("%s: primary display path is already slept, skip\n",
 			  __func__);
 		goto done;
 	}
@@ -497,13 +491,13 @@ int primary_display_switch_aod_mode(int mode)
 
 	mmprofile_log_ex(ddp_mmp_get_events()->primary_display_switch_dst_mode,
 			 MMPROFILE_FLAG_PULSE, 4, 0);
-	oplus_cmdq_reset_config_handle();
+	oppo_cmdq_reset_config_handle();
 
 	/* 1.modify lcm mode - sw */
 	mmprofile_log_ex(ddp_mmp_get_events()->primary_display_switch_dst_mode,
 			 MMPROFILE_FLAG_PULSE, 4, 1);
 
-	DISPCHECK("%s [cmd/video] primary_display_def_dst_mode = %d\n", __func__, primary_display_def_dst_mode);
+	DISP_PR_INFO("%s [cmd/video] primary_display_def_dst_mode = %d\n", __func__, primary_display_def_dst_mode);
 
 	if (mode) {
 		pgc->plcm->params->dsi.mode = primary_display_def_dst_mode;
@@ -513,7 +507,8 @@ int primary_display_switch_aod_mode(int mode)
 		switch_mode = CMD_MODE;
 	}
 
-	DISPCHECK("%s [cmd/video] mode = %d\n", __func__, primary_display_is_video_mode());
+	DISP_PR_INFO("%s [cmd/video] mode = %d, switch_mode=%d\n", __func__,
+		primary_display_is_video_mode(), switch_mode);
 
 	dpmgr_path_set_video_mode(pgc->dpmgr_handle,
 			  primary_display_is_video_mode());
@@ -548,21 +543,22 @@ int primary_display_switch_aod_mode(int mode)
 			ddp_mmp_get_events()->primary_display_switch_dst_mode,
 			MMPROFILE_FLAG_PULSE, 9, 0);
 		ret = -1;
+		DISP_PR_ERR("set DDP_SWITCH_AOD_MODE faield\n");
 	}
 
 	/* 6. rebuild trigger loop */
 	mmprofile_log_ex(ddp_mmp_get_events()->primary_display_switch_dst_mode,
 			 MMPROFILE_FLAG_PULSE, 4, 2);
 	_cmdq_stop_trigger_loop();
-	oplus_cmdq_build_trigger_loop();
+	oppo_cmdq_build_trigger_loop();
 	_cmdq_start_trigger_loop();
-	oplus_cmdq_reset_config_handle();
+	oppo_cmdq_reset_config_handle();
 	_cmdq_insert_wait_frame_done_token_mira(pgc->cmdq_handle_config);
 
 	mmprofile_log_ex(ddp_mmp_get_events()->primary_display_switch_dst_mode,
 			 MMPROFILE_FLAG_PULSE, 4, 3);
 	primary_display_cur_dst_mode = mode;
-	DISPCHECK("[cmd/video]primary_display_cur_dst_mode %d\n",
+	DISP_PR_INFO("[cmd/video]primary_display_cur_dst_mode %d\n",
 		primary_display_cur_dst_mode);
 	if (primary_display_is_video_mode()) {
 		dpmgr_map_event_to_irq(pgc->dpmgr_handle,

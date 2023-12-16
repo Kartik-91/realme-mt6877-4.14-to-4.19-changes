@@ -1,15 +1,5 @@
-#
-# Copyright (C) 2015 MediaTek Inc.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
+# SPDX-License-Identifier: GPL-2.0
+
 #
 # Makefile for misc devices that really don't fit anywhere else.
 #
@@ -36,12 +26,7 @@ obj-y += ../common/$(COMMON_VERSION)/imgsensor_sensor_list.o
 obj-y += ../common/$(COMMON_VERSION)/seninf_clk.o
 obj-y += ../common/$(COMMON_VERSION)/seninf.o
 obj-y += ../common/$(COMMON_VERSION)/imgsensor_pwr_seq.o
-#ifdef OPLUS_FEATURE_CAMERA_COMMON
-obj-y				+= ../OplusImgsensor/imgsensor_eeprom.o
-obj-y				+= ../OplusImgsensor/imgsensor_hwcfg_custom.o
-obj-y				+= ../OplusImgsensor/imgsensor_hwcfg_20131.o
-#endif
-
+obj-y += ../common/$(COMMON_VERSION)/imgsensor_eeprom.o
 define FILTER_DRV
 ifeq ($(wildcard $(IMGSENSOR_DRIVER_PATH)/$(MTK_PLATFORM)/camera_project/$(ARCH_MTK_PROJECT)/$(1)),)
 ifeq ($(wildcard $(IMGSENSOR_DRIVER_PATH)/$(MTK_PLATFORM)/$(1)),)
@@ -79,9 +64,6 @@ endif
 subdir-ccflags-y		+= -I$(IMGSENSOR_DRIVER_PATH)/common/$(COMMON_VERSION)/camera_hw
 
 # Enable parallelism
-subdir-ccflags-y += -DSENSOR_PARALLEISM
-#ifdef OPLUS_FEATURE_CAMERA_COMMON
-#oplus platformflag
-subdir-ccflags-y += -DSENSOR_PLATFORM_5G_H
-#endif
+# subdir-ccflags-y += -DNO_I2C_MTK -DSENSOR_PARALLEISM
+
 obj-y += seninf/

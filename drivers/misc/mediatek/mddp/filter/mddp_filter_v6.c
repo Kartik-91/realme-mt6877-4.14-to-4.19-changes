@@ -123,9 +123,9 @@ static void mddp_f_del_router_tuple_w_unlock(struct router_tuple *t,
 	kmem_cache_free(mddp_f_router_tuple_cache, t);
 }
 
-static void mddp_f_timeout_router_tuple(unsigned long data)
+static void mddp_f_timeout_router_tuple(struct timer_list *timer)
 {
-	struct router_tuple *t = (struct router_tuple *)data;
+	struct router_tuple *t = from_timer(t, timer, timeout_used);
 	unsigned long flag;
 
 	if (unlikely(atomic_read(&mddp_filter_quit))) {
@@ -206,8 +206,7 @@ static bool mddp_f_add_router_tuple_tcpudp(struct router_tuple *t)
 			__func__, t, t->list.next, t->list.prev);
 
 	/* init timer and start it */
-	setup_timer(&t->timeout_used,
-			mddp_f_timeout_router_tuple, (unsigned long)t);
+	timer_setup(&t->timeout_used, mddp_f_timeout_router_tuple, 0);
 	t->timeout_used.expires = jiffies + HZ * USED_TIMEOUT;
 
 	add_timer(&t->timeout_used);
@@ -321,9 +320,8 @@ static inline void mddp_f_ip6_tcp_lan(
 
 	ret = mddp_f_check_pkt_need_track_router_tuple(t, &found_router_tuple);
 	MDDP_F_LOG(MDDP_LL_DEBUG,
-		"%s: IPv6 TCP is_need_track[%d], found_tuple[%p], src_ip[%x], dst_ip[%x], ip_p[%d], sport[%x], dport[%x].\n",
-		__func__, ret, found_router_tuple, &t->saddr, &t->daddr,
-		t->proto, t->in.tcp.port, t->out.tcp.port);
+		"%s: IPv6 TCP is_need_track[%d], found_tuple[%p], ip_p[%d], sport[%x], dport[%x].\n",
+		__func__, ret, found_router_tuple, t->proto, t->in.tcp.port, t->out.tcp.port);
 	if (ret == true)
 		desc->flag |= DESC_FLAG_TRACK_ROUTER;
 }
@@ -344,9 +342,8 @@ static inline void mddp_f_ip6_udp_lan(
 
 	ret = mddp_f_check_pkt_need_track_router_tuple(t, &found_router_tuple);
 	MDDP_F_LOG(MDDP_LL_DEBUG,
-		"%s: IPv6 UDP tuple. ret[%d], found_tuple[%p], src_ip[%x], dst_ip[%x], ip_p[%d], sport[%x], dport[%x],.\n",
-		__func__, ret, found_router_tuple, &t->saddr, &t->daddr,
-		t->proto, t->in.tcp.port, t->out.tcp.port);
+		"%s: IPv6 UDP tuple. ret[%d], found_tuple[%p], ip_p[%d], sport[%x], dport[%x],.\n",
+		__func__, ret, found_router_tuple, t->proto, t->in.tcp.port, t->out.tcp.port);
 	if (ret == true)
 		desc->flag |= DESC_FLAG_TRACK_ROUTER;
 }

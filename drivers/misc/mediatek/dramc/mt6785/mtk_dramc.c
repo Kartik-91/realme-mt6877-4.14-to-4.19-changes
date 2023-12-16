@@ -1,15 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (C) 2016 MediaTek Inc.
  */
+
 
 #include <linux/kernel.h>
 #include <linux/device.h>
@@ -48,10 +41,20 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 
-#include <mt-plat/mtk_gpt.h>
 #include <mt-plat/sync_write.h>
 
 #include <linux/interrupt.h>
+
+struct mem_desc {
+	u64 start;
+	u64 size;
+};
+
+struct dram_info {
+	u32 rank_num;
+	struct mem_desc rank_info[4];
+};
+
 
 struct mt_gpt_timers {
 	int tmr_irq;
@@ -1445,8 +1448,10 @@ DRIVER_ATTR(read_mr4, 0664, read_mr4_show, read_mr4_store);
 #endif
 
 /*DRIVER_ATTR(dram_dfs, 0664, dram_dfs_show, dram_dfs_store);*/
+#if defined(SW_ZQCS) || defined(SW_TX_TRACKING)
 static struct timer_list zqcs_timer;
 static unsigned char low_freq_counter;
+#endif
 DEFINE_SPINLOCK(sw_zq_tx_lock);
 
 void zqcs_timer_callback(unsigned long data)
@@ -1926,14 +1931,6 @@ static int dram_probe(struct platform_device *pdev)
 	/* if (((DRAM_TYPE == TYPE_LPDDR4) || (DRAM_TYPE == TYPE_LPDDR4X)) &&
 	 *		(dram_sw_tx || dram_sw_zq)) {
 	 */
-	if (0) {
-		low_freq_counter = 10;
-		init_timer_deferrable(&zqcs_timer);
-		zqcs_timer.function = zqcs_timer_callback;
-		zqcs_timer.data = 0;
-		if (mod_timer(&zqcs_timer, jiffies + msecs_to_jiffies(280)))
-			dramc_info("Error in ZQCS mod_timer\n");
-	}
 
 	ret = driver_create_file(pdev->dev.driver,
 	&driver_attr_emi_clk_mem_test);

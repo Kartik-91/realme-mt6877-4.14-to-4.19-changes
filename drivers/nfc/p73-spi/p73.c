@@ -124,6 +124,7 @@ static struct regulator *p61_regulator = NULL;
 //#define P61_SPI_CLOCK_7Mzh
 #undef P61_SPI_CLOCK_7Mzh
 #undef P61_SPI_CLOCK_13_3_Mzh
+//#ifndef VENDOR_EDIT
 //Modify for : change SPI speed to 8M
 //#undef P61_SPI_CLOCK_8Mzh
 //#define P61_SPI_CLOCK_20Mzh
@@ -192,6 +193,7 @@ struct p61_dev {
     bool irq_enabled; /* flag to indicate irq is used */
     unsigned char enable_poll_mode; /* enable the poll mode */
     spinlock_t irq_enabled_lock; /*spin lock for read irq */
+    //#ifdef VENDOR_EDIT
     //Add for buf for transceive SPI data
     /* read buffer */
     size_t kbuflen;
@@ -486,6 +488,7 @@ static ssize_t p61_dev_write(struct file *filp, const char *buf, size_t count,
 
     int ret = -1;
     struct p61_dev *p61_dev;
+    //#ifndef VENDOR_EDIT
     //Mod for buf for transceive SPI data
     //unsigned char tx_buffer[MAX_BUFFER_SIZE];
     //#else /* VENDOR_EDIT */
@@ -500,6 +503,7 @@ static ssize_t p61_dev_write(struct file *filp, const char *buf, size_t count,
     if (count > MAX_BUFFER_SIZE)
         count = MAX_BUFFER_SIZE;
 
+    //#ifdef VENDOR_EDIT
     //Add for buf for transceive SPI data
     /*memset(&tx_buffer[0], 0, sizeof(tx_buffer));
     if (copy_from_user(&tx_buffer[0], &buf[0], count))
@@ -521,6 +525,7 @@ static ssize_t p61_dev_write(struct file *filp, const char *buf, size_t count,
     if(p61_through_put_t.enable_through_put_measure)
         p61_start_throughput_measurement(WRITE_THROUGH_PUT);
     /* Write data */
+    //#ifndef VENDOR_EDIT
     //Mod for buf for transceive SPI data
     //ret = spi_write(p61_dev->spi, &tx_buffer[0], count);
     //#else /* VENDOR_EDIT */
@@ -537,6 +542,7 @@ static ssize_t p61_dev_write(struct file *filp, const char *buf, size_t count,
             p61_stop_throughput_measurement(WRITE_THROUGH_PUT, ret);
     }
 
+    //#ifdef VENDOR_EDIT
     //Add for buf for transceive SPI data
     kfree(tmp);
     //#endif /* VENDOR_EDIT */
@@ -618,6 +624,7 @@ static ssize_t p61_dev_read(struct file *filp, char *buf, size_t count,
 {
     int ret = -EIO;
     struct p61_dev *p61_dev = filp->private_data;
+    //#ifndef VENDOR_EDIT
     //Mod for buf for transceive SPI data
     //unsigned char rx_buffer[MAX_BUFFER_SIZE];
     //#else /* VENDOR_EDIT */
@@ -632,6 +639,7 @@ static ssize_t p61_dev_read(struct file *filp, char *buf, size_t count,
         count = MAX_BUFFER_SIZE;
     }
 
+    //#ifndef VENDOR_EDIT
     //Mod for buf for transceive SPI data
     //memset(&rx_buffer[0], 0x00, sizeof(rx_buffer));
     //#else /* VENDOR_EDIT */
@@ -649,6 +657,7 @@ static ssize_t p61_dev_read(struct file *filp, char *buf, size_t count,
         P61_DBG_MSG(" %s Poll Mode Enabled \n", __FUNCTION__);
 
         P61_DBG_MSG(KERN_INFO"SPI_READ returned 0x%x", count);
+        //#ifndef VENDOR_EDIT
         //Mod for buf for transceive SPI data
         //ret = spi_read(p61_dev->spi, (void *)&rx_buffer[0], count);
         //#else /* VENDOR_EDIT */
@@ -693,6 +702,7 @@ static ssize_t p61_dev_read(struct file *filp, char *buf, size_t count,
 #else
     P61_DBG_MSG(" %s P61_IRQ_ENABLE not Enabled \n", __FUNCTION__);
 #endif
+        //#ifndef VENDOR_EDIT
         //Mod for buf for transceive SPI data
         //ret = spi_read(p61_dev->spi, (void *)&rx_buffer[0], count);
         //#else /* VENDOR_EDIT */
@@ -714,6 +724,7 @@ static ssize_t p61_dev_read(struct file *filp, char *buf, size_t count,
         p61_stop_throughput_measurement (READ_THROUGH_PUT, count);
     P61_DBG_MSG(KERN_INFO"total_count = %d", count);
 
+    //#ifndef VENDOR_EDIT
     //Mod for buf for transceive SPI data
     //if (copy_to_user(buf, &rx_buffer[0], count))
     //#else /* VENDOR_EDIT */
@@ -725,6 +736,7 @@ static ssize_t p61_dev_read(struct file *filp, char *buf, size_t count,
         goto fail;
     }
     P61_DBG_MSG("p61_dev_read ret %d Exit\n", ret);
+    //#ifndef VENDOR_EDIT
     //Mod for buf for transceive SPI data
     //P61_DBG_MSG("p61_dev_read ret %d Exit\n", rx_buffer[0]);
     //#endif /* VENDOR_EDIT */
@@ -964,6 +976,7 @@ static int p61_probe(struct spi_device *spi)
         goto err_exit;
     }
 
+    //#ifdef VENDOR_EDIT
     //Add for buf for transceive SPI data
     p61_dev->kbuflen = MAX_BUFFER_SIZE;
     p61_dev->kbuf = kzalloc(MAX_BUFFER_SIZE, GFP_KERNEL);
@@ -1054,6 +1067,7 @@ static int p61_probe(struct spi_device *spi)
     err_exit0:
     mutex_destroy(&p61_dev->read_mutex);
     mutex_destroy(&p61_dev->write_mutex);
+    //#ifdef VENDOR_EDIT
     //Add for buf for transceive SPI data
     kfree(p61_dev->kbuf);
     err_free_dev:

@@ -1,15 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2016 MediaTek Inc.
- * Author: Tiffany Lin <tiffany.lin@mediatek.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef _MTK_VCODEC_ENC_PM_H_
@@ -34,6 +25,13 @@ void mtk_prepare_venc_emi_bw(void);
 void mtk_unprepare_venc_emi_bw(void);
 
 void mtk_venc_pmqos_prelock(struct mtk_vcodec_ctx *ctx, int core_id);
-void mtk_venc_pmqos_begin_frame(struct mtk_vcodec_ctx *ctx);
-void mtk_venc_pmqos_end_frame(struct mtk_vcodec_ctx *ctx);
+void mtk_venc_pmqos_begin_frame(struct mtk_vcodec_ctx *ctx, int core_id);
+void mtk_venc_pmqos_end_frame(struct mtk_vcodec_ctx *ctx, int core_id);
+
+/* GCE version PMQoS */
+void mtk_venc_pmqos_gce_flush(struct mtk_vcodec_ctx *ctx, int core_id,
+	int job_cnt);
+void mtk_venc_pmqos_gce_done(struct mtk_vcodec_ctx *ctx, int core_id,
+	int job_cnt);
+
 #endif /* _MTK_VCODEC_ENC_PM_H_ */

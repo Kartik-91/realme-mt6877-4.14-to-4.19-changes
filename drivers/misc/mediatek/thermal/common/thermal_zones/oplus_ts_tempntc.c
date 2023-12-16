@@ -1,7 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ * Copyright (c) 2019 MediaTek Inc.
  */
+#define pr_fmt(fmt)	"[OPLUS_TEMPNTC] %s: " fmt, __func__
 
 #include <linux/version.h>
 #include <linux/kernel.h>
@@ -19,833 +20,296 @@
 #include "mach/mtk_thermal.h"
 #include <linux/uidgid.h>
 #include <linux/slab.h>
+#include <soc/oplus/system/oppo_project.h>
 #include <linux/power_supply.h>
 #include <linux/iio/consumer.h>
 #include <linux/kthread.h>	/* For Kthread_run */
 #include <linux/of_gpio.h>
-#include "oplus_tempntc.h"
 
-
+#define CHGNTC_ENABLE_LEVEL		     	(1)
+#define CHGNTC_DISABLE_LEVEL			(0)
+#define  BOARD_TEMP_GPIO_NUM   154
+#define OPLUS_DALEY_MS 300
 struct temp_data {
 	struct platform_device *pdev;
-	int btb_con_volt;
-	int usb_con_volt;
-	int pa1_ntc_volt;
-	int pa2_ntc_volt;
+	int batt_id_volt;
+	int flash_ntc_volt;
+	int charger_ntc_volt;
+	int pa_ntc_volt;
+	int bb_ntc_volt;
+	int bat_con_ntc_volt;
 	struct task_struct      *oplus_tempntc_kthread;
-	struct iio_channel      *iio_channel_btb_con;
-	struct iio_channel      *iio_channel_usb_con;
+	struct iio_channel      *iio_channel_btb;
+	struct iio_channel      *iio_channel_ftp;
+	struct iio_channel      *iio_channel_btc;
+	struct iio_channel      *iio_channel_bb;
+	struct iio_channel      *iio_channel_pa;
+	struct iio_channel      *iio_channel_flash;
+	struct iio_channel      *iio_channel_batid;
+	struct iio_channel      *iio_channel_charger;
 	struct power_supply *ac_psy;
-	int ac_status;
-	int tempntc_pin;
 	struct pinctrl *pinctrl;
-	struct pinctrl_state *ntcctrl_high;
-	struct pinctrl_state *ntcctrl_low;
+	struct pinctrl_state *ntc_switch1_ctrl_high;
+	struct pinctrl_state *ntc_switch1_ctrl_low;
+	struct pinctrl_state *ntc_switch2_ctrl_high;
+	struct pinctrl_state *ntc_switch2_ctrl_low;
 	struct delayed_work init_work;
-	int delay_time;
-	int len_array;
-	int *con_volt_pa;
-	int *con_volt_btb;
-	int *con_temp;
+	struct completion temp_det_start;
+	struct mutex det_lock;
 	bool is_kthread_get_adc;
+	int ntcswitch1_pin;
+	int ntcswitch2_pin;
+	bool disable_ntc_switch;
 };
 static struct temp_data *pinfo;
+extern void oplus_gpio_switch_lock(void);
+extern void oplus_gpio_switch_unlock(void);
+extern void oplus_gpio_value_switch(unsigned int pin, unsigned int val);
 
-int con_volt_21061[] = {
-	1759,
-	1756,
-	1753,
-	1749,
-	1746,
-	1742,
-	1738,
-	1734,
-	1730,
-	1725,
-	1720,
-	1715,
-	1709,
-	1704,
-	1697,
-	1691,
-	1684,
-	1677,
-	1670,
-	1662,
-	1654,
-	1646,
-	1637,
-	1628,
-	1618,
-	1608,
-	1598,
-	1587,
-	1575,
-	1564,
-	1551,
-	1539,
-	1526,
-	1512,
-	1498,
-	1484,
-	1469,
-	1454,
-	1438,
-	1422,
-	1405,
-	1388,
-	1371,
-	1353,
-	1335,
-	1316,
-	1297,
-	1278,
-	1258,
-	1238,
-	1218,
-	1198,
-	1177,
-	1156,
-	1136,
-	1114,
-	1093,
-	1072,
-	1050,
-	1029,
-	1007,
-	986,
-	964,
-	943,
-	921,
-	900,
-	879,
-	858,
-	837,
-	816,
-	796,
-	775,
-	755,
-	736,
-	716,
-	697,
-	678,
-	659,
-	641,
-	623,
-	605,
-	588,
-	571,
-	555,
-	538,
-	522,
-	507,
-	492,
-	477,
-	463,
-	449,
-	435,
-	422,
-	409,
-	396,
-	384,
-	372,
-	360,
-	349,
-	338,
-	327,
-	317,
-	307,
-	297,
-	288,
-	279,
-	270,
-	261,
-	253,
-	245,
-	237,
-	230,
-	222,
-	215,
-	209,
-	202,
-	196,
-	189,
-	183,
-	178,
-	172,
-	167,
-	162,
-	156,
-	152,
-	147,
-	142,
-	138,
-	134,
-	130,
-	126,
-	122,
-	118,
-	114,
-	111,
-	108,
-	104,
-	101,
-	98,
-	95,
-	92,
-	90,
-	87,
-	84,
-	82,
-	80,
-	77,
-	75,
-	73,
-	71,
-	69,
-	67,
-	65,
-	63,
-	61,
-	59,
-	58,
-	56,
-	55,
-	53,
-	52,
-	50,
-	49,
-	47,
-	46,
-	45,
-};
-
-int con_volt_21015[] = {
-	1719,
-	1714,
-	1708,
-	1701,
-	1695,
-	1688,
-	1680,
-	1673,
-	1664,
-	1656,
-	1647,
-	1637,
-	1627,
-	1617,
-	1606,
-	1595,
-	1583,
-	1571,
-	1558,
-	1544,
-	1530,
-	1516,
-	1501,
-	1486,
-	1470,
-	1453,
-	1436,
-	1419,
-	1401,
-	1382,
-	1363,
-	1344,
-	1324,
-	1304,
-	1283,
-	1262,
-	1241,
-	1219,
-	1197,
-	1175,
-	1152,
-	1129,
-	1106,
-	1083,
-	1060,
-	1037,
-	1014,
-	990,
-	967,
-	944,
-	921,
-	898,
-	875,
-	852,
-	829,
-	807,
-	785,
-	763,
-	741,
-	720,
-	699,
-	679,
-	659,
-	639,
-	619,
-	600,
-	581,
-	563,
-	545,
-	528,
-	511,
-	494,
-	478,
-	462,
-	447,
-	432,
-	418,
-	404,
-	390,
-	377,
-	364,
-	351,
-	339,
-	328,
-	317,
-	306,
-	295,
-	285,
-	275,
-	265,
-	256,
-	247,
-	239,
-	230,
-	222,
-	215,
-	207,
-	200,
-	193,
-	186,
-	180,
-	174,
-	168,
-	162,
-	156,
-	151,
-	146,
-	141,
-	136,
-	131,
-	127,
-	123,
-	119,
-	115,
-	111,
-	107,
-	103,
-	100,
-	97,
-	94,
-	90,
-	87,
-	85,
-	82,
-	79,
-	77,
-	74,
-	72,
-	69,
-	67,
-	65,
-	63,
-	61,
-	59,
-	57,
-	55,
-	54,
-	52,
-	50,
-	49,
-	47,
-	46,
-	45,
-	43,
-	42,
-	41,
-	39,
-	38,
-	37,
-	36,
-	35,
-	34,
-	33,
-	32,
-	31,
-	30,
-	29,
-	29,
-	28,
-	27,
-	26,
-	25,
-	25,
-	24,
-	23,
-	23,
-};
-
-
-int con_temp_21061[] = {
-	-40,
-	-39,
-	-38,
-	-37,
-	-36,
-	-35,
-	-34,
-	-33,
-	-32,
-	-31,
-	-30,
-	-29,
-	-28,
-	-27,
-	-26,
-	-25,
-	-24,
-	-23,
-	-22,
-	-21,
-	-20,
-	-19,
-	-18,
-	-17,
-	-16,
-	-15,
-	-14,
-	-13,
-	-12,
-	-11,
-	-10,
-	-9,
-	-8,
-	-7,
-	-6,
-	-5,
-	-4,
-	-3,
-	-2,
-	-1,
-	0,
-	1,
-	2,
-	3,
-	4,
-	5,
-	6,
-	7,
-	8,
-	9,
-	10,
-	11,
-	12,
-	13,
-	14,
-	15,
-	16,
-	17,
-	18,
-	19,
-	20,
-	21,
-	22,
-	23,
-	24,
-	25,
-	26,
-	27,
-	28,
-	29,
-	30,
-	31,
-	32,
-	33,
-	34,
-	35,
-	36,
-	37,
-	38,
-	39,
-	40,
-	41,
-	42,
-	43,
-	44,
-	45,
-	46,
-	47,
-	48,
-	49,
-	50,
-	51,
-	52,
-	53,
-	54,
-	55,
-	56,
-	57,
-	58,
-	59,
-	60,
-	61,
-	62,
-	63,
-	64,
-	65,
-	66,
-	67,
-	68,
-	69,
-	70,
-	71,
-	72,
-	73,
-	74,
-	75,
-	76,
-	77,
-	78,
-	79,
-	80,
-	81,
-	82,
-	83,
-	84,
-	85,
-	86,
-	87,
-	88,
-	89,
-	90,
-	91,
-	92,
-	93,
-	94,
-	95,
-	96,
-	97,
-	98,
-	99,
-	100,
-	101,
-	102,
-	103,
-	104,
-	105,
-	106,
-	107,
-	108,
-	109,
-	110,
-	111,
-	112,
-	113,
-	114,
-	115,
-	116,
-	117,
-	118,
-	119,
-	120,
-	121,
-	122,
-	123,
-	124,
-	125,
-};
-
-int convert_volt_to_precise_temp(int volt)
+int get_flash_ntc_volt(void)
 {
-	int volt1, volt2, temp1, temp2;
-	int temp, i;
-
-	if (volt <= 0) {
-		volt = 2457;
-	}
-
-	volt = volt * 1500 / 4096;
-
-	if (volt >= pinfo->con_volt_pa[0]) {
-		temp = pinfo->con_temp[0] * 1000;
-	} else if (volt <=  pinfo->con_volt_pa[pinfo->len_array- 1]) {
-		temp = pinfo->con_temp[pinfo->len_array- 1] * 1000;
-	} else {
-		volt1 = pinfo->con_volt_pa[0];
-		temp1 =  pinfo->con_temp[0];
-
-		for (i = 0; i < pinfo->len_array; i++) {
-			if (volt >= pinfo->con_volt_pa[i]) {
-				volt2 = pinfo->con_volt_pa[i];
-				temp2 = pinfo->con_temp[i];
-				break;
-			}
-			volt1 = pinfo->con_volt_pa[i];
-			temp1 =  pinfo->con_temp[i];
-		}
-		/* now volt1 > volt > volt2 */
-		temp = mult_frac((((volt - volt2) * temp1) + ((volt1 - volt) * temp2)), 1000, (volt1 - volt2));
-	}
-	return temp;
+    if (!pinfo)
+        return -1;
+    return pinfo->flash_ntc_volt;
 }
 
-int convert_volt_to_temp(int volt)
+int get_batt_id_ntc_volt(void)
 {
-	int i;
-	int temp_volt = 0;
-	int result_temp = 0;
-
-	temp_volt = volt;
-	if (temp_volt <= 0) {
-		temp_volt = 2457;
-	}
-
-	temp_volt = temp_volt * 1500 / 4096;
-
-	for (i = pinfo->len_array- 1; i >= 0; i--) {
-		if (pinfo->con_volt_btb[i] >= temp_volt)
-			break;
-		else if (i == 0)
-			break;
-	}
-
-	result_temp = pinfo->con_temp[i];
-	return result_temp;
+    if (!pinfo)
+        return -1;
+    return pinfo->batt_id_volt;
 }
 
-int oplus_chg_get_battery_btb_temp_cal(void)
+int get_charger_ntc_volt(void)
 {
-	int ret = 0;
-
-	if (pinfo == NULL) {
-		return 25;
-	}
-
-	ret = convert_volt_to_temp(pinfo->btb_con_volt);
-	pr_err("%s ret = %d, btb_con_volt = %d\n", __func__, ret, pinfo->btb_con_volt);
-	return ret;
+    if (!pinfo)
+        return -1;
+    return pinfo->charger_ntc_volt;
 }
-EXPORT_SYMBOL(oplus_chg_get_battery_btb_temp_cal);
 
-
-int oplus_chg_get_usb_btb_temp_cal(void)
+int get_pa_ntc_volt(void)
 {
-	int ret = 0;
-
-	if (pinfo == NULL) {
-		return 25;
-	}
-
-	ret = convert_volt_to_temp(pinfo->usb_con_volt);
-	pr_err("%s ret = %d,usb_con_volt = %d\n", __func__, ret, pinfo->usb_con_volt);
-	return ret;
+    if (!pinfo)
+        return -1;
+    return pinfo->pa_ntc_volt;
 }
-EXPORT_SYMBOL(oplus_chg_get_usb_btb_temp_cal);
 
-void  oplus_chg_adc_switch_ctrl(void)
+int get_bb_ntc_volt(void)
 {
-	if(!pinfo->ac_status) {
-		printk("%s ac_status =%d\n", __func__, pinfo->ac_status);
-		pinfo->delay_time = 800;
-		schedule_delayed_work(&pinfo->init_work, 0);
-	}
-	return;
+    if (!pinfo)
+        return -1;
+    return pinfo->bb_ntc_volt;
 }
-EXPORT_SYMBOL(oplus_chg_adc_switch_ctrl);
 
-
-
-int oplus_get_pa1_con_temp(void)
+int get_bat_con_ntc_volt(void)
 {
-	int ret = 0;
-
-	if (pinfo == NULL) {
-		return 25;
-	 }
-	ret = convert_volt_to_precise_temp(pinfo->pa1_ntc_volt);
-	pr_err("%s ret = %d, pa1_ntc_volt = %d\n", __func__, ret, pinfo->pa1_ntc_volt);
-
-	return ret;
+    if (!pinfo)
+        return -1;
+    return pinfo->bat_con_ntc_volt;
 }
-EXPORT_SYMBOL(oplus_get_pa1_con_temp);
-
-
-int oplus_get_pa2_con_temp(void)
-{
-	int ret = 0;
-
-	if (pinfo == NULL) {
-		return 25;
-	}
-
-	ret = convert_volt_to_precise_temp(pinfo->pa2_ntc_volt);
-	pr_err("%s ret = %d, pa2_ntc_volt = %d\n", __func__, ret, pinfo->pa2_ntc_volt);
-
-	return ret;
-}
-EXPORT_SYMBOL(oplus_get_pa2_con_temp);
-
-
 
 bool is_kthread_get_adc(void)
 {
-	if (!pinfo)
-		return 0;
-	return pinfo->is_kthread_get_adc;
+    if (!pinfo)
+        return 0;
+    return pinfo->is_kthread_get_adc;
+}
+
+void oplus_tempntc_read_ntcswitch1_high(struct temp_data *info) {
+	int ret;
+        int iio_chan1_volt;
+        int iio_chan3_volt;
+
+	ret = iio_read_channel_processed(info->iio_channel_ftp, &iio_chan1_volt);
+	if (ret < 0) {
+		pr_err("PA_NTC read error!\n");
+	} else {
+		info->pa_ntc_volt = iio_chan1_volt;
+	}
+
+	ret = iio_read_channel_processed(info->iio_channel_btc, &iio_chan3_volt);
+	if (ret < 0) {
+		pr_err("CHARGE_NTC read error!\n");
+	} else {
+		info->charger_ntc_volt = iio_chan3_volt;
+	}
+}
+
+void oplus_tempntc_read_ntcswitch1_low(struct temp_data *info) {
+	int ret;
+	int iio_chan1_volt;
+	int iio_chan3_volt;
+
+	ret = iio_read_channel_processed(info->iio_channel_ftp, &iio_chan1_volt);
+	if (ret < 0) {
+		pr_err("FLASH_NTC read error!\n");
+	} else {
+		info->flash_ntc_volt = iio_chan1_volt;
+	}
+
+	ret = iio_read_channel_processed(info->iio_channel_btc, &iio_chan3_volt);
+	if (ret < 0) {
+		pr_err("BAT_ID read error!\n");
+	} else {
+		info->batt_id_volt = iio_chan3_volt;
+	}
+}
+
+void oplus_tempntc_read_ntcswitch2_high(struct temp_data *info) {
+	int ret;
+        int iio_chan0_volt;
+
+	ret = iio_read_channel_processed(info->iio_channel_btb, &iio_chan0_volt);
+	if (ret < 0) {
+		pr_err("BAT_CON_NTC read error!\n");
+	} else {
+		info->bat_con_ntc_volt = iio_chan0_volt;
+	}
+
+}
+
+void oplus_tempntc_read_ntcswitch2_low(struct temp_data *info) {
+	int ret;
+	int iio_chan0_volt;
+
+	ret = iio_read_channel_processed(info->iio_channel_btb, &iio_chan0_volt);
+	if (ret < 0) {
+		pr_err("BB_NTC read error!\n");
+	} else {
+		info->bb_ntc_volt = iio_chan0_volt;
+	}
 }
 
 int oplus_tempntc_get_volt(struct temp_data *info)
 {
 	int ret;
-	int ntcctrl_gpio_value = 0;
-	static int last_ntcctrl_gpio = -1;
+	int ntcswitch1_gpio_value = 0;
+	int ntcswitch2_gpio_value = 0;
+	int iio_chan_bb;
+	int iio_chan_pa;
+	int iio_chan_flash;
+	int iio_chan_batid;
+	int iio_chan_charger;
+	if(pinfo->disable_ntc_switch){
+		pr_err("Get tempntc This project will use ntc switch  \n");
+		if ((!info) || (!info->iio_channel_bb) || (!info->iio_channel_pa)|| (!info->iio_channel_batid)
+			|| (!info->iio_channel_flash) ||(!info->iio_channel_charger)){
+			pr_err("conntinue\n");
+			return 0;
+		}
 
-	int iio_chan2_volt;
-	int iio_chan1_volt;
+		ret = iio_read_channel_processed(info->iio_channel_bb, &iio_chan_bb);
+		if (ret < 0) {
+			pr_err("BB_NTC read error!\n");
+		}
+		else {
+			info->bb_ntc_volt = iio_chan_bb;
+		}
+		ret = iio_read_channel_processed(info->iio_channel_pa, &iio_chan_pa);
+		if (ret < 0) {
+			pr_err("PA_NTC read error!\n");
+		}
+		else {
+			info->pa_ntc_volt = iio_chan_pa;
+		}
+		ret = iio_read_channel_processed(info->iio_channel_flash, &iio_chan_flash);
+		if (ret < 0) {
+			pr_err("FLASH_NTC read error!\n");
+		} else {
+			info->flash_ntc_volt = iio_chan_flash;
+		}
+		ret = iio_read_channel_processed(info->iio_channel_batid, &iio_chan_batid);
+		if (ret < 0) {
+			pr_err("BATTERY_ID_NTC read error!\n");
+		}
+		else {
+			info->batt_id_volt = iio_chan_batid;
+		}
+		ret = iio_read_channel_processed(info->iio_channel_charger, &iio_chan_charger);
+		if (ret < 0) {
+			pr_err("CHARGER_NTC read error!\n");
+			}
+		else {
+			info->charger_ntc_volt = iio_chan_charger;
+		}
+	}
 
-	if ((!info->iio_channel_btb_con) || (!info->iio_channel_usb_con) || (!info)) {
-		pr_err("%s conntinue\n", __func__);
+	else{
+		pr_err("Get tempntc This project will not use ntc switch  \n");
+	if ((!info->iio_channel_btb) || (!info->iio_channel_ftp)
+		|| (!info->iio_channel_btc) || (!info)) {
+		pr_err("conntinue\n");
 		return 0;
 	}
 
-	ntcctrl_gpio_value = gpio_get_value(info->tempntc_pin);
+	ntcswitch1_gpio_value = gpio_get_value(info->ntcswitch1_pin);
+	ntcswitch2_gpio_value = gpio_get_value(info->ntcswitch2_pin);
+	pr_err("ntcswitch1_gpio_value = %d , ntcswitch2_gpio_value = %d.\n",
+		 ntcswitch1_gpio_value, ntcswitch2_gpio_value);
 
-	if (last_ntcctrl_gpio != ntcctrl_gpio_value) {
-		last_ntcctrl_gpio = ntcctrl_gpio_value;
-		printk("%s ntcctrl_gpio_value =%d  last_ntcctrl_gpio =%d\n", __func__, ntcctrl_gpio_value, last_ntcctrl_gpio);
-	}
+	if (ntcswitch1_gpio_value == 0) {
+		oplus_tempntc_read_ntcswitch1_low(info);
+		/* -------------------------------------------------- */
+		pinctrl_select_state(info->pinctrl, info->ntc_switch1_ctrl_high);
+		msleep(OPLUS_DALEY_MS);
 
-	if (ntcctrl_gpio_value == 0) {
-		ret = iio_read_channel_processed(info->iio_channel_usb_con, &iio_chan1_volt);
+		ret = gpio_get_value(info->ntcswitch1_pin);
 		if (ret < 0) {
-			pr_err("%s pa1_ntc_volt read error!\n");
-		} else {
-			info->pa1_ntc_volt = iio_chan1_volt;
+			pr_err("ntcswitch1_gpio_value = %d\n", ret);
 		}
-
-		ret = iio_read_channel_processed(info->iio_channel_btb_con, &iio_chan2_volt);
-		if (ret < 0) {
-			pr_err("%s pa2_ntc_volt read error!\n");
-		} else {
-			info->pa2_ntc_volt = iio_chan2_volt;
-		}
-
-		pinctrl_select_state(info->pinctrl, info->ntcctrl_high);
-		msleep(100);
-		ret = gpio_get_value(info->tempntc_pin);
-
-		ret = iio_read_channel_processed(info->iio_channel_usb_con, &iio_chan1_volt);
-		if (ret < 0) {
-			pr_err("%s usb_con_volt read error!\n");
-		} else {
-			info->usb_con_volt = iio_chan1_volt;
-		}
-
-		ret = iio_read_channel_processed(info->iio_channel_btb_con, &iio_chan2_volt);
-		if (ret < 0) {
-			pr_err("%s btb_con_volt read error!\n");
-		} else {
-			info->btb_con_volt = iio_chan2_volt;
-		}
-
+		oplus_tempntc_read_ntcswitch1_high(info);
 	} else {
-		ret = iio_read_channel_processed(info->iio_channel_usb_con, &iio_chan1_volt);
-		if (ret < 0) {
-			pr_err("%s usb_con_volt read error!\n");
-		} else {
-			info->usb_con_volt = iio_chan1_volt;
-		}
+		oplus_tempntc_read_ntcswitch1_high(info);
+		/* -------------------------------------------------- */
+		pinctrl_select_state(info->pinctrl, info->ntc_switch1_ctrl_low);
+		msleep(OPLUS_DALEY_MS);
 
-		ret = iio_read_channel_processed(info->iio_channel_btb_con, &iio_chan2_volt);
+		ret = gpio_get_value(info->ntcswitch1_pin);
 		if (ret < 0) {
-			pr_err("%s btb_con_volt read error!\n");
-		} else {
-			info->btb_con_volt = iio_chan2_volt;
+			pr_err("ntcswitch1_gpio_value = %d\n", ret);
 		}
-
-		pinctrl_select_state(info->pinctrl, info->ntcctrl_low);
-		msleep(100);
-		ret = gpio_get_value(info->tempntc_pin);
-
-		ret = iio_read_channel_processed(info->iio_channel_usb_con, &iio_chan1_volt);
-		if (ret < 0) {
-			pr_err("%s pa1_ntc_volt read error!\n");
-		} else {
-			info->pa1_ntc_volt = iio_chan1_volt;
-		}
-
-		ret = iio_read_channel_processed(info->iio_channel_btb_con, &iio_chan2_volt);
-		if (ret < 0) {
-			pr_err("%s pa2_ntc_volt read error!\n");
-		} else {
-			info->pa2_ntc_volt = iio_chan2_volt;
-		}
+		oplus_tempntc_read_ntcswitch1_low(info);
 	}
 
-	info->is_kthread_get_adc = true;
-	pr_err("%s is_kthread_get_adc = %d,ntcctrl_gpio_value = %d, pa1_ntc_volt = %d,pa2_ntc_volt = %d,usb_con_volt = %d,btb_con_volt = %d\n",
-		__func__, info->is_kthread_get_adc, ntcctrl_gpio_value, info->pa1_ntc_volt, info->pa2_ntc_volt, info->usb_con_volt, info->btb_con_volt);
+	if (ntcswitch2_gpio_value == 0) {
+		oplus_tempntc_read_ntcswitch2_low(info);
+		/* -------------------------------------------------- */
+		pinctrl_select_state(info->pinctrl, info->ntc_switch2_ctrl_high);
+		msleep(OPLUS_DALEY_MS);
+
+		ret = gpio_get_value(info->ntcswitch2_pin);
+		if (ret < 0) {
+			pr_err("ntcswitch2_gpio_value = %d\n", ret);
+		}
+		oplus_tempntc_read_ntcswitch2_high(info);
+	} else {
+		oplus_tempntc_read_ntcswitch2_high(info);
+		/* -------------------------------------------------- */
+		pinctrl_select_state(info->pinctrl, info->ntc_switch2_ctrl_low);
+		msleep(OPLUS_DALEY_MS);
+
+		ret = gpio_get_value(info->ntcswitch2_pin);
+		if (ret < 0) {
+			pr_err("ntcswitch2_gpio_value = %d\n", ret);
+		}
+		oplus_tempntc_read_ntcswitch2_low(info);
+	}
+	}
+
+		pinfo->is_kthread_get_adc = true;
+	pr_err("BAT_CON_NTC[%d], PA_NTC[%d], CHARGE_NTC[%d], BB_NTC[%d], FLASH_NTC[%d], BAT_ID[%d].\n",
+		info->bat_con_ntc_volt, info->pa_ntc_volt, info->charger_ntc_volt,
+		info->bb_ntc_volt, info->flash_ntc_volt, info->batt_id_volt);
 
 	return 0;
 }
 
 static void oplus_tempntc_det_work(struct work_struct *work)
 {
-	union power_supply_propval propval;
-	int ret = 0;
-
-	if (!pinfo->ac_psy)
-		pinfo->ac_psy = power_supply_get_by_name("ac");
-
-	pinfo->delay_time = 5000;
-
-	if(pinfo->ac_psy) {
-		ret = power_supply_get_property(pinfo->ac_psy,
-						POWER_SUPPLY_PROP_ONLINE,
-						&propval);
-		pinfo->ac_status = propval.intval;
-		if(pinfo->ac_status)
-			pinfo->delay_time = 800;
-	}
-
+	mutex_lock(&pinfo->det_lock);
 	oplus_tempntc_get_volt(pinfo);
-
-	schedule_delayed_work(&pinfo->init_work, msecs_to_jiffies(pinfo->delay_time));
-}
-
-
-static int oplus_ntcctrl_gpio_init(struct temp_data *info, struct device *dev)
-{
-	if (!info) {
-		printk("info  null !\n");
-		return -EINVAL;
-	}
-
-	info->pinctrl = devm_pinctrl_get(dev);
-
-	if (IS_ERR_OR_NULL(info->pinctrl)) {
-		printk("get temp ntc princtrl fail\n");
-		return -EINVAL;
-	}
-
-	info->ntcctrl_high = pinctrl_lookup_state(info->pinctrl, "ntcctrl_high");
-	if (IS_ERR_OR_NULL(info->ntcctrl_high)) {
-		printk("get ntcctrl_high fail\n");
-		return -EINVAL;
-	}
-
-	info->ntcctrl_low = pinctrl_lookup_state(info->pinctrl, "ntcctrl_low");
-	if (IS_ERR_OR_NULL(info->ntcctrl_low)) {
-		printk("get ntcctrl_low fail\n");
-		return -EINVAL;
-	}
-
-	pinctrl_select_state(info->pinctrl, info->ntcctrl_low);
-	return 0;
+	mutex_unlock(&pinfo->det_lock);
+	schedule_delayed_work(&pinfo->init_work, msecs_to_jiffies(5000));
 }
 
 static int oplus_tempntc_parse_dt(struct temp_data *info,
@@ -853,54 +317,137 @@ static int oplus_tempntc_parse_dt(struct temp_data *info,
 {
 	struct device_node *np = dev->of_node;
 
-	info->iio_channel_btb_con = iio_channel_get(dev, "auxadc1-usb_btb_temp");
-	if (IS_ERR(info->iio_channel_btb_con)) {
-		pr_err("battery ID CHANNEL ERR \n");
+	info->iio_channel_btb = iio_channel_get(dev, "auxadc0-bb_or_bat_con_v");
+	if (IS_ERR(info->iio_channel_btb)) {
+		pr_err("BAT_CON_NTC BB_NTC ERR \n");
 	}
 
-	info->iio_channel_usb_con = iio_channel_get(dev, "auxadc2-battery_btb_temp");
-	if (IS_ERR(info->iio_channel_usb_con)) {
-		pr_err("Flash_PA CHANNEL ERR \n");
+	info->iio_channel_ftp = iio_channel_get(dev, "auxadc1-flash_or_pa_v");
+	if (IS_ERR(info->iio_channel_ftp)){
+		pr_err("Flash PA CHANNEL ERR \n");
 	}
 
-	info->tempntc_pin = of_get_named_gpio(np, "qcom,ntcctrl-gpio", 0);
-	if(info->tempntc_pin < 0) {
-		pr_err("[%s]: tempntc_pin < 0 !!! \r\n", __func__);
+	info->iio_channel_btc = iio_channel_get(dev, "auxadc3-bat_id_or_charge_v");
+	if (IS_ERR(info->iio_channel_btc)){
+		pr_err("BAT_ID CHARGE_NTC CHANNEL ERR \n");
 	}
 
-	if (gpio_request(info->tempntc_pin, "TEMPNTC_GPIO") < 0)
-		pr_err("[%s]: tempntc_pin gpio_request fail !!! \r\n", __func__);
+	info->iio_channel_bb = iio_channel_get(dev, "auxadc0-bb_v");
+	if (IS_ERR(info->iio_channel_bb)){
+		pr_err("BB NTC CHANNEL ERR \n");
+	}
+
+	info->iio_channel_pa = iio_channel_get(dev, "auxadc1-pa_v");
+	if (IS_ERR(info->iio_channel_pa)){
+		pr_err("PA NTC CHANNEL ERR \n");
+	}
+
+	info->iio_channel_flash = iio_channel_get(dev, "auxadc2-flash_v");
+	if (IS_ERR(info->iio_channel_flash)){
+		pr_err("FLASH NTC CHANNEL ERR \n");
+	}
+
+	info->iio_channel_batid = iio_channel_get(dev, "auxadc3-bat_id_v");
+	if (IS_ERR(info->iio_channel_batid)){
+		pr_err("BATTERY ID NTC CHANNEL ERR \n");
+	}
+
+	info->iio_channel_charger = iio_channel_get(dev, "auxadc4-charger_v");
+	if (IS_ERR(info->iio_channel_charger)){
+		pr_err("CHARGER NTC CHANNEL ERR \n");
+	}
+
+	info->disable_ntc_switch =
+					of_property_read_bool(np, "disable_ntc_switch");
+
+	if(!info->disable_ntc_switch)
+		{
+	pr_err("This project will use ntc switch  \n");
+	info->ntcswitch1_pin = of_get_named_gpio(np, "ntc_switch1_gpio", 0);
+
+	if(info->ntcswitch1_pin < 0)	{
+		pr_err("ntc_switch1_gpio < 0 !!! \r\n");
+	}
+
+	if (gpio_request(info->ntcswitch1_pin, "NTC_SWITCH1_GPIO") < 0)
+		pr_err("ntc_switch1_gpio gpio_request fail !!! \r\n");
+
+	info->ntcswitch2_pin = of_get_named_gpio(np, "ntc_switch2_gpio", 0);
+	if(info->ntcswitch2_pin < 0)	{
+		pr_err("ntc_switch2_gpio < 0 !!! \r\n");
+	}
+
+	if (gpio_request(info->ntcswitch2_pin, "NTC_SWITCH2_GPIO") < 0)
+		pr_err("ntc_switch2_gpio gpio_request fail !!! \r\n");
+	}
 
 	return 0;
 }
 
 static int oplus_tempntc_data_init(struct temp_data *info)
 {
-	info->btb_con_volt = -1;
-	info->usb_con_volt = -1;
-	info->pa1_ntc_volt = -1;
-	info->pa2_ntc_volt = -1;
-	info->ac_status = 0;
-	info->len_array = ARRAY_SIZE(con_temp_21061);
-	info->con_volt_pa = con_volt_21061;
-	if (oplus_voocphy_get_bidirect_cp_support())
-		info->con_volt_btb = con_volt_21015;
-	else
-		info->con_volt_btb = con_volt_21061;
-	info->con_temp = con_temp_21061;
-	if (!info->ac_psy) {
-		info->ac_psy = power_supply_get_by_name("ac");
-	}
+	info->flash_ntc_volt = -1;
+	info->batt_id_volt = -1;
+	info->pa_ntc_volt = -1;
+	info->charger_ntc_volt = -1;
+	info->bb_ntc_volt = -1;
+	info->bat_con_ntc_volt = -1;
+	mutex_init(&info->det_lock);
 
 	return 0;
 }
+
+static int oplus_ntcctrl_gpio_init(struct temp_data *info,struct device *dev)
+{
+	if (!info) {
+		pr_err("info  null !\n");
+		return -EINVAL;
+	}
+
+  	info->pinctrl = devm_pinctrl_get(dev);
+	if (IS_ERR_OR_NULL(info->pinctrl)) {
+		pr_err("get temp ntc princtrl fail\n");
+		return -EINVAL;
+	}
+
+	info->ntc_switch1_ctrl_high = pinctrl_lookup_state(info->pinctrl, "ntc_switch1_ctrl_high");
+	if (IS_ERR_OR_NULL(info->ntc_switch1_ctrl_high)) {
+		pr_err("get ntc_switch1_ctrl_high fail\n");
+		return -EINVAL;
+	}
+
+	info->ntc_switch1_ctrl_low = pinctrl_lookup_state(info->pinctrl, "ntc_switch1_ctrl_low");
+	if (IS_ERR_OR_NULL(info->ntc_switch1_ctrl_low)) {
+		pr_err("get ntc_switch1_ctrl_low fail\n");
+		return -EINVAL;
+	}
+
+	info->ntc_switch2_ctrl_high = pinctrl_lookup_state(info->pinctrl, "ntc_switch2_ctrl_high");
+	if (IS_ERR_OR_NULL(info->ntc_switch2_ctrl_high)) {
+		pr_err("get ntc_switch2_ctrl_high fail\n");
+		return -EINVAL;
+	}
+
+	info->ntc_switch2_ctrl_low = pinctrl_lookup_state(info->pinctrl, "ntc_switch2_ctrl_low");
+	if (IS_ERR_OR_NULL(info->ntc_switch2_ctrl_low)) {
+		pr_err("get ntc_switch2_ctrl_low fail\n");
+		return -EINVAL;
+	}
+
+	pinctrl_select_state(info->pinctrl, info->ntc_switch2_ctrl_low);
+	msleep(100);
+	pinctrl_select_state(info->pinctrl, info->ntc_switch1_ctrl_low);
+	return 0;
+
+}
+
 
 static int oplus_tempntc_pdrv_probe(struct platform_device *pdev)
 {
 	struct temp_data *info;
 
-	pr_err("%s: starts\n", __func__);
-	info = devm_kzalloc(&pdev->dev, sizeof(struct temp_data), GFP_KERNEL);
+	pr_err("starts\n");
+	info = devm_kzalloc(&pdev->dev,sizeof(struct temp_data), GFP_KERNEL);
 	if (!info) {
 		pr_err(" kzalloc() failed\n");
 		return -ENOMEM;
@@ -912,25 +459,30 @@ static int oplus_tempntc_pdrv_probe(struct platform_device *pdev)
 
 	oplus_tempntc_data_init(info);
 	oplus_tempntc_parse_dt(info, &pdev->dev);
-	oplus_ntcctrl_gpio_init(info, &pdev->dev);
+
+	if (!pinfo->disable_ntc_switch){
+		pr_err("Probe This project will use ntc switch  \n");
+		oplus_ntcctrl_gpio_init(info, &pdev->dev);
+	}
 
 	INIT_DELAYED_WORK(&info->init_work, oplus_tempntc_det_work);
-	schedule_delayed_work(&info->init_work, 0);
+	schedule_delayed_work(&info->init_work, msecs_to_jiffies(5000));
+
 	return 0;
 }
 
 static int oplus_tempntc_pdrv_remove(struct platform_device *pdev)
 {
-	power_supply_put(pinfo->ac_psy);
 	return 0;
 }
 
 static void oplus_tempntc_pdrv_shutdown(struct platform_device *dev)
 {
+
 }
 
 static const struct of_device_id oplus_tempntc_of_match[] = {
-	{.compatible = "oplus,ntc_ctrl", },
+	{.compatible = "oplus-tempntc",},
 	{},
 };
 MODULE_DEVICE_TABLE(of, oplus_tempntc_of_match)
@@ -945,7 +497,7 @@ static int __maybe_unused tempntc_resume(struct device *dev)
 {
 	/* Schedule timer to check current status */
 	schedule_delayed_work(&pinfo->init_work,
-			msecs_to_jiffies(pinfo->delay_time));
+			msecs_to_jiffies(5000));
 	return 0;
 }
 
@@ -959,29 +511,28 @@ static struct platform_driver oplus_tempntc_driver = {
 		.name = "oplus_tempntc",
 		.owner = THIS_MODULE,
 		.of_match_table = oplus_tempntc_of_match,
-		.pm	= &tempntc_pm_ops,
+		.pm = &tempntc_pm_ops,
 	},
 };
 
 static int __init oplus_tempntc_init(void)
 {
-	int ret;
+    int ret;
 	ret = platform_driver_register(&oplus_tempntc_driver);
-	if (ret) {
-		pr_err("%s fail to tempntc device\n", __func__);
+    if (ret) {
+		pr_err("%s fail to tempntc device\n");
 		return ret;
-	}
-	return ret;
+    }
+    return ret;
 }
-
 late_initcall(oplus_tempntc_init);
 
 static void __exit oplus_tempntc_exit(void)
 {
-	platform_driver_unregister(&oplus_tempntc_driver);
+    platform_driver_unregister(&oplus_tempntc_driver);
 }
 module_exit(oplus_tempntc_exit);
 
-MODULE_AUTHOR("shuai.sun <sunshuai.@oplus.com>");
-MODULE_DESCRIPTION("oplus Device Driver");
+MODULE_AUTHOR("wy.chuang <wy.chuang@mediatek.com>");
+MODULE_DESCRIPTION("MTK Gauge Device Driver");
 MODULE_LICENSE("GPL");

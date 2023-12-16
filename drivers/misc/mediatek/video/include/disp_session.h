@@ -1,14 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
+ * Author: Joey Pan <joey.pan@mediatek.com>
  */
 
 #ifndef __DISP_SESSION_H
@@ -67,32 +60,32 @@ enum DISP_ORIENTATION {
 enum DISP_FORMAT {
 	DISP_FORMAT_UNKNOWN = 0,
 
-	DISP_FORMAT_RGB565 = MAKE_DISP_FORMAT_ID(1, 2),
-	DISP_FORMAT_RGB888 = MAKE_DISP_FORMAT_ID(2, 3),
-	DISP_FORMAT_BGR888 = MAKE_DISP_FORMAT_ID(3, 3),
-	DISP_FORMAT_ARGB8888 = MAKE_DISP_FORMAT_ID(4, 4),
-	DISP_FORMAT_ABGR8888 = MAKE_DISP_FORMAT_ID(5, 4),
-	DISP_FORMAT_RGBA8888 = MAKE_DISP_FORMAT_ID(6, 4),
-	DISP_FORMAT_BGRA8888 = MAKE_DISP_FORMAT_ID(7, 4),
-	DISP_FORMAT_YUV422 = MAKE_DISP_FORMAT_ID(8, 2),
-	DISP_FORMAT_XRGB8888 = MAKE_DISP_FORMAT_ID(9, 4),
-	DISP_FORMAT_XBGR8888 = MAKE_DISP_FORMAT_ID(10, 4),
-	DISP_FORMAT_RGBX8888 = MAKE_DISP_FORMAT_ID(11, 4),
-	DISP_FORMAT_BGRX8888 = MAKE_DISP_FORMAT_ID(12, 4),
-	DISP_FORMAT_UYVY = MAKE_DISP_FORMAT_ID(13, 2),
-	DISP_FORMAT_YUV420_P = MAKE_DISP_FORMAT_ID(14, 2),
-	DISP_FORMAT_YV12 = MAKE_DISP_FORMAT_ID(16, 1),	/* BPP = 1.5 */
-	DISP_FORMAT_PARGB8888 = MAKE_DISP_FORMAT_ID(17, 4),
-	DISP_FORMAT_PABGR8888 = MAKE_DISP_FORMAT_ID(18, 4),
-	DISP_FORMAT_PRGBA8888 = MAKE_DISP_FORMAT_ID(19, 4),
-	DISP_FORMAT_PBGRA8888 = MAKE_DISP_FORMAT_ID(20, 4),
-	DISP_FORMAT_DIM = MAKE_DISP_FORMAT_ID(21, 0),
+	DISP_FORMAT_RGB565 =	MAKE_DISP_FORMAT_ID(1, 2),
+	DISP_FORMAT_RGB888 =	MAKE_DISP_FORMAT_ID(2, 3),
+	DISP_FORMAT_BGR888 =	MAKE_DISP_FORMAT_ID(3, 3),
+	DISP_FORMAT_ARGB8888 =	MAKE_DISP_FORMAT_ID(4, 4),
+	DISP_FORMAT_ABGR8888 =	MAKE_DISP_FORMAT_ID(5, 4),
+	DISP_FORMAT_RGBA8888 =	MAKE_DISP_FORMAT_ID(6, 4),
+	DISP_FORMAT_BGRA8888 =	MAKE_DISP_FORMAT_ID(7, 4),
+	DISP_FORMAT_YUV422 =	MAKE_DISP_FORMAT_ID(8, 2),
+	DISP_FORMAT_XRGB8888 =	MAKE_DISP_FORMAT_ID(9, 4),
+	DISP_FORMAT_XBGR8888 =	MAKE_DISP_FORMAT_ID(10, 4),
+	DISP_FORMAT_RGBX8888 =	MAKE_DISP_FORMAT_ID(11, 4),
+	DISP_FORMAT_BGRX8888 =	MAKE_DISP_FORMAT_ID(12, 4),
+	DISP_FORMAT_UYVY =	MAKE_DISP_FORMAT_ID(13, 2),
+	DISP_FORMAT_YUV420_P =	MAKE_DISP_FORMAT_ID(14, 2),
+	DISP_FORMAT_YV12 =	MAKE_DISP_FORMAT_ID(16, 1), /* BPP = 1.5 */
+	DISP_FORMAT_PARGB8888 =	MAKE_DISP_FORMAT_ID(17, 4),
+	DISP_FORMAT_PABGR8888 =	MAKE_DISP_FORMAT_ID(18, 4),
+	DISP_FORMAT_PRGBA8888 =	MAKE_DISP_FORMAT_ID(19, 4),
+	DISP_FORMAT_PBGRA8888 =	MAKE_DISP_FORMAT_ID(20, 4),
+	DISP_FORMAT_DIM =	MAKE_DISP_FORMAT_ID(21, 0),
 	DISP_FORMAT_RGBA1010102 =	MAKE_DISP_FORMAT_ID(22, 4),
 	DISP_FORMAT_PRGBA1010102 =	MAKE_DISP_FORMAT_ID(23, 4),
 	DISP_FORMAT_RGBA_FP16 =		MAKE_DISP_FORMAT_ID(24, 8),
 	DISP_FORMAT_PRGBA_FP16 =	MAKE_DISP_FORMAT_ID(25, 8),
 	DISP_FORMAT_NUM =	MAKE_DISP_FORMAT_ID(26, 0),
-	DISP_FORMAT_BPP_MASK = 0xFF,
+	DISP_FORMAT_BPP_MASK =	0xFF,
 };
 
 enum DISP_LAYER_TYPE {
@@ -181,10 +174,10 @@ enum DISP_DC_TYPE {
 };
 
 enum EXTD_TRIGGER_MODE {
-	TRIGGER_NORMAL,
-	TRIGGER_SUSPEND,
-	TRIGGER_RESUME,
-	TRIGGER_MODE_MAX_NUM
+	TRIGGER_NORMAL = 0,
+	TRIGGER_SUSPEND = 1,
+	TRIGGER_RESUME = 2,
+	TRIGGER_MODE_MAX_NUM,
 };
 
 struct disp_session_config {
@@ -345,10 +338,9 @@ struct disp_frame_cfg_t {
 	/* #ifndef OPLUS_FEATURE_ONSCREENFINGERPRINT */
 	/* for panel HBM (High Backlight Mode) control */
 	/* bool hbm_en; */
-	/* #else */ /* OPLUS_FEATURE_ONSCREENFINGERPRINT */
+	/* #else */
 	unsigned int hbm_en;
-	/* #endif */ /* OPLUS_FEATURE_ONSCREENFINGERPRINT */
-
+	/* #endif */
 	/*DynFPS*/
 	int active_config;
 };
@@ -436,9 +428,6 @@ enum DISP_FEATURE {
 	DISP_FEATURE_FBDC = 0x00000100,
 	DISP_FEATURE_FORCE_DISABLE_AOD = 0x00000200,
 	DISP_FEATURE_ARR = 0x00000400,
-
-	/*reserve 0x00000400 for ARR*/
-
 	DISP_FEATURE_DYNFPS = 0x00000800
 };
 
@@ -451,7 +440,8 @@ struct disp_caps_info {
 	int is_output_rotated;
 	int lcm_degree;
 
-	/* resizer input resolution list
+	/*
+	 * resizer input resolution list
 	 * format:
 	 *   sequence from big resolution(LCM resolution) to small
 	 *   portrait {width, height, rsz layer cnt to use}
@@ -489,7 +479,7 @@ enum LAYERING_CAPS {
 	MDP_HDR_LAYER =		0x00000010,
 	NO_FBDC =		0x00000020,
 	CLIENT_CLEAR_LAYER =    0x00000040,
-	DISP_CLIENT_CLEAR_LAYER =       0x00000080,
+	DISP_CLIENT_CLEAR_LAYER =   0x00000080,
 };
 
 struct layer_config {
@@ -548,18 +538,13 @@ enum DISP_SELF_REFRESH_TYPE {
 	REFRESH_FOR_IDLE,
 	REFRESH_TYPE_NUM,
 };
-
 struct dynamic_fps_levels {
 	unsigned int fps_level_num;
 	unsigned int fps_levels[10];
 };
 
 /*DynFPS start*/
-#ifdef OPLUS_FEATURE_DFPS3_SUPPORT
-#define MULTI_CONFIG_NUM 3
-#else
 #define MULTI_CONFIG_NUM 2
-#endif
 struct dyn_config_info {
 	unsigned int vsyncFPS;
 	unsigned int vact_timing_fps;/*active timing fps*/
@@ -646,7 +631,6 @@ struct multi_configs {
 	DISP_IOW(230, unsigned int)
 #define DISP_IOCTL_GET_MULTI_CONFIGS \
 	DISP_IOR(231, struct multi_configs)
-
 #ifdef __KERNEL__
 
 int disp_mgr_get_session_info(struct disp_session_info *info);

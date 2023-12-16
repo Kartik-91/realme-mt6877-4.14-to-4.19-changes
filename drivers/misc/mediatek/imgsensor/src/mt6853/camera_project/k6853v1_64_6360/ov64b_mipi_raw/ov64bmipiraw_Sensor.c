@@ -1813,7 +1813,7 @@ static kal_uint32 set_test_pattern_mode(kal_bool enable)
         write_cmos_sensor(0x4302, 0x00);
         write_cmos_sensor(0x4304, 0x00);
         write_cmos_sensor(0x4306, 0x00);
-
+        set_gain(imgsensor_info.min_gain);
     } else {
         write_cmos_sensor(0x3019, 0xd2);
         write_cmos_sensor(0x4308, 0x00);
@@ -2211,7 +2211,6 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
     break;
     case SENSOR_FEATURE_SET_TEST_PATTERN:
         set_test_pattern_mode((BOOL)*feature_data);
-        set_gain(0);
     break;
     case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE:
         *feature_return_para_32 = imgsensor_info.checksum_value;

@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2015 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <drm/drmP.h>
 #include <linux/clk.h>
@@ -1327,8 +1319,8 @@ static void _ovl_common_config(struct mtk_ddp_comp *comp, unsigned int idx,
 
 	src_size = (dst_h << 16) | dst_w;
 
-	buf_size = (dst_h - 1) * pending->pitch +
-		dst_w * drm_format_plane_cpp(fmt, 0);
+	buf_size = dst_h > 0 ? (dst_h - 1) * pending->pitch +
+		dst_w * drm_format_plane_cpp(fmt, 0) : 0;
 	if (ext_lye_idx != LYE_NORMAL) {
 		unsigned int id = ext_lye_idx - 1;
 

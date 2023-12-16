@@ -464,6 +464,20 @@ static void write_sensor_QSC(void)
 	#endif
 }
 
+static void CalDacEeprom(void)
+{
+    kal_uint32 Dac_master = 0, Dac_mac = 0, Dac_inf = 0;
+
+    Dac_mac = (Eeprom_1ByteDataRead(0x93, 0xA0) << 8) | Eeprom_1ByteDataRead(0x92, 0xA0);
+    Dac_inf = (Eeprom_1ByteDataRead(0x95, 0xA0) << 8) | Eeprom_1ByteDataRead(0x94, 0xA0);
+    Dac_master = (5*Dac_mac+36*Dac_inf)/41;
+    printk("Dac_inf:%d Dac_Mac:%d Dac_master:%d\n", Dac_inf, Dac_mac, Dac_master);
+
+    memcpy(&gImgEepromInfo.camNormdata[2][28], &Dac_master, 4);
+    memcpy(&gImgEepromInfo.camNormdata[0][48], &Dac_mac, 4);
+    memcpy(&gImgEepromInfo.camNormdata[0][52], &Dac_inf, 4);
+}
+
 #if SUPPORT_LRC
 static void write_sensor_LRC(void)
 {
@@ -2642,6 +2656,7 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 				}
 				#endif	//OPLUS_FEATURE_CAMERA_COMMON
 				read_sensor_Cali();
+                CalDacEeprom();
                 Eeprom_DataInit(IMGSENSOR_SENSOR_IDX_MAIN, *sensor_id);
 				return ERROR_NONE;
 			}
@@ -3769,7 +3784,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 		*feature_para_len = 4;
 		break;
 	case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
-		*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -6135000;
+		*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -2135000;
 		break;
 	case SENSOR_FEATURE_GET_PERIOD_BY_SCENARIO:
 		switch (*feature_data) {

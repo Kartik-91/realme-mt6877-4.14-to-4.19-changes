@@ -1,20 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
-
-/*
- * Copyright(C)2014 MediaTek Inc.
- * Modification based on code covered by the below mentioned copyright
- * and/or permission notice(S).
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef SENSORS_IO_H
@@ -37,6 +23,13 @@ struct SENSOR_DATA {
 	int y;
 	int z;
 };
+
+#ifdef OPLUS_FEATURE_SENSOR
+struct SAR_SENSOR_DATA {
+	int diff[3];
+	int offset[5];
+};
+#endif
 
 struct biometric_cali {
 	unsigned int pga6;
@@ -114,12 +107,8 @@ struct compat_biometric_threshold {
 
 #define ALSPS 0x84
 #define ALSPS_SET_PS_MODE _IOW(ALSPS, 0x01, int)
-#define ALSPS_GET_PS_MODE _IOR(ALSPS, 0x02, int)
-#define ALSPS_GET_PS_DATA _IOR(ALSPS, 0x03, int)
 #define ALSPS_GET_PS_RAW_DATA _IOR(ALSPS, 0x04, int)
 #define ALSPS_SET_ALS_MODE _IOW(ALSPS, 0x05, int)
-#define ALSPS_GET_ALS_MODE _IOR(ALSPS, 0x06, int)
-#define ALSPS_GET_ALS_DATA _IOR(ALSPS, 0x07, int)
 #define ALSPS_GET_ALS_RAW_DATA _IOR(ALSPS, 0x08, int)
 
 /*-------------------MTK add-------------------------------------------*/
@@ -230,8 +219,15 @@ struct compat_biometric_threshold {
 
 #define SAR 0x91
 #define SAR_IOCTL_INIT _IOW(SAR, 0x01, int)
+
+#ifdef OPLUS_FEATURE_SENSOR
+#define SAR_IOCTL_READ_SENSORDATA _IOR(SAR, 0x02, struct SAR_SENSOR_DATA)
+#define SAR_IOCTL_GET_CALI  _IOR(SAR, 0x03, struct SAR_SENSOR_DATA)
+#else
 #define SAR_IOCTL_READ_SENSORDATA _IOR(SAR, 0x02, struct SENSOR_DATA)
 #define SAR_IOCTL_GET_CALI  _IOR(SAR, 0x03, struct SENSOR_DATA)
+#endif
+
 #define SAR_IOCTL_ENABLE_CALI _IO(SAR, 0x04)
 #ifdef CONFIG_COMPAT
 #define COMPAT_SAR_IOCTL_INIT _IOW(SAR, 0x01, compat_int_t)

@@ -103,7 +103,7 @@ struct imgsensor_struct {
     kal_uint16 dummy_line;    //current dummline
     kal_uint16 current_fps;    //current max fps
     kal_bool autoflicker_en;    //record autoflicker enable or disable
-    kal_bool test_pattern;    //record test pattern mode or not
+    kal_uint8 test_pattern;    //record test pattern mode or not
     kal_bool enable_secure;    /* run as secure driver or not */
     enum MSDK_SCENARIO_ID_ENUM current_scenario_id;    //current scenario id
     kal_uint8 ihdr_en;    //ihdr enable or disable
@@ -166,6 +166,7 @@ struct imgsensor_info_struct {
     kal_uint32 min_gain_iso;
     kal_uint32 gain_step;
     kal_uint32 gain_type;
+    kal_uint32 hs_trail;
 };
 
 struct imgsensor_sensor_reg {

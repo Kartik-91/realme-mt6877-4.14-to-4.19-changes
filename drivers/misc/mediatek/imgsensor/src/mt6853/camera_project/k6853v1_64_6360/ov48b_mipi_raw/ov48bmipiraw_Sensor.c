@@ -56,7 +56,7 @@
 #include "ov48b_Sensor_setting.h"
 #include "ov48b_Sensor_setting_20151.h"
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #endif
 
 #define LOG_INF(format, args...)    \
@@ -2157,7 +2157,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 		}
 		case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
 			if (IsProject_20151) {
-				*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -1268000;
+				*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -7320000;
 			} else {
 				*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -5561000;
 			}

@@ -318,12 +318,9 @@ static int get_hw_flashlight_temp(void)
 		mtkts_flashlight_dprintk("IIO channel read failed %d\n", ret);
 		return ret;
 	}
-	/*val * 1500 / 4096*/
-	ret = (val * 1500) >> 12;
-
 	/* ret = ret*1800/4096; 82's ADC power */
-	mtkts_flashlight_dprintk("APtery output mV = %d\n", ret);
-	output = mtk_ts_flashlight_volt_to_temp(ret);
+	mtkts_flashlight_dprintk("APtery output mV = %d\n", val);
+	output = mtk_ts_flashlight_volt_to_temp(val);
 	mtkts_flashlight_dprintk("flashlight output temperature = %d\n", output);
 	return output;
 }

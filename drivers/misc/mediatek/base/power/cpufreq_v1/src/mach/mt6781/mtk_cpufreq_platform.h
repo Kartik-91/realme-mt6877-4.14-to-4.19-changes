@@ -1,15 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2020 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (C) 2016 MediaTek Inc.
  */
+
 
 #ifndef __MTK_CPUFREQ_PLATFORM_H__
 #define __MTK_CPUFREQ_PLATFORM_H__
@@ -17,9 +10,10 @@
 #include "mtk_cpufreq_internal.h"
 
 #define CPU_DVFS_DT_REG	1
+
 #if defined(CONFIG_MTK_TINYSYS_MCUPM_SUPPORT) || \
 	(defined(CONFIG_MTK_TINYSYS_SSPM_SUPPORT) && \
-	defined(USE_SSPM_VER_V2))
+	defined(CONFIG_MTK_TINYSYS_SSPM_V2))
 #define CONFIG_HYBRID_CPU_DVFS	1
 #define READ_SRAM_VOLT          1
 #define PPM_AP_SIDE	1

@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 /*
  * Copyright (C) 2017 MediaTek Inc.
  *
@@ -21,8 +25,9 @@
 #include <linux/pinctrl/pinctrl.h>
 #include "imgsensor_hw.h"
 #include "imgsensor_common.h"
+
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #endif
 enum GPIO_CTRL_STATE_CAM {
 	/* Main */

@@ -11,8 +11,6 @@
  **                2021-07-13  1.0            sdcard info
  ****************************************************************/
 
-#ifndef _SD_INFO_H_
-#define _SD_INFO_H_
 
 #define SET_SDCARD_QUICK_RETURN		1
 #define RESET_SDCARD_QUICK_RETURN	2
@@ -58,4 +56,3 @@ extern int get_sdcard_remove(void);
 extern int get_dma_data_timeout(void);
 extern struct sd_info sdinfo;
 
-#endif  /* _SD_INFO_H_ */

@@ -1,22 +1,15 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2021 MediaTek Inc.
+*/
 
 #include <linux/errno.h>
 #include <linux/mutex.h>
 #include <linux/delay.h>
 #include "mtk_charger_intf.h"
+#ifdef OPLUS_FEATURE_CHG_BASIC
 #include <tcpm.h>
-/*end*/
+#endif
 
 #define PD_VBUS_IR_DROP_THRESHOLD 1200
 
@@ -124,7 +117,6 @@ end:
 
 static bool mtk_is_pdc_ready(struct charger_manager *info)
 {
-/*
 	if (info->pd_type == MTK_PD_CONNECT_PE_READY_SNK ||
 		info->pd_type == MTK_PD_CONNECT_PE_READY_SNK_PD30)
 		return true;
@@ -133,21 +125,12 @@ static bool mtk_is_pdc_ready(struct charger_manager *info)
 		info->enable_pe_4 == false &&
 		info->enable_pe_5 == false)
 		return true;
-*/
-/*else*/
-	if (info->pd_type == PD_CONNECT_PE_READY_SNK ||
-		info->pd_type == PD_CONNECT_PE_READY_SNK_PD30 ||
-		info->pd_type == PD_CONNECT_PE_READY_SNK_APDO)
-	return true;
-/*endif*/
+
 	return false;
 }
 
 bool mtk_pdc_check_charger(struct charger_manager *info)
 {
-#ifdef OPLUS_FEATURE_CHG_BASIC
-	printk(KERN_ERR "%s: pd_type[%d]\n", __func__, info->pd_type);
-#endif
 	if (mtk_is_pdc_ready(info) == false)
 		return false;
 
@@ -374,6 +357,8 @@ int mtk_pdc_setup(struct charger_manager *info, int idx)
 
 	return ret;
 }
+
+#ifdef OPLUS_FEATURE_CHG_BASIC
 int oplus_pdc_setup(int *vbus_mv, int *ibus_ma)
 {
 	int ret = 0;
@@ -423,7 +408,7 @@ int oplus_pdc_get(int *vbus_mv, int *ibus_ma)
 	printk(KERN_ERR "%s: default vbus_mv[%d], ibus_ma[%d]\n", __func__, *vbus_mv, *ibus_ma);
 	return 0;
 }
-/*end*/
+#endif
 
 void mtk_pdc_get_cap_max_watt(struct charger_manager *info)
 {
@@ -481,7 +466,7 @@ void mtk_pdc_get_reset_idx(struct charger_manager *info)
 void mtk_pdc_reset(struct charger_manager *info)
 {
 	struct mtk_pdc *pd = &info->pdc;
-
+	info->is_pdc_run = false;
 	chr_err("%s: reset to default profile\n", __func__);
 	mtk_pdc_init_table(info);
 	mtk_pdc_get_reset_idx(info);

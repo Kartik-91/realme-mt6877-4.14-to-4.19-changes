@@ -70,7 +70,7 @@ typedef struct imgsensor_struct {
 
     kal_uint16 current_fps;            //current max fps
     kal_bool   autoflicker_en;        //record autoflicker enable or disable
-    kal_bool test_pattern;            //record test pattern mode or not
+    kal_uint8  test_pattern;            //record test pattern mode or not
     enum MSDK_SCENARIO_ID_ENUM current_scenario_id;//current scenario id
     kal_uint8  ihdr_en;                //ihdr enable or disable
 

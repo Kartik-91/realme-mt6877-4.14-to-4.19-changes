@@ -250,11 +250,11 @@ EXPORT_SYMBOL(register_device_proc);
 static ssize_t fork_para_monitor_read_proc(struct file *file, char __user *buf,
                 size_t count, loff_t *off)
 {
-        char page[256] = {0};
+        //char page[256] = {0};
         int ret = 0;
-        /* ret = snprintf(page, 255, " times:%d\n father pid:%d\n child pid:%d\n",
-		happend_times, fork_pid_father, fork_pid_child); 
-        ret = simple_read_from_buffer(buf, count, off, page, strlen(page)); */
+        //ret = snprintf(page, 255, " times:%d\n father pid:%d\n child pid:%d\n", happend_times, fork_pid_father, fork_pid_child);
+
+        //ret = simple_read_from_buffer(buf, count, off, page, strlen(page));
         return ret;
 }
 
@@ -263,6 +263,7 @@ struct file_operations fork_para_monitor_proc_fops = {
         .write = NULL,
 };
 
+/*
 static void recursive_fork_para_monitor(void)
 {
 		struct proc_dir_entry *pentry;
@@ -272,6 +273,7 @@ static void recursive_fork_para_monitor(void)
                 pr_err("create /devinfo/fork_monitor proc failed.\n");
         }
 }
+*/
 static int parse_gpio_dts(struct device *dev, struct device_info *dev_info)
 {
 #ifdef CONFIG_MTK_PLATFORM
@@ -578,7 +580,6 @@ static int
 reinit_aboard_id_for_brandon(struct device *dev, struct device_info *dev_info)
 {
 	int adc_value = 0;
-	int operate = 0;
 	struct iio_channel *ADC_channel = NULL;
 	int ret = 0;
 
@@ -601,7 +602,8 @@ reinit_aboard_id_for_brandon(struct device *dev, struct device_info *dev_info)
 	adc_value /= 1000;
 	dev_msg("adc value %d\n", adc_value);
 
-	/* operate = get_Operator_Version(); */
+	//operate = get_Operator_Version();
+/*
 	operate = 1;
 	if ((2 == operate) || (8 == operate)) {
 		if ((adc_value >= 250) && (adc_value <= 400)) {
@@ -630,6 +632,9 @@ reinit_aboard_id_for_brandon(struct device *dev, struct device_info *dev_info)
 	} else {
 		ret = -EINVAL;
 	}
+*/
+
+	ret = -EINVAL;
 
 	return ret;
 }
@@ -642,7 +647,8 @@ reinit_aboard_id(struct device *dev, struct manufacture_info *info)
 	int i = 0, ret = 0;
 	int id_size = 0;
 	uint32_t *main_val = NULL, *sub_val = NULL, *rf_val = NULL;
-	int active_val = 0, sleep_val = 0, idle_val = 0;
+	//int active_val = 0, sleep_val = 0, idle_val = 0;
+	int active_val = 0, sleep_val = 0;
 	struct device_info *dev_info = g_dev_info;
 	bool match = false;
 
@@ -717,36 +723,12 @@ reinit_aboard_id(struct device *dev, struct manufacture_info *info)
 		set_gpios_sleep(dev_info);
 		sleep_val  = gpio_get_submask(np);
 		set_gpios_idle(dev_info);
-		if (get_project() == 0X2169E || get_project() == 0X2169F ||
-                	get_project() == 21711 || get_project() == 21712 ||
-			get_project() == 0x216C9 || get_project() == 0x216CA) {
-			if (active_val == 3 && sleep_val == 0) {	/*2169E 216CA*/
-				hw_mask = 0;
-			} else if (active_val == 2 && sleep_val == 0) {	/*2169F 216C9*/
-				hw_mask = 1;
-			} else if (active_val == 3 && sleep_val == 1) {	/*21711*/
-				hw_mask = 2;
-			} else if (active_val == 1 && sleep_val == 0) {	/*21712*/
-				hw_mask = 3;
-			} else if (active_val == 0 && sleep_val == 0) {	/*NA*/
-				hw_mask = 4;
-			} else if (active_val == 1 && sleep_val == 1) {	/*NA*/
-				hw_mask = 5;
-			} else if (active_val == 3 && sleep_val == 2) {	/*NA*/
-				hw_mask = 6;
-			} else if (active_val == 2 && sleep_val == 2) {	/*NA*/
-				hw_mask = 7;
-			} else if (active_val == 3 && sleep_val == 3) {	/*NA*/
-				hw_mask = 8;
-			}
-		} else {
-			if (active_val == 1 && sleep_val == 0) {	/*high-resistance*/
-				hw_mask = 0;
-			} else if (active_val == 1 && sleep_val == 1) {	/*external pull-up*/
-				hw_mask = 2;
-			} else if (active_val == 0 && sleep_val == 0) {	/*external pull-down*/
-				hw_mask = 1;
-			}
+		if (active_val == 1 && sleep_val == 0) {		/*high-resistance*/
+			hw_mask = 0;
+		} else if (active_val == 1 && sleep_val == 1) {		/*external pull-up*/
+			hw_mask = 2;
+		} else if (active_val == 0 && sleep_val == 0) {		/*external pull-down*/
+			hw_mask = 1;
 		}
 		dev_msg("active_val[%d] sleep_val[%d] hw_mask[%d]\n", active_val, sleep_val, hw_mask);
 		if (hw_mask < 0) {

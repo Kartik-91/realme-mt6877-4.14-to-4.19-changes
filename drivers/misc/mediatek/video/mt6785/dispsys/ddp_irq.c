@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 
 #define LOG_TAG "IRQ"
@@ -35,19 +27,6 @@
 #include "primary_display.h"
 #include "ddp_misc.h"
 #include "disp_recovery.h"
-/* #ifdef OPLUS_FEATURE_ONSCREENFINGERPRINT */
-/*
-* add for fingerprint notify frigger
-*/
-int hbm_sof_flag = 0;
-extern bool fingerprint_layer;
-extern void hbm_notify(void);
-extern int ramless_dc_wait;
-extern int oplus_dc_enable;
-int dim_count = 0;
-extern bool oplus_display_fppress_support;
-extern bool oplus_display_aod_ramless_support;
-/* #endif */ /* OPLUS_FEATURE_ONSCREENFINGERPRINT */
 
 /* IRQ log print kthread */
 static struct task_struct *disp_irq_log_task;
@@ -237,8 +216,7 @@ irqreturn_t disp_irq_handler(int irq, void *dev_id)
 
 				lcm_fps_ctx_update(&lcm_fps_ctx, ext_te_time);
 			}
-		}
-		else
+		} else
 			reg_val = (DISP_REG_GET(DISPSYS_DSI1_BASE + 0xC) &
 				   0xffff);
 
@@ -384,30 +362,6 @@ irqreturn_t disp_irq_handler(int irq, void *dev_id)
 			DDPIRQ("IRQ: RDMA%d reg update done!\n", index);
 
 		if (reg_val & (1 << 2)) {
-			/* #ifdef OPLUS_FEATURE_ONSCREENFINGERPRINT */
-			/*
-			* add for fingerprint notify frigger
-			*/
-			if (oplus_display_fppress_support) {
-				if (oplus_display_aod_ramless_support) {
-					if(hbm_sof_flag){
-						fpd_notify();
-						hbm_sof_flag = 0;
-					}
-
-					if (ramless_dc_wait && oplus_dc_enable && fingerprint_layer) {
-						dim_count = dim_count + 1;
-						if (dim_count == 2) {
-							hbm_notify();
-						}
-					} else {
-						dim_count = 0;
-					}
-				} else {
-					fpd_notify_check_trig();
-				}
-			}
-			/* #endif */ /* OPLUS_FEATURE_ONSCREENFINGERPRINT */
 			mmprofile_log_ex(
 				ddp_mmp_get_events()->SCREEN_UPDATE[index],
 				MMPROFILE_FLAG_END, reg_val,
@@ -434,14 +388,6 @@ irqreturn_t disp_irq_handler(int irq, void *dev_id)
 			rdma_start_time[index] = sched_clock();
 			DDPIRQ("IRQ: RDMA%d frame start!\n", index);
 			rdma_start_irq_cnt[index]++;
-			/* #ifdef OPLUS_FEATURE_ONSCREENFINGERPRINT */
-			/*
-			* add for fingerprint notify frigger
-			*/
-			if (oplus_display_fppress_support && oplus_display_aod_ramless_support) {
-				fpd_notify_check_trig();
-			}
-			/* #endif */ /* OPLUS_FEATURE_ONSCREENFINGERPRINT */
 			if (!primary_display_is_video_mode())
 				primary_display_wakeup_pf_thread();
 		}

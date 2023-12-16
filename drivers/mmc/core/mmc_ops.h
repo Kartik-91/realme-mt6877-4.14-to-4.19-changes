@@ -32,7 +32,6 @@ int mmc_spi_set_crc(struct mmc_host *host, int use_crc);
 int mmc_bus_test(struct mmc_card *card, u8 bus_width);
 int mmc_interrupt_hpi(struct mmc_card *card);
 int mmc_can_ext_csd(struct mmc_card *card);
-int mmc_get_ext_csd(struct mmc_card *card, u8 **new_ext_csd);
 int mmc_switch_status(struct mmc_card *card);
 int __mmc_switch_status(struct mmc_card *card, bool crc_err_fatal);
 int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
@@ -40,17 +39,13 @@ int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 		bool use_busy_signal, bool send_status,	bool retry_crc_err);
 int mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 		unsigned int timeout_ms);
-#ifdef CONFIG_MTK_EMMC_HW_CQ
-int __mmc_switch_cmdq_mode(struct mmc_command *cmd, u8 set, u8 index,
-				  u8 value, unsigned int timeout_ms,
-				  bool use_busy_signal, bool ignore_timeout);
-int mmc_discard_queue(struct mmc_host *host, u32 tasks);
-#endif
 int mmc_stop_bkops(struct mmc_card *card);
 void mmc_start_bkops(struct mmc_card *card, bool from_exception);
 int mmc_flush_cache(struct mmc_card *card);
 int mmc_cmdq_enable(struct mmc_card *card);
 int mmc_cmdq_disable(struct mmc_card *card);
-
+#ifdef CONFIG_MMC_PASSWORDS
+int mmc_lock_unlock_by_buf(struct mmc_card *card, u8* key_buf,int key_len, int mode);
+#endif
 #endif
 

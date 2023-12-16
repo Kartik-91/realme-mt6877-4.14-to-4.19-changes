@@ -27,7 +27,7 @@
 #include <linux/fs.h>
 #include <linux/atomic.h>
 #include <linux/types.h>
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 
 #include "kd_camera_typedef.h"
 #include "kd_imgsensor.h"

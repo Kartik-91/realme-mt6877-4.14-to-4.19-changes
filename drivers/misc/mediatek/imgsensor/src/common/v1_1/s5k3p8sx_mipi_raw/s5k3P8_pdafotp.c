@@ -1,15 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
+
 #define PFX "S5K3P8_pdafotp"
 #define pr_fmt(fmt) PFX "[%s] " fmt, __func__
 
@@ -84,6 +77,7 @@ static bool _read_S5K3P8_eeprom(kal_uint16 addr, BYTE *data, kal_uint32 size)
 
 bool read_3P8_eeprom(kal_uint16 addr, BYTE *data, kal_uint32 size)
 {
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	int i = 0;
 	int proc1_flag = 0;
 	int proc2_flag = 0;
@@ -91,6 +85,10 @@ bool read_3P8_eeprom(kal_uint16 addr, BYTE *data, kal_uint32 size)
 
 	addr = 0x1400;
 	size = 0x1A67-0x1400;
+	#else
+	addr = 0x0801;
+	size = 1404;
+	#endif
 
 	pr_debug("read 3P8 eeprom, size = %d\n", size);
 
@@ -102,6 +100,7 @@ bool read_3P8_eeprom(kal_uint16 addr, BYTE *data, kal_uint32 size)
 			return false;
 		}
 	}
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	proc1_flag = S5K3P8_eeprom_data[0x15F0-0x1400];
 	proc2_flag = S5K3P8_eeprom_data[0x1926-0x1400];
 	proc3_flag = S5K3P8_eeprom_data[0x1A66-0x1400];
@@ -121,6 +120,9 @@ bool read_3P8_eeprom(kal_uint16 addr, BYTE *data, kal_uint32 size)
 		data[i] = S5K3P8_eeprom_data[i+16+218];
 		pr_debug("data[%d] = %x\n", i, data[i]);
 	}
+	#else
+	memcpy(data, S5K3P8_eeprom_data, size);
+	#endif
 	return true;
 }
 

@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2020 MediaTek Inc.
  */
 #ifdef JPEG_ENC_DRIVER
 #include <linux/kernel.h>
@@ -373,11 +365,7 @@ unsigned int jpeg_drv_enc_set_encFormat(unsigned int encFormat)
 	}
 
 	val = (encFormat & 3) << 3;
-#if 0
-/* REG_JPEG_ENC_CTRL &= ~JPEG_ENC_CTRL_YUV_BIT; */
-/*  */
-/* REG_JPEG_ENC_CTRL |= val; */
-#else
+
 	u4Value = IMG_REG_READ(REG_ADDR_JPEG_ENC_CTRL);
 
 	u4Value &= ~JPEG_ENC_CTRL_YUV_BIT;
@@ -385,7 +373,6 @@ unsigned int jpeg_drv_enc_set_encFormat(unsigned int encFormat)
 	u4Value |= val;
 
 	IMG_REG_WRITE((u4Value), REG_ADDR_JPEG_ENC_CTRL);
-#endif
 
 	return 1;
 }

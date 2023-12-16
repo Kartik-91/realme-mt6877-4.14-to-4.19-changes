@@ -1,18 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 20w0 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
-#ifndef __DRV_CLK_MT6885_PG_H
-#define __DRV_CLK_MT6885_PG_H
+#ifndef __DRV_CLK_MT6893_PG_H
+#define __DRV_CLK_MT6893_PG_H
 
 enum subsys_id {
 	SYS_MD1 = 0,
@@ -54,35 +46,6 @@ struct pg_callbacks {
 
 /* register new pg_callbacks and return previous pg_callbacks. */
 extern struct pg_callbacks *register_pg_callback(struct pg_callbacks *pgcb);
-extern int spm_topaxi_protect(unsigned int mask_value, int en);
-extern int spm_topaxi_protect_1(unsigned int mask_value, int en);
-extern int cam_mtcmos_patch(int on);
-extern void check_mm0_clk_sts(void);
-extern void check_img_clk_sts(void);
-extern void check_ipe_clk_sts(void);
-extern void check_ven_clk_sts(void);
-extern void check_cam_clk_sts(void);
-void enable_subsys_hwcg(enum subsys_id id);
 void mtk_check_subsys_swcg(enum subsys_id id);
 
-/*ram console api*/
-/*
- *[0] bus protect reg
- *[1] pwr_status
- *[2] pwr_status 2
- *[others] local function use
- */
-#ifdef CONFIG_MTK_RAM_CONSOLE
-extern void aee_rr_rec_clk(int id, u32 val);
-#endif
-
-/* for cam debug only */
-extern void __iomem *cam_base, *cam_rawa_base, *cam_rawb_base, *cam_rawc_base;
-extern void __iomem *spm_base_debug;
-extern void mtk_ccf_cam_debug(const char *str1, const char *str2,
-							const char *str3);
-/* for cam debug only */
-
-
-
-#endif				/* __DRV_CLK_MT6885_PG_H */
+#endif/* __DRV_CLK_MT6893_PG_H */

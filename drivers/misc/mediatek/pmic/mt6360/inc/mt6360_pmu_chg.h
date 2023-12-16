@@ -1,17 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- *  drivers/misc/mediatek/pmic/mt6360/inc/mt6360_pmu_chg.h
- *
- *  Copyright (C) 2018 Mediatek Technology Corp.
- *  cy_huang <cy_huang@richtek.com>
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2 as
- *  published by the Free Software Foundation.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *  See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2020 MediaTek Inc.
  */
 
 #ifndef __MT6360_PMU_CHG_H
@@ -35,9 +24,6 @@ struct mt6360_chg_platform_data {
 	u32 aicc_once;
 	u32 post_aicc;
 	u32 batoc_notify;
-#ifdef OPLUS_FEATURE_CHG_BASIC
-	u32 pp_sense_l;
-#endif
 	u32 bc12_sel;
 	const char *chg_name;
 };

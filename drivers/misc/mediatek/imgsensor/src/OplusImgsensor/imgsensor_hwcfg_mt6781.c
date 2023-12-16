@@ -57,11 +57,20 @@ struct IMGSENSOR_SENSOR_LIST
 #if defined(HI1634Q_MIPI_RAW_21690)
 {HI1634Q_SENSOR_ID_21690, SENSOR_DRVNAME_HI1634Q_MIPI_RAW_21690, HI1634Q_MIPI_RAW_21690_SensorInit},
 #endif
+#if defined(S5K3P9SP_MIPI_RAW_21690)
+{S5K3P9SP_SENSOR_ID_21690, SENSOR_DRVNAME_S5K3P9SP_MIPI_RAW_21690, S5K3P9SP_MIPI_RAW_21690_SensorInit},
+#endif
 #if defined(GC02M1HLT_MIPI_RAW_21690)
 {GC02M1HLT_SENSOR_ID_21690, SENSOR_DRVNAME_GC02M1HLT_MIPI_RAW_21690, GC02M1HLT_MIPI_RAW_21690_SensorInit},
 #endif
+#if defined(GC02M1SHINE_MIPI_RAW_21690)
+{GC02M1SHINE_SENSOR_ID_21690, SENSOR_DRVNAME_GC02M1SHINE_MIPI_RAW_21690, GC02M1SHINE_MIPI_RAW_21690_SensorInit},
+#endif
 #if defined(OV02B1B_MIPI_MONO_21690)
 {OV02B1B_SENSOR_ID_21690, SENSOR_DRVNAME_OV02B1B_MIPI_MONO_21690, OV02B1B_MIPI_MONO_21690_SensorInit},
+#endif
+#if defined(GC02M1BSY_MIPI_RAW_21690)
+{GC02M1BSY_SENSOR_ID_21690, SENSOR_DRVNAME_GC02M1BSY_MIPI_RAW_21690, GC02M1BSY_MIPI_RAW_21690_SensorInit},
 #endif
     /*  ADD sensor driver before this line */
     {0, {0}, NULL}, /* end of list */
@@ -328,9 +337,34 @@ struct IMGSENSOR_HW_POWER_SEQ sensor_power_sequence_21690[] = {
 		},
 	},
 #endif
+#if defined(S5K3P9SP_MIPI_RAW_21690)
+	{
+		SENSOR_DRVNAME_S5K3P9SP_MIPI_RAW_21690,
+		{
+			{SensorMCLK, Vol_High, 0},
+			{RST, Vol_Low, 1},
+			{DVDD, Vol_1100, 1},
+			{AVDD, Vol_2800, 1},
+			{DOVDD, Vol_1800, 0},
+			{RST, Vol_High, 2},
+		},
+	},
+#endif
 #if defined(GC02M1HLT_MIPI_RAW_21690)
 	{
 		SENSOR_DRVNAME_GC02M1HLT_MIPI_RAW_21690,
+		{
+			{RST, Vol_Low, 3},
+			{DOVDD, Vol_1800, 1},
+			{AVDD, Vol_2800, 1},
+			{RST, Vol_High, 5},
+			{SensorMCLK, Vol_High, 3},
+		},
+	},
+#endif
+#if defined(GC02M1SHINE_MIPI_RAW_21690)
+	{
+		SENSOR_DRVNAME_GC02M1SHINE_MIPI_RAW_21690,
 		{
 			{RST, Vol_Low, 3},
 			{DOVDD, Vol_1800, 1},
@@ -349,6 +383,18 @@ struct IMGSENSOR_HW_POWER_SEQ sensor_power_sequence_21690[] = {
 			{AVDD, Vol_2800, 6},
 			{SensorMCLK, Vol_High, 5},
 			{RST, Vol_High, 2}
+		},
+	},
+#endif
+#if defined(GC02M1BSY_MIPI_RAW_21690)
+	{
+		SENSOR_DRVNAME_GC02M1BSY_MIPI_RAW_21690,
+		{
+			{RST, Vol_Low, 3},
+			{DOVDD, Vol_1800, 1},
+			{AVDD, Vol_2800, 1},
+			{RST, Vol_High, 5},
+			{SensorMCLK, Vol_High, 3},
 		},
 	},
 #endif
@@ -376,7 +422,8 @@ struct CAMERA_DEVICE_INFO gImgEepromInfo_21684 = {
 
 void oplus_imgsensor_hwcfg()
 {
-    if(is_project(21690) || is_project(21691) || is_project(21692)) {
+    if(is_project(21690) || is_project(21691) || is_project(21692)
+        || is_project(21684) || is_project(21685) || is_project(21686)) {
         oplus_gimgsensor_sensor_list = gimgsensor_sensor_list_21690;
         oplus_imgsensor_custom_config = imgsensor_custom_config_21690;
         oplus_sensor_power_sequence = sensor_power_sequence_21690;

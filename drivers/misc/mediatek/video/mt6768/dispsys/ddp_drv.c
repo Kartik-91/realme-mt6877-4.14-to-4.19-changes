@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #define LOG_TAG "ddp_drv"
 
@@ -73,7 +65,6 @@
 #include "disp_helper.h"
 #include <linux/of_platform.h>
 #include "smi_public.h"
-#include <soc/oplus/system/oplus_project.h>
 
 #define DISP_DEVNAME "DISPSYS"
 
@@ -603,11 +594,6 @@ static int disp_probe(struct platform_device *pdev)
 	pr_info("disp driver(1) %s end\n", __func__);
 
 	disp_probe_1();
-
-	if (/*is_userdebug() || */(get_eng_version() == AGING)) {
-		pr_info("%s, enable g_mobilelog for AGING\n", __func__);
-		g_mobilelog = 1;
-	}
 
 	return 0;
 }

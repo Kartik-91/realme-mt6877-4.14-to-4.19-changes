@@ -301,7 +301,7 @@ static struct imgsensor_struct imgsensor = {
 	.dummy_line = 0,	/* current dummyline */
 	.current_fps = 300,
 	.autoflicker_en = KAL_FALSE,
-	.test_pattern = KAL_FALSE,
+	.test_pattern = 0,
 	.current_scenario_id = MSDK_SCENARIO_ID_CAMERA_PREVIEW,
 	.ihdr_mode = 0, /* sensor need support LE, SE with HDR feature */
 	.i2c_write_id = 0x34, /* record current sensor's i2c write id */
@@ -4225,7 +4225,7 @@ static kal_uint32 open(void)
 	imgsensor.dummy_pixel = 0;
 	imgsensor.dummy_line = 0;
 	imgsensor.ihdr_mode = 0;
-	imgsensor.test_pattern = KAL_FALSE;
+	imgsensor.test_pattern = 0;
 	imgsensor.current_fps = imgsensor_info.pre.max_framerate;
 	spin_unlock(&imgsensor_drv_lock);
 	pr_debug("%s -\n", __func__);
@@ -5041,17 +5041,34 @@ static kal_uint32 get_default_framerate_by_scenario(
 	return ERROR_NONE;
 }
 
-static kal_uint32 set_test_pattern_mode(kal_bool enable)
+static kal_uint32 set_test_pattern_mode(kal_uint8 modes, struct SET_SENSOR_PATTERN_SOLID_COLOR *pTestpatterndata)
 {
-	pr_debug("enable: %d\n", enable);
+    kal_uint16 Color_R, Color_Gr, Color_Gb, Color_B;
+    pr_debug("set_test_pattern enum: %d\n", modes);
 
-	if (enable)
-		write_cmos_sensor_8(0x0601, 0x0002); /*100% Color bar*/
-	else
-		write_cmos_sensor_8(0x0601, 0x0000); /*No pattern*/
-
+    if (modes){
+        write_cmos_sensor_8(0x0600, modes>>4);
+        write_cmos_sensor_8(0x0601, modes);
+        if (modes == 1 && (pTestpatterndata != NULL)) { //Solid Color
+            Color_R = (pTestpatterndata->COLOR_R >> 16) & 0xFFFF;
+            Color_Gr = (pTestpatterndata->COLOR_Gr >> 16) & 0xFFFF;
+            Color_B = (pTestpatterndata->COLOR_B >> 16) & 0xFFFF;
+            Color_Gb = (pTestpatterndata->COLOR_Gb >> 16) & 0xFFFF;
+            write_cmos_sensor_8(0x0602, Color_R >> 8);
+            write_cmos_sensor_8(0x0603, Color_R & 0xFF);
+            write_cmos_sensor_8(0x0602, Color_Gr >> 8);
+            write_cmos_sensor_8(0x0603, Color_Gr & 0xFF);
+            write_cmos_sensor_8(0x0602, Color_B >> 8);
+            write_cmos_sensor_8(0x0603, Color_B & 0xFF);
+            write_cmos_sensor_8(0x0602, Color_Gb >> 8);
+            write_cmos_sensor_8(0x0603, Color_Gb & 0xFF);
+        }
+    }
+    else {
+        write_cmos_sensor_8(0x0600, 0x0000); /*No pattern*/
+    }
 	spin_lock(&imgsensor_drv_lock);
-	imgsensor.test_pattern = enable;
+	imgsensor.test_pattern = modes;
 	spin_unlock(&imgsensor_drv_lock);
 	return ERROR_NONE;
 }
@@ -5161,7 +5178,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 			return ERROR_MSDK_IS_ACTIVATED;
 	}
         case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
-                *(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -7238750;
+                *(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -1405150;
                 break;
 	#endif
 	case SENSOR_FEATURE_GET_AWB_REQ_BY_SCENARIO:
@@ -5346,7 +5363,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 		pr_debug("SENSOR_FEATURE_GET_PDAF_DATA\n");
 		break;
 	case SENSOR_FEATURE_SET_TEST_PATTERN:
-		set_test_pattern_mode((BOOL)*feature_data);
+		set_test_pattern_mode((UINT8)*feature_data, (struct SET_SENSOR_PATTERN_SOLID_COLOR *) feature_data+1);
 		break;
 	case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE:
 		/* for factory mode auto testing */

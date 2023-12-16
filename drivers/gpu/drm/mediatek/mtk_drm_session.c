@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2015 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <drm/drmP.h>
 #include <drm/drm_gem.h>
@@ -24,6 +16,10 @@
 #endif
 
 static DEFINE_MUTEX(disp_session_lock);
+
+#ifdef OPLUS_BUG_STABILITY
+int mtk_drm_session_created = 0;
+#endif /* OPLUS_BUG_STABILITY */
 
 int mtk_drm_session_create(struct drm_device *dev,
 			   struct drm_mtk_session *config)
@@ -285,6 +281,10 @@ int mtk_drm_session_create_ioctl(struct drm_device *dev, void *data,
 
 	if (mtk_drm_session_create(dev, config) != 0)
 		ret = -EFAULT;
+
+	#ifdef OPLUS_BUG_STABILITY
+	mtk_drm_session_created = 1;
+	#endif /* OPLUS_BUG_STABILITY */
 
 	return ret;
 }

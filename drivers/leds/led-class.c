@@ -25,12 +25,11 @@
 
 static struct class *leds_class;
 
-//#ifdef OPLUS_BUG_STABILITY
+#ifdef OPLUS_BUG_STABILITY
 /*
 * add for oppo brightness and max_brightness node
 */
-#if defined(DRM_OPLUS_DISPLAY_NODES)
-extern unsigned long oplus_display_brightness;
+#if defined(CONFIG_DRM_MEDIATEK)
 extern unsigned int m_new_pq_persist_property[32];
 enum mtk_pq_persist_property {
 	DISP_PQ_COLOR_BYPASS,
@@ -44,40 +43,11 @@ enum mtk_pq_persist_property {
 	DISP_PQ_GAMMA_SILKY_BRIGHTNESS,
 	DISP_PQ_PROPERTY_MAX,
 };
-#else
-extern unsigned long oplus_display_brightness;
 #endif
-//#endif
+#endif /* OPLUS_BUG_STABILITY */
 
 /* #ifdef OPLUS_BUG_STABILITY */
-#ifdef OPLUS_FEATURE_MULTIBITS_BL
-extern bool __attribute((weak)) oplus_display_tenbits_support;
-extern bool __attribute((weak)) oplus_display_elevenbits_support;
-extern bool __attribute((weak)) oplus_display_twelvebits_support;
-
-int get_full_backlight_level()
-{
-	if(oplus_display_twelvebits_support)
-		return 4095;
-	else if(oplus_display_elevenbits_support)
-		return 2047;
-	else if(oplus_display_tenbits_support)
-		return 1023;
-	return 255;
-}
-EXPORT_SYMBOL_GPL(get_full_backlight_level);
-int get_half_backlight_level()
-{
-        if(oplus_display_twelvebits_support)
-                return 2047;
-        else if(oplus_display_elevenbits_support)
-		return 1023;
-	else if(oplus_display_tenbits_support)
-		return 511;
-	return 127;
-}
-EXPORT_SYMBOL_GPL(get_half_backlight_level);
-#endif /* OPLUS_FEATURE_MULTIBITS_BL */
+extern unsigned long __attribute((weak)) oplus_display_brightness;
 /* #endif */ /* OPLUS_BUG_STABILITY */
 
 static ssize_t brightness_show(struct device *dev,
@@ -95,7 +65,7 @@ static ssize_t brightness_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
 	struct led_classdev *led_cdev = dev_get_drvdata(dev);
-	unsigned long state;
+	unsigned long state = 0;
 	ssize_t ret;
 
 	mutex_lock(&led_cdev->led_access);
@@ -117,11 +87,11 @@ static ssize_t brightness_store(struct device *dev,
 unlock:
 	mutex_unlock(&led_cdev->led_access);
 
-//#ifdef OPLUS_BUG_STABILITY
+#ifdef OPLUS_BUG_STABILITY
 /*
 * add for oppo brightness and max_brightness node
 */
-#if defined(DRM_OPLUS_DISPLAY_NODES)
+#if defined(CONFIG_DRM_MEDIATEK)
 	if (!m_new_pq_persist_property[DISP_PQ_CCORR_SILKY_BRIGHTNESS]) {
 		if (strncmp(led_cdev->name, "lcd-backlight", 13) == 0)
 			oplus_display_brightness = state;
@@ -130,7 +100,7 @@ unlock:
 	if (strncmp(led_cdev->name, "lcd-backlight", 13) == 0)
 		oplus_display_brightness = state;
 #endif
-//#endif
+#endif /* OPLUS_BUG_STABILITY */
 
 	return ret;
 }
@@ -144,6 +114,18 @@ static ssize_t max_brightness_show(struct device *dev,
 	return sprintf(buf, "%u\n", led_cdev->max_brightness);
 }
 static DEVICE_ATTR_RO(max_brightness);
+
+#ifdef OPLUS_BUG_STABILITY
+/* MM.Display.LCD, 2022/07/07, add for backlight */
+static ssize_t min_brightness_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%u\n", led_cdev->min_brightness);
+}
+static DEVICE_ATTR_RO(min_brightness);
+#endif
 
 #ifdef CONFIG_LEDS_TRIGGERS
 static DEVICE_ATTR(trigger, 0644, led_trigger_show, led_trigger_store);
@@ -159,6 +141,10 @@ static const struct attribute_group led_trigger_group = {
 static struct attribute *led_class_attrs[] = {
 	&dev_attr_brightness.attr,
 	&dev_attr_max_brightness.attr,
+#ifdef OPLUS_BUG_STABILITY
+/* MM.Display.LCD, 2022/07/07, add for backlight */
+	&dev_attr_min_brightness.attr,
+#endif
 	NULL,
 };
 
@@ -235,7 +221,33 @@ static void led_remove_brightness_hw_changed(struct led_classdev *led_cdev)
 {
 }
 #endif
-
+//#ifdef OPLUS_BUG_STABILITY
+extern bool __attribute((weak)) oplus_display_tenbits_support;
+extern bool __attribute((weak)) oplus_display_elevenbits_support;
+extern bool __attribute((weak)) oplus_display_twelvebits_support;
+int get_full_backlight_level()
+{
+	if (oplus_display_twelvebits_support)
+		return 4095;
+	else if(oplus_display_elevenbits_support)
+		return 2047;
+	else if(oplus_display_tenbits_support)
+		return 1023;
+	return 255;
+}
+EXPORT_SYMBOL_GPL(get_full_backlight_level);
+int get_half_backlight_level()
+{
+	if (oplus_display_twelvebits_support)
+		return 2047;
+	else if(oplus_display_elevenbits_support)
+		return 1023;
+	else if(oplus_display_tenbits_support)
+		return 511;
+	return 127;
+}
+EXPORT_SYMBOL_GPL(get_half_backlight_level);
+//#endif
 /**
  * led_classdev_suspend - suspend an led_classdev.
  * @led_cdev: the led_classdev to suspend.
@@ -244,6 +256,7 @@ void led_classdev_suspend(struct led_classdev *led_cdev)
 {
 	led_cdev->flags |= LED_SUSPENDED;
 	led_set_brightness_nopm(led_cdev, 0);
+	flush_work(&led_cdev->set_brightness_work);
 }
 EXPORT_SYMBOL_GPL(led_classdev_suspend);
 
@@ -331,10 +344,14 @@ int of_led_classdev_register(struct device *parent, struct device_node *np,
 	if (ret < 0)
 		return ret;
 
+	mutex_init(&led_cdev->led_access);
+	mutex_lock(&led_cdev->led_access);
 	led_cdev->dev = device_create_with_groups(leds_class, parent, 0,
 				led_cdev, led_cdev->groups, "%s", name);
-	if (IS_ERR(led_cdev->dev))
+	if (IS_ERR(led_cdev->dev)) {
+		mutex_unlock(&led_cdev->led_access);
 		return PTR_ERR(led_cdev->dev);
+	}
 	led_cdev->dev->of_node = np;
 
 	if (ret)
@@ -345,6 +362,7 @@ int of_led_classdev_register(struct device *parent, struct device_node *np,
 		ret = led_add_brightness_hw_changed(led_cdev);
 		if (ret) {
 			device_unregister(led_cdev->dev);
+			mutex_unlock(&led_cdev->led_access);
 			return ret;
 		}
 	}
@@ -356,7 +374,6 @@ int of_led_classdev_register(struct device *parent, struct device_node *np,
 #ifdef CONFIG_LEDS_BRIGHTNESS_HW_CHANGED
 	led_cdev->brightness_hw_changed = -1;
 #endif
-	mutex_init(&led_cdev->led_access);
 	/* add to the list of leds */
 	down_write(&leds_list_lock);
 	list_add_tail(&led_cdev->node, &leds_list);
@@ -365,6 +382,12 @@ int of_led_classdev_register(struct device *parent, struct device_node *np,
 	if (!led_cdev->max_brightness)
 		led_cdev->max_brightness = LED_FULL;
 
+#ifdef OPLUS_BUG_STABILITY
+/* MM.Display.LCD, 2022/07/07, add for backlight */
+	if (!led_cdev->min_brightness)
+		led_cdev->min_brightness = LED_MIN;
+#endif
+
 	led_update_brightness(led_cdev);
 
 	led_init_core(led_cdev);
@@ -372,6 +395,8 @@ int of_led_classdev_register(struct device *parent, struct device_node *np,
 #ifdef CONFIG_LEDS_TRIGGERS
 	led_trigger_set_default(led_cdev);
 #endif
+
+	mutex_unlock(&led_cdev->led_access);
 
 	dev_dbg(parent, "Registered led device: %s\n",
 			led_cdev->name);

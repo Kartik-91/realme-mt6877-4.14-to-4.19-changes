@@ -1,7 +1,9 @@
-source "drivers/misc/mediatek/sensor/2.0/lsm6dsm_secondary/Kconfig"
+# SPDX-License-Identifier: GPL-2.0
+
+source "drivers/misc/mediatek/sensor/2.0/mtk_nanohub/Kconfig"
 source "drivers/misc/mediatek/sensor/2.0/sensorhub/Kconfig"
 source "drivers/misc/mediatek/sensor/2.0/test/Kconfig"
-source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/Kconfig"
+source "drivers/misc/mediatek/sensor/2.0/lsm6dsm_secondary/Kconfig"
 source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/Kconfig"
 source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/sensors/camera_protecthub/Kconfig"
 source "drivers/misc/mediatek/sensor/2.0/oplus_virtual_sensor/sensors/free_fallhub/Kconfig"

@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2021 MediaTek Inc.
+*/
 
 /*****************************************************************************
  *
@@ -63,10 +55,6 @@
 
 struct gauge_device;
 struct gauge_ops;
-
-#ifdef OPLUS_FEATURE_CHG_BASIC
-#define GAUBE_INFO_LENGTH 1024
-#endif
 
 enum gauge_info {
 	GAUGE_2SEC_REBOOT,
@@ -191,14 +179,6 @@ struct gauge_ops {
 		struct gauge_device *gauge_dev, int *nag_dltv);
 	int (*gauge_get_nag_c_dltv)(
 		struct gauge_device *gauge_dev, int *nag_c_dltv);
-#ifdef OPLUS_FEATURE_CHG_BASIC
-	int (*gauge_get_nag_c_dltv_thr)(
-		struct gauge_device *gauge_dev, int *nag_c_dltv_thr);
-	int (*gauge_get_nag_c_dltv_thr_reg)(
-		struct gauge_device *gauge_dev, int *nag_c_dltv_thr_reg);
-	int (*gauge_get_nag_debug_info)(
-		struct gauge_device *gauge_dev, char *debug_info);
-#endif
 	int (*gauge_get_nag_vbat)(
 		struct gauge_device *gauge_dev, int *vbat);
 	int (*gauge_enable_zcv_interrupt)(
@@ -325,14 +305,6 @@ extern int gauge_dev_get_nag_dltv(
 	struct gauge_device *gauge_dev, int *nag_dltv);
 extern int gauge_dev_get_nag_c_dltv(
 	struct gauge_device *gauge_dev, int *nag_c_dltv);
-#ifdef OPLUS_FEATURE_CHG_BASIC
-extern int gauge_dev_get_nag_c_dltv_thr(
-	struct gauge_device *gauge_dev, int *nafg_c_dltv_thr);
-extern int gauge_dev_get_nag_c_dltv_thr_reg(
-	struct gauge_device *gauge_dev, int *nafg_c_dltv_thr_reg);
-extern int gauge_dev_get_nag_debug_info(
-	struct gauge_device *gauge_dev, char *debug_info);
-#endif
 extern int gauge_dev_enable_zcv_interrupt(
 	struct gauge_device *gauge_dev, int en);
 extern int gauge_dev_set_zcv_interrupt_threshold(

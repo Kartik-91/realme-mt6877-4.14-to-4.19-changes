@@ -1,15 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
+
 
 #ifndef _DDP_DISP_BDG_H_
 #define _DDP_DISP_BDG_H_
@@ -138,5 +131,9 @@ irqreturn_t bdg_eint_thread_handler(int irq, void *data);
 void bdg_request_eint_irq(void);
 //void bdg_free_eint_irq(void);
 void bdg_rx_reset(void *cmdq);
-
+void bdg_clk_buf_nfc(bool onoff);
+/***** NFC SRCLKENAI0 Interrupt Handler +++ *****/
+irqreturn_t nfc_eint_thread_handler(int irq, void *data);
+void nfc_request_eint_irq(void);
+/***** NFC SRCLKENAI0 Interrupt Handler --- *****/
 #endif

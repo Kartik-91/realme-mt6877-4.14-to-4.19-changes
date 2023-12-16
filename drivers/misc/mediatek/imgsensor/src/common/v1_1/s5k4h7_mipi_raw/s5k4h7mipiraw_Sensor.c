@@ -1,15 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2019 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
+
 /*****************************************************************************
  *
  * Filename:
@@ -44,10 +37,14 @@
 #include "kd_imgsensor_errcode.h"
 #include "kd_camera_typedef.h"
 #include "imgsensor_ca.h"
+#include "imgsensor_hwcfg_custom.h"
 
 #define PFX "s5k4h7_camera_sensor"
 #define LOG_INF(format, args...) pr_debug(PFX "[%s] " format, __func__, ##args)
 static DEFINE_SPINLOCK(imgsensor_drv_lock);
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+//#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 
 #include "s5k4h7mipiraw_Sensor.h"
 #include "s5k4h7otp.h"
@@ -59,9 +56,11 @@ static DEFINE_SPINLOCK(imgsensor_drv_lock);
 #define I2C_BUFFER_LEN 3
 #endif
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 #define DEVICE_VERSION_S5K4H7    "s5k4h7"
 static kal_uint32 streaming_control(kal_bool enable);
 static uint8_t deviceInfo_register_value;
+#endif
 
 static struct imgsensor_info_struct imgsensor_info = {
 	.sensor_id = S5K4H7_SENSOR_ID,	/*S5K4H7_SENSOR_ID = 0x487B */
@@ -164,7 +163,11 @@ static struct imgsensor_info_struct imgsensor_info = {
 	.sensor_output_dataformat = SENSOR_OUTPUT_FORMAT_RAW_Gr,
 	.mclk = 24,
 	.mipi_lane_num = SENSOR_MIPI_4_LANE,
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+	.i2c_addr_table = {0x20},
+#else
 	.i2c_addr_table = {0x20, 0xff},
+#endif
 	.i2c_speed = 400,
 };
 
@@ -1024,6 +1027,7 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 			read_cmos_sensor_8(0x0000), read_cmos_sensor_8(0x0001),
 			read_cmos_sensor(0x0000));
 		if (*sensor_id == imgsensor_info.sensor_id) {
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 			/*
 			 * 2017/10/18 add for register device info
 			 */
@@ -1032,11 +1036,12 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 			 * 20180126 remove to adapt with mt6771
 			 */
 			if (deviceInfo_register_value == 0x00) {
-				register_imgsensor_deviceinfo("Cam_f",
+				Oplusimgsensor_Registdeviceinfo("Cam_f",
 					DEVICE_VERSION_S5K4H7,
 					imgsensor_info.module_id);
 				deviceInfo_register_value = 0x01;
 			}
+#endif
 			LOG_INF(
 				"i2c write id: 0x%x, sensor id: 0x%x module_id 0x%x\n",
 				imgsensor.i2c_write_id, *sensor_id,
@@ -1085,7 +1090,9 @@ static kal_uint32 open(void)
 	kal_uint8 retry = 1;
 	kal_uint16 sensor_id = 0;
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	bool otp_flag = 0;
+#endif
 
 	LOG_INF("%s imgsensor.enable_secure %d\n",
 		__func__, imgsensor.enable_secure);
@@ -1123,11 +1130,13 @@ static kal_uint32 open(void)
 
 	/* initail sequence write in  */
 	sensor_init();
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	otp_flag = S5K4H7_otp_update();
 	if (otp_flag)
 		LOG_INF("Load otp succeed\n");
 	else
 		LOG_INF("Load otp failed\n");
+#endif
 	spin_lock(&imgsensor_drv_lock);
 
 	imgsensor.autoflicker_en = KAL_FALSE;

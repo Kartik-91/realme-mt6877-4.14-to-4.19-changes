@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
  */
 
 
@@ -117,10 +109,12 @@ static void inject_event_helper(struct ccci_util_bc_user_ctlb *user_ctlb,
 			user_ctlb->curr_r = 0;
 	}
 
-	if (user_ctlb->curr_w < 0) {
-		CCCI_UTIL_ERR_MSG("invalid user_ctlb->curr_w\n");
+	if (user_ctlb->curr_w >= EVENT_BUFF_SIZE || user_ctlb->curr_w < 0) {
+		CCCI_UTIL_ERR_MSG(
+		"%s(user_ctlb->curr_w = %d)\n", __func__, user_ctlb->curr_w);
 		return;
 	}
+
 	user_ctlb->event_buf[user_ctlb->curr_w].time_stamp = *ev_rtime;
 	user_ctlb->event_buf[user_ctlb->curr_w].md_id = md_id;
 	user_ctlb->event_buf[user_ctlb->curr_w].event_type = event_type;
@@ -159,9 +153,9 @@ static void save_last_md_status(int md_id,
 	last_md_status[md_id].event_type = event_type;
 
 	if (reason != NULL)
-		snprintf(last_md_status[md_id].reason, 32, "%s", reason);
+		scnprintf(last_md_status[md_id].reason, 32, "%s", reason);
 	else
-		snprintf(last_md_status[md_id].reason, 32, "%s", "----");
+		scnprintf(last_md_status[md_id].reason, 32, "%s", "----");
 }
 
 static void send_last_md_status_to_user(int md_id,
@@ -217,6 +211,7 @@ void inject_md_status_event(int md_id, int event_type, char reason[])
 	}
 	spin_unlock_irqrestore(&s_event_update_lock, flag);
 }
+EXPORT_SYMBOL(inject_md_status_event);
 
 int get_lock_rst_user_cnt(int md_id)
 {
@@ -244,7 +239,7 @@ int get_lock_rst_user_list(int md_id, char list_buff[], int size)
 		list_for_each_entry(user_ctlb,
 			&s_bc_ctl_tbl[0]->user_list, node) {
 			if (user_ctlb->has_request_rst_lock) {
-				cpy_size = snprintf(&list_buff[total_size],
+				cpy_size = scnprintf(&list_buff[total_size],
 				size - total_size,
 				"%s,", user_ctlb->user_name);
 				if (cpy_size > 0)
@@ -257,7 +252,7 @@ int get_lock_rst_user_list(int md_id, char list_buff[], int size)
 		list_for_each_entry(user_ctlb,
 			&s_bc_ctl_tbl[3]->user_list, node) {
 			if (user_ctlb->has_request_rst_lock) {
-				cpy_size = snprintf(&list_buff[total_size],
+				cpy_size = scnprintf(&list_buff[total_size],
 				size - total_size,
 				"%s,", user_ctlb->user_name);
 				if (cpy_size > 0)
@@ -299,7 +294,7 @@ static int ccci_util_bc_open(struct inode *inode, struct file *filp)
 	user_ctlb->buff_cnt = EVENT_BUFF_SIZE;
 	user_ctlb->exit = 0;
 	INIT_LIST_HEAD(&user_ctlb->node);
-	snprintf(user_ctlb->user_name, 32, "%s", current->comm);
+	scnprintf(user_ctlb->user_name, 32, "%s", current->comm);
 	filp->private_data = user_ctlb;
 	nonseekable_open(inode, filp);
 

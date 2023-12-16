@@ -1,14 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
+ * Author: Joey Pan <joey.pan@mediatek.com>
  */
 
 #ifndef __LCM_COMMON_H__
@@ -16,7 +9,11 @@
 
 #include "lcm_drv.h"
 
-#if defined(MTK_LCM_DEVICE_TREE_SUPPORT)
+//#ifndef OPLUS_BUG_STABILITY
+//#if defined(MTK_LCM_DEVICE_TREE_SUPPORT)
+//#else
+#if (defined(MTK_LCM_DEVICE_TREE_SUPPORT) || defined(MTK_LCM_DEVICE_TREE_SUPPORT_PASCAL_E))
+//#endif
 enum LCM_STATUS {
 	LCM_STATUS_OK = 0,
 	LCM_STATUS_ERROR,
@@ -26,7 +23,13 @@ enum LCM_STATUS {
 void lcm_common_parse_dts(const struct LCM_DTS *DTS,
 	unsigned char force_update);
 void lcm_common_set_util_funcs(const struct LCM_UTIL_FUNCS *util);
+//#ifdef OPLUS_BUG_STABILITY
+#if defined(MTK_LCM_DEVICE_TREE_SUPPORT_PASCAL_E)
+void lcm_common_get_params(struct LCM_PARAMS *params);
+#else
 void lcm_common_get_params(LCM_PARAMS *params);
+#endif
+//#endif
 void lcm_common_init(void);
 void lcm_common_suspend(void);
 void lcm_common_resume(void);

@@ -1,18 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- *  drivers/misc/mediatek/pmic/mt6360/mt6360_pmu_core.c
- *  Driver for MT6360 PMU Core part
- *
- *  Copyright (C) 2018 Mediatek Technology Inc.
- *  cy_huang <cy_huang@richtek.com>
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2 as
- *  published by the Free Software Foundation.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *  See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2020 MediaTek Inc.
  */
 
 #include <linux/init.h>
@@ -123,7 +111,7 @@ static struct mt6360_pmu_irq_desc mt6360_pmu_core_irq_desc[] = {
 
 static void mt6360_pmu_core_irq_register(struct platform_device *pdev)
 {
-	struct mt6360_pmu_irq_desc *irq_desc = NULL;
+	struct mt6360_pmu_irq_desc *irq_desc;
 	int i, ret;
 
 	for (i = 0; i < ARRAY_SIZE(mt6360_pmu_core_irq_desc); i++) {
@@ -248,7 +236,7 @@ static int mt6360_core_parse_dt_data(struct device *dev,
 static int mt6360_pmu_core_probe(struct platform_device *pdev)
 {
 	struct mt6360_core_platform_data *pdata = dev_get_platdata(&pdev->dev);
-	struct mt6360_pmu_core_info *mpci = NULL;
+	struct mt6360_pmu_core_info *mpci;
 	bool use_dt = pdev->dev.of_node;
 	int ret;
 
@@ -283,10 +271,6 @@ static int mt6360_pmu_core_probe(struct platform_device *pdev)
 	}
 	/* irq register */
 	mt6360_pmu_core_irq_register(pdev);
-#ifdef OPLUS_FEATURE_CHG_BASIC
-	ret = mt6360_pmu_reg_read(mpci->mpi, MT6360_PMU_I2C_CTRL);
-	dev_info(&pdev->dev, "%s: reg0x10 = 0x%02X\n", __func__, ret);
-#endif
 	dev_info(&pdev->dev, "%s: successfully probed\n", __func__);
 	return 0;
 }

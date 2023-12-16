@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 /*
@@ -141,6 +133,8 @@ static unsigned int xo_mode_init[XO_NUMBER];
 /* TODO: enable BBLPM if its function is ready (set as 1) */
 /* #define CLK_BUF_HW_BBLPM_EN */
 static unsigned int bblpm_switch = 2;
+
+static unsigned int bblpm_cnt;
 
 /* todo: remove */
 static unsigned int pwrap_dcxo_en_init;
@@ -1495,7 +1489,7 @@ int clk_buf_dts_map(void)
 }
 #endif
 
-void clk_buf_init_pmic_clkbuf(void)
+void clk_buf_init_pmic_clkbuf(struct regmap *regmap)
 {
 	clk_buf_dump_clkbuf_log();
 }
@@ -1620,13 +1614,11 @@ void clk_buf_post_init(void)
 #endif
 #endif
 
-//Remove for: adaption nfc
-//#ifndef CONFIG_NFC_CHIP_SUPPORT
-//	/* no need to use XO_NFC if no NFC */
-//	clk_buf_ctrl_internal(CLK_BUF_NFC, CLK_BUF_FORCE_OFF);
-//	CLK_BUF3_STATUS = CLOCK_BUFFER_DISABLE;
-//#endif
-//#endif /* VENDOR_EDIT */
+#ifndef CONFIG_MTK_NFC_CLKBUF_ENABLE
+	/* no need to use XO_NFC if no NFC */
+	clk_buf_ctrl_internal(CLK_BUF_NFC, CLK_BUF_FORCE_OFF);
+	CLK_BUF3_STATUS = CLOCK_BUFFER_DISABLE;
+#endif
 #ifdef CLKBUF_USE_BBLPM
 	if (bblpm_switch == 2) {
 		clk_buf_ctrl_bblpm_mask(CLK_BUF_BB_MD, true);

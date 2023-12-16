@@ -53,7 +53,7 @@
 #include "imx581_eeprom.h"
 #include "imgsensor_eeprom.h"
 #include "imx581_seamless_switch.h"
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #define PCB_VERSION_T0   11
 
 #undef OPLUS_FEATURE_CAMERA_COMMON

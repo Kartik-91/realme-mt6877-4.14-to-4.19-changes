@@ -238,6 +238,7 @@ bool cmdq_virtual_is_disp_scenario(const enum CMDQ_SCENARIO_ENUM scenario)
 	/* TODO */
 		dispScenario = true;
 		break;
+
 #endif
 	default:
 		break;
@@ -326,6 +327,7 @@ int cmdq_virtual_disp_thread(enum CMDQ_SCENARIO_ENUM scenario)
 		return 1;
 #endif
 
+
 	case CMDQ_SCENARIO_HIGHP_TRIGGER_LOOP:
 	case CMDQ_SCENARIO_DISP_VFP_CHANGE:
 		return 2;
@@ -353,6 +355,7 @@ int cmdq_virtual_disp_thread(enum CMDQ_SCENARIO_ENUM scenario)
 		return BIT(5) | 21;
 	/* TODO */
 #endif
+
 	default:
 		/* freely dispatch */
 		return CMDQ_INVALID_THREAD;

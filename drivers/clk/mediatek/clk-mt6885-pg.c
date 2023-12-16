@@ -1,36 +1,32 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2019 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Copyright (c) 2021 MediaTek Inc.
+ * Author: Owen Chen <owen.chen@mediatek.com>
  */
+
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <linux/io.h>
+#include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/platform_device.h>
 #include <linux/sched/clock.h>
 #include <linux/slab.h>
+
 #include <dt-bindings/clock/mt6885-clk.h>
 
-#include "clk-mtk-v1.h"
 #include "clk-mt6885-pg.h"
-#include "clkdbg-mt6885.h"
-#include <mt-plat/aee.h>
+#include "clkchk.h"
+#include "clkchk-mt6885.h"
 
 #define MT_CCF_DEBUG	0
-#define MT_CCF_BRINGUP  0
+#define MT_CCF_BRINGUP	0
 #define CONTROL_LIMIT	1
 
-#define	CHECK_PWR_ST	1
+#define CHECK_PWR_ST	1
 
 #ifndef GENMASK
 #define GENMASK(h, l)	(((U32_C(1) << ((h) - (l) + 1)) - 1) << (l))
@@ -52,6 +48,12 @@
 
 #define clk_writel(addr, val)		mt_reg_sync_writel(val, addr)
 #define clk_readl(addr)			__raw_readl(IOMEM(addr))
+
+static DEFINE_SPINLOCK(clk_ops_lock);
+
+#define mtk_clk_lock(flags)	spin_lock_irqsave(&clk_ops_lock, flags)
+#define mtk_clk_unlock(flags)	\
+	spin_unlock_irqrestore(&clk_ops_lock, flags)
 
 /*MM Bus*/
 #ifdef CONFIG_OF
@@ -92,7 +94,7 @@ void __iomem *clk_apu_conn_base;
 #define APU_VCORE_CG_CLR	(clk_apu_vcore_base + 0x0008)
 #define APU_CONN_CG_CLR		(clk_apu_conn_base + 0x0008)
 #define MFG_MISC_CON		INFRACFG_REG(0x0600)
-#define MFG_DFD_TRIGGER (1<<19)
+#define MFG_DFD_TRIGGER		(1<<19)
 #endif
 
 /*
@@ -124,7 +126,7 @@ struct subsys {
 	struct subsys_ops *ops;
 };
 
-/* MT6885: 25+1 subsys */
+/* MT6893: 25+1 subsys */
 static struct subsys_ops MD1_sys_ops;
 static struct subsys_ops CONN_sys_ops;
 static struct subsys_ops MFG0_sys_ops;
@@ -156,8 +158,6 @@ static void __iomem *infracfg_base;	/*infracfg_ao*/
 static void __iomem *spm_base;
 static void __iomem *ckgen_base;	/*ckgen*/
 
-void __iomem *spm_base_debug;
-
 #define INFRACFG_REG(offset)		(infracfg_base + offset)
 #define SPM_REG(offset)			(spm_base + offset)
 #define CKGEN_REG(offset)		(ckgen_base + offset)
@@ -166,7 +166,7 @@ void __iomem *spm_base_debug;
 #define POWERON_CONFIG_EN	SPM_REG(0x0000)
 #define PWR_STATUS		SPM_REG(0x016C)
 #define PWR_STATUS_2ND		SPM_REG(0x0170)
-#define OTHER_PWR_STATUS	SPM_REG(0x0178)	/* for MT6885 VPU only */
+#define OTHER_PWR_STATUS	SPM_REG(0x0178)	/* for MT6893 VPU only */
 
 #define MD1_PWR_CON		SPM_REG(0x300)
 #define CONN_PWR_CON		SPM_REG(0x304)
@@ -200,10 +200,10 @@ void __iomem *spm_base_debug;
 #define MD_EXT_BUCK_ISO_CON	SPM_REG(0x398)
 #define EXT_BUCK_ISO		SPM_REG(0x39C)
 
-#define SPM_CROSS_WAKE_M01_REQ	SPM_REG(0x670)	/* for MT6885 VPU wakeup src */
+#define SPM_CROSS_WAKE_M01_REQ	SPM_REG(0x670)	/* for MT6893 VPU wakeup src */
 #define APMCU_WAKEUP_APU	(0x1 << 0)
 
-/* for MT6885 DISP/MDP MTCMOS on/off APIs  */
+/* for MT6893 DISP/MDP MTCMOS on/off APIs  */
 #define INFRA_TOPAXI_PROTECTEN				INFRACFG_REG(0x0220)
 #define INFRA_TOPAXI_PROTECTEN_SET			INFRACFG_REG(0x02A0)
 #define INFRA_TOPAXI_PROTECTEN_CLR			INFRACFG_REG(0x02A4)
@@ -890,7 +890,7 @@ static struct subsys syss[] =	/* NR_SYSS */
 			},
 	[SYS_VPU] = {
 			.name = __stringify(SYS_VPU),
-			 /* MT6885: fixme: resident in OTHER_PWR_STATUS */
+			 /* MT6893: fixme: resident in OTHER_PWR_STATUS */
 			.sta_mask = (0x1 << 5),
 			/* .ctl_addr = NULL,  */
 			.sram_pdn_bits = 0,
@@ -1023,12 +1023,12 @@ static void ram_console_update(void)
 
 		log_dump = true;
 
-		print_enabled_clks_once();
+		dump_enabled_clks_once();
 
 		for (i = 0; i < ARRAY_SIZE(data); i++)
 			pr_notice("%s: data[%i]=%08x\n", __func__, i, data[i]);
 
-		/* The code based on  clkdbg/clkdbg-mt6885. */
+		/* The code based on  clkdbg/clkdbg-mt6893. */
 		/* When power on/off fails, dump the related registers. */
 		print_subsys_reg(topckgen);
 		print_subsys_reg(infracfg);
@@ -1139,7 +1139,62 @@ static void ram_console_update(void)
 #endif
 
 	if (log_over_cnt && log_timeout)
-		BUG_ON(1);
+		WARN_ON(true);
+}
+
+static void enable_subsys_hwcg(enum subsys_id id)
+{
+	if (id == SYS_MDP) {
+		/* SMI0, SMI1, SMI2, APMCU_GALS */
+		clk_writel(MDP_CG_CLR1, 0x1112);
+	} else if (id == SYS_DIS) {
+		/* SMI_COMMON, SMI_GALS, SMI_INFRA, SMI_IOMMU */
+		clk_writel(DISP_CG_CLR1, 0x88880000);
+	} else if (id == SYS_ISP) {
+		/* LARB9_CGPDN */
+		clk_writel(IMG1_CG_CLR, 0x1);
+	} else if (id == SYS_ISP2) {
+		/* LARB11_CGPDN */
+		clk_writel(IMG2_CG_CLR, 0x1);
+	} else if (id == SYS_IPE) {
+		/* LARB19_CGPDN, LARB20_CGPDN, IPE_SMI_SUBCOM_CGPDN */
+		clk_writel(IPE_CG_CLR, 0x7);
+	} else if (id == SYS_VDE) {
+		/* VDEC_CKEN, LAT_CKEN */
+		/* LARB1_CKEN */
+		clk_writel(VDEC_SOC_CKEN_SET, 0x1);
+		clk_writel(VDEC_SOC_LAT_CKEN_SET, 0x1);
+		clk_writel(VDEC_SOC_LARB1_CKEN_SET, 0x1);
+		//print_subsys_reg(vdec_soc_sys);
+	} else if (id == SYS_VDE2) {
+		/* VDEC_CKEN, LAT_CKEN */
+		clk_writel(VDEC_CKEN_SET, 0x1);
+		clk_writel(VDEC_LAT_CKEN_SET, 0x1);
+		clk_writel(VDEC_LARB1_CKEN_SET, 0x1);
+		//print_subsys_reg(vdec_soc_sys);
+		//print_subsys_reg(vdecsys);
+	} else if (id == SYS_VEN) {
+		/* SET1_VENC */
+		clk_writel(VENC_CG_SET, 0x4);
+	} else if (id == SYS_VEN_CORE1) {
+		/* SET1_VENC */
+		clk_writel(VENC_C1_CG_SET, 0x4);
+	} else if (id == SYS_CAM) {
+		/* LARB13_CGPDN, LARB14_CGPDN, LARB15_CGPDN */
+		clk_writel(CAMSYS_CG_CLR, 0xD);
+	} else if (id == SYS_CAM_RAWA) {
+		/* LARBX_CGPDN */
+		clk_writel(CAMSYS_RAWA_CG_CLR, 0x1);
+	} else if (id == SYS_CAM_RAWB) {
+		/* LARBX_CGPDN */
+		clk_writel(CAMSYS_RAWB_CG_CLR, 0x1);
+	} else if (id == SYS_CAM_RAWC) {
+		/* LARBX_CGPDN */
+		clk_writel(CAMSYS_RAWC_CG_CLR, 0x1);
+	} else if (id == SYS_VPU) {
+		clk_writel(APU_VCORE_CG_CLR, 0xFFFFFFFF);
+		clk_writel(APU_CONN_CG_CLR, 0xFFFFFFFF);
+	}
 }
 
 /* auto-gen begin, 0724 */
@@ -4150,7 +4205,7 @@ int spm_mtcmos_vpu(int state)
 		spm_write(SPM_CROSS_WAKE_M01_REQ,
 			spm_read(SPM_CROSS_WAKE_M01_REQ) &
 						~APMCU_WAKEUP_APU);
-		/* mt6885: no need to wait for power down.*/
+		/* mt6893: no need to wait for power down.*/
 		INCREASE_STEPS;
 	} else {
 		spm_write(EXT_BUCK_ISO, spm_read(EXT_BUCK_ISO) &
@@ -4252,7 +4307,7 @@ static int AUDIO_sys_enable_op(struct subsys *sys)
 static int ADSP_sys_enable_op(struct subsys *sys)
 {
 	/* return spm_mtcmos_ctrl_adsp_shut_down(STA_POWER_ON); */
-	/* MT6885: For ADSP, only enter dormant flow */
+	/* MT6893: For ADSP, only enter dormant flow */
 	return spm_mtcmos_ctrl_adsp_dormant(STA_POWER_ON);
 }
 static int CAM_sys_enable_op(struct subsys *sys)
@@ -4360,7 +4415,7 @@ static int AUDIO_sys_disable_op(struct subsys *sys)
 static int ADSP_sys_disable_op(struct subsys *sys)
 {
 	/* return spm_mtcmos_ctrl_adsp_shut_down(STA_POWER_DOWN); */
-	/* MT6885: For ADSP, only enter dormant flow */
+	/* MT6893: For ADSP, only enter dormant flow */
 	return spm_mtcmos_ctrl_adsp_dormant(STA_POWER_DOWN);
 }
 static int CAM_sys_disable_op(struct subsys *sys)
@@ -4661,7 +4716,7 @@ static int enable_subsys(enum subsys_id id)
 	r = sys->ops->enable(sys);
 	WARN_ON(r);
 
-	/* for MT6885 preclks CGs. */
+	/* for MT6893 preclks CGs. */
 	enable_subsys_hwcg(id);
 
 	mtk_clk_unlock(flags);
@@ -4867,7 +4922,7 @@ struct clk *mt_clk_register_power_gate(const char *name,
 {
 	struct mt_power_gate *pg;
 	struct clk *clk;
-	struct clk_init_data init;
+	struct clk_init_data init = {};
 
 	pg = kzalloc(sizeof(*pg), GFP_KERNEL);
 	if (!pg)
@@ -4920,8 +4975,8 @@ struct mtk_power_gate {
 		.pd_id = _pd_id,			\
 	}
 
-/* MT6885: TODO:FIXME: all values needed to be verified */
-/* MT6885: preclks */
+/* MT6893: TODO:FIXME: all values needed to be verified */
+/* MT6893: preclks */
 struct mtk_power_gate scp_clks[] __initdata = {
 	PGATE(SCP_SYS_MD1, "PG_MD1", NULL, NULL, SYS_MD1),
 	PGATE(SCP_SYS_CONN, "PG_CONN", NULL, NULL, SYS_CONN),
@@ -4944,8 +4999,8 @@ struct mtk_power_gate scp_clks[] __initdata = {
 								SYS_VEN_CORE1),
 
 	PGATE3(SCP_SYS_AUDIO, "PG_AUDIO", NULL, "aud_intbus_sel",
-			"infracfg_ao_audio_26m_bclk_ck",
-			"infracfg_ao_audio_cg", SYS_AUDIO),
+			"ifrao_audio26m",
+			"ifrao_audio", SYS_AUDIO),
 	PGATE(SCP_SYS_ADSP, "PG_ADSP", NULL, "adsp_sel", SYS_ADSP),
 	PGATE(SCP_SYS_CAM, "PG_CAM", "PG_DIS", "cam_sel", SYS_CAM),
 	PGATE(SCP_SYS_CAM_RAWA, "PG_CAM_RAWA", "PG_CAM", NULL, SYS_CAM_RAWA),
@@ -4957,18 +5012,12 @@ struct mtk_power_gate scp_clks[] __initdata = {
 							"dsp7_sel", SYS_VPU),
 };
 
-static void __init init_clk_scpsys(void __iomem *infracfg_reg,
-				   void __iomem *spm_reg,
-				   struct clk_onecell_data *clk_data)
+static void __init init_clk_scpsys(struct clk_onecell_data *clk_data)
 {
 	int i;
 	struct clk *clk;
 	struct clk *pre_clk, *pre_clk2, *pre_clk3;
 
-
-	infracfg_base = infracfg_reg;
-	spm_base = spm_reg;
-	spm_base_debug = spm_reg;
 
 	for (i = 0; i < ARRAY_SIZE(scp_clks); i++) {
 		struct mtk_power_gate *pg = &scp_clks[i];
@@ -5034,7 +5083,6 @@ static void __iomem *get_reg(struct device_node *np, int index)
 	return of_iomap(np, index);
 }
 
-
 #ifdef CONFIG_OF
 static void __iomem *find_and_iomap(char *comp_str)
 {
@@ -5054,307 +5102,99 @@ static void __iomem *find_and_iomap(char *comp_str)
 	return ret;
 }
 
-static void iomap_mm(void)
+static int iomap_mm(void)
 {
-	clk_mdp_base = find_and_iomap("mediatek,mdpsys_config");
+	clk_mdp_base = find_and_iomap("mediatek,mt6893-mdpsys");
 	if (!clk_mdp_base)
-		return;
-	clk_disp_base = find_and_iomap("mediatek,dispsys_config");
+		return -1;
+	clk_disp_base = find_and_iomap("mediatek,mt6893-mmsys");
 	if (!clk_disp_base)
-		return;
-	clk_img1_base = find_and_iomap("mediatek,imgsys");
+		return -1;
+	clk_img1_base = find_and_iomap("mediatek,mt6893-imgsys1");
 	if (!clk_img1_base)
-		return;
-	clk_img2_base = find_and_iomap("mediatek,imgsys2");
+		return -1;
+	clk_img2_base = find_and_iomap("mediatek,mt6893-imgsys2");
 	if (!clk_img2_base)
-		return;
-	clk_ipe_base = find_and_iomap("mediatek,ipesys_config");
+		return -1;
+	clk_ipe_base = find_and_iomap("mediatek,mt6893-ipesys");
 	if (!clk_ipe_base)
-		return;
-	clk_vdec_soc_gcon_base = find_and_iomap("mediatek,vdec_soc_gcon");
+		return -1;
+	clk_vdec_soc_gcon_base = find_and_iomap("mediatek,mt6893-vdecsys_soc");
 	if (!clk_vdec_soc_gcon_base)
-		return;
-	clk_vdec_gcon_base = find_and_iomap("mediatek,vdec_gcon");
+		return -1;
+	clk_vdec_gcon_base = find_and_iomap("mediatek,mt6893-vdecsys");
 	if (!clk_vdec_gcon_base)
-		return;
-	clk_venc_gcon_base = find_and_iomap("mediatek,venc_gcon");
+		return -1;
+	clk_venc_gcon_base = find_and_iomap("mediatek,mt6893-vencsys");
 	if (!clk_venc_gcon_base)
-		return;
-	clk_venc_c1_gcon_base = find_and_iomap("mediatek,venc_c1_gcon");
+		return -1;
+	clk_venc_c1_gcon_base = find_and_iomap("mediatek,mt6893-vencsys_c1");
 	if (!clk_venc_c1_gcon_base)
-		return;
-	clk_cam_base = find_and_iomap("mediatek,camsys");
+		return -1;
+	clk_cam_base = find_and_iomap("mediatek,mt6893-camsys_main");
 	if (!clk_cam_base)
-		return;
-	clk_cam_rawa_base = find_and_iomap("mediatek,camsys_rawa");
+		return -1;
+	clk_cam_rawa_base = find_and_iomap("mediatek,mt6893-camsys_rawa");
 	if (!clk_cam_rawa_base)
-		return;
-	clk_cam_rawb_base = find_and_iomap("mediatek,camsys_rawb");
+		return -1;
+	clk_cam_rawb_base = find_and_iomap("mediatek,mt6893-camsys_rawb");
 	if (!clk_cam_rawb_base)
-		return;
-	clk_cam_rawc_base = find_and_iomap("mediatek,camsys_rawc");
+		return -1;
+	clk_cam_rawc_base = find_and_iomap("mediatek,mt6893-camsys_rawc");
 	if (!clk_cam_rawc_base)
-		return;
-	clk_apu_vcore_base = find_and_iomap("mediatek,apu_vcore");
+		return -1;
+	clk_apu_vcore_base = find_and_iomap("mediatek,mt6893-apu_vcore");
 	if (!clk_apu_vcore_base)
-		return;
-	clk_apu_conn_base = find_and_iomap("mediatek,apu_conn");
+		return -1;
+	clk_apu_conn_base = find_and_iomap("mediatek,mt6893-apu_conn");
 	if (!clk_apu_conn_base)
-		return;
+		return -1;
+
+	return 0;
 }
 #endif
 
-void enable_subsys_hwcg(enum subsys_id id)
+static int clk_mt6893_scpsys_probe(struct platform_device *pdev)
 {
-	if (id == SYS_MDP) {
-		/* SMI0, SMI1, SMI2, APMCU_GALS */
-		clk_writel(MDP_CG_CLR1, 0x1112);
-	} else if (id == SYS_DIS) {
-		/* SMI_COMMON, SMI_GALS, SMI_INFRA, SMI_IOMMU */
-		clk_writel(DISP_CG_CLR1, 0x88880000);
-	} else if (id == SYS_ISP) {
-		/* LARB9_CGPDN */
-		clk_writel(IMG1_CG_CLR, 0x1);
-	} else if (id == SYS_ISP2) {
-		/* LARB11_CGPDN */
-		clk_writel(IMG2_CG_CLR, 0x1);
-	} else if (id == SYS_IPE) {
-		/* LARB19_CGPDN, LARB20_CGPDN, IPE_SMI_SUBCOM_CGPDN */
-		clk_writel(IPE_CG_CLR, 0x7);
-	} else if (id == SYS_VDE) {
-		/* VDEC_CKEN, LAT_CKEN */
-		/* LARB1_CKEN */
-		clk_writel(VDEC_SOC_CKEN_SET, 0x1);
-		clk_writel(VDEC_SOC_LAT_CKEN_SET, 0x1);
-		clk_writel(VDEC_SOC_LARB1_CKEN_SET, 0x1);
-		//print_subsys_reg(vdec_soc_sys);
-	} else if (id == SYS_VDE2) {
-		/* VDEC_CKEN, LAT_CKEN */
-		clk_writel(VDEC_CKEN_SET, 0x1);
-		clk_writel(VDEC_LAT_CKEN_SET, 0x1);
-		clk_writel(VDEC_LARB1_CKEN_SET, 0x1);
-		//print_subsys_reg(vdec_soc_sys);
-		//print_subsys_reg(vdecsys);
-	} else if (id == SYS_VEN) {
-		/* SET1_VENC */
-		clk_writel(VENC_CG_SET, 0x4);
-	} else if (id == SYS_VEN_CORE1) {
-		/* SET1_VENC */
-		clk_writel(VENC_C1_CG_SET, 0x4);
-	} else if (id == SYS_CAM) {
-		/* LARB13_CGPDN, LARB14_CGPDN, LARB15_CGPDN */
-		clk_writel(CAMSYS_CG_CLR, 0xD);
-	} else if (id == SYS_CAM_RAWA) {
-		/* LARBX_CGPDN */
-		clk_writel(CAMSYS_RAWA_CG_CLR, 0x1);
-	} else if (id == SYS_CAM_RAWB) {
-		/* LARBX_CGPDN */
-		clk_writel(CAMSYS_RAWB_CG_CLR, 0x1);
-	} else if (id == SYS_CAM_RAWC) {
-		/* LARBX_CGPDN */
-		clk_writel(CAMSYS_RAWC_CG_CLR, 0x1);
-	} else if (id == SYS_VPU) {
-		clk_writel(APU_VCORE_CG_CLR, 0xFFFFFFFF);
-		clk_writel(APU_CONN_CG_CLR, 0xFFFFFFFF);
-	}
-}
-
-static void __init mt_scpsys_init(struct device_node *node)
-{
+	struct device_node *node = pdev->dev.of_node;
 	struct clk_onecell_data *clk_data;
-	void __iomem *infracfg_reg;
-	void __iomem *spm_reg;
-	void __iomem *ckgen_reg;
+	int ret = 0;
 
-	int r;
+	pr_notice("%s: start\n", __func__);
 
-	infracfg_reg = get_reg(node, 0);
-	spm_reg = get_reg(node, 1);
-	ckgen_reg = get_reg(node, 2);
+	spm_base = get_reg(node, 0);
+	infracfg_base = get_reg(node, 1);
+	ckgen_base = get_reg(node, 2);
 
-	pr_notice("mt_scpsys_init begin\n");
+	if (!infracfg_base || !spm_base || !ckgen_base) {
+		pr_debug("clk-pg-mt6893: missing reg\n");
 
-	if (!infracfg_reg || !spm_reg   || !ckgen_reg) {
-		pr_notice("clk-pg-mt6885: missing reg\n");
-		return;
+		return -EINVAL;
 	}
 
 	clk_data = alloc_clk_data(SCP_NR_SYSS);
+	if (!clk_data)
+		return -ENOMEM;
 
-	init_clk_scpsys(infracfg_reg, spm_reg, clk_data);
+	init_clk_scpsys(clk_data);
 
-	r = of_clk_add_provider(node, of_clk_src_onecell_get, clk_data);
-	if (r)
-		pr_notice("[CCF] %s:could not register clock provide\n",
+	ret = of_clk_add_provider(node, of_clk_src_onecell_get, clk_data);
+	if (ret) {
+		pr_debug("[CCF] %s:could not register clock provide\n",
 			__func__);
 
-	ckgen_base = ckgen_reg;
+		return ret;
+	}
 
 	/*MM Bus*/
-	iomap_mm();
+	ret = iomap_mm();
 
 	spin_lock_init(&pgcb_lock);
 
-#if !MT_CCF_BRINGUP
-	/* subsys init: per modem owner request, remain modem power */
-	/* disable_subsys(SYS_MD1); */
-#else				/*power on all subsys for bring up */
-#ifndef CONFIG_FPGA_EARLY_PORTING
-	pr_notice("MTCMOS AO begin\n");
-
-	spm_mtcmos_ctrl_md1(STA_POWER_DOWN);
-	spm_mtcmos_ctrl_conn(STA_POWER_DOWN);
-
-	pr_notice("MTCMOS MM AO begin\n");
-	spm_mtcmos_ctrl_mdp(STA_POWER_ON);
-	spm_mtcmos_ctrl_dis(STA_POWER_ON);
-
-	pr_notice("MTCMOS GPU begin\n");
-	spm_mtcmos_ctrl_mfg0(STA_POWER_ON);
-	spm_mtcmos_ctrl_mfg1(STA_POWER_ON);
-	spm_mtcmos_ctrl_mfg2(STA_POWER_ON);
-	spm_mtcmos_ctrl_mfg3(STA_POWER_ON);
-	spm_mtcmos_ctrl_mfg4(STA_POWER_ON);
-	spm_mtcmos_ctrl_mfg5(STA_POWER_ON);
-	spm_mtcmos_ctrl_mfg6(STA_POWER_ON);
-
-	pr_notice("MTCMOS ISP begin\n");
-	spm_mtcmos_ctrl_isp(STA_POWER_ON);
-	spm_mtcmos_ctrl_isp2(STA_POWER_ON);
-
-	pr_notice("MTCMOS IPE begin\n");
-	spm_mtcmos_ctrl_ipe(STA_POWER_ON);
-
-	pr_notice("MTCMOS VDE/VEN begin\n");
-	spm_mtcmos_ctrl_vde(STA_POWER_ON);
-	spm_mtcmos_ctrl_vde2(STA_POWER_ON);
-	spm_mtcmos_ctrl_ven(STA_POWER_ON);
-	spm_mtcmos_ctrl_ven_core1(STA_POWER_ON);
-
-	pr_notice("MTCMOS AUDIO begin\n");
-	spm_mtcmos_ctrl_audio(STA_POWER_ON);
-	spm_mtcmos_ctrl_adsp_shut_down(STA_POWER_ON);
-	spm_mtcmos_ctrl_adsp_dormant(STA_POWER_ON);
-
-	pr_notice("MTCMOS CAM begin\n");
-	spm_mtcmos_ctrl_cam(STA_POWER_ON);
-	spm_mtcmos_ctrl_cam_rawa(STA_POWER_ON);
-	spm_mtcmos_ctrl_cam_rawb(STA_POWER_ON);
-	spm_mtcmos_ctrl_cam_rawc(STA_POWER_ON);
-	spm_mtcmos_ctrl_dp_tx(STA_POWER_ON);
-
-	/* pr_notice("MTCMOS VPU begin\n"); */
-	/* spm_mtcmos_vpu(STA_POWER_ON); */
-
-	pr_notice("MTCMOS AO end\n");
-#endif /* CONFIG_FPGA_EARLY_PORTING */
-#endif /* !MT_CCF_BRINGUP */
-}
-CLK_OF_DECLARE_DRIVER(mtk_pg_regs, "mediatek,scpsys", mt_scpsys_init);
-
-#if 0 /* MT6885 todo: add print CG status for suspend checking */
-static const char * const *get_all_clk_names(size_t *num)
-{
-	static const char * const clks[] = {
-
-		/* CAM */
-		"camsys_larb6",
-		"camsys_dfp_vad",
-		"camsys_larb3",
-		"camsys_cam",
-		"camsys_camtg",
-		"camsys_seninf",
-		"camsys_camsv0",
-		"camsys_camsv1",
-		"camsys_camsv2",
-		"camsys_ccu",
-		/* IMG */
-		"imgsys_larb5",
-		"imgsys_larb2",
-		"imgsys_dip",
-		"imgsys_fdvt",
-		"imgsys_dpe",
-		"imgsys_rsc",
-		"imgsys_mfb",
-		"imgsys_wpe_a",
-		"imgsys_wpe_b",
-		"imgsys_owe",
-		/* MM */
-		"mm_smi_common",
-		"mm_smi_larb0",
-		"mm_smi_larb1",
-		"mm_gals_comm0",
-		"mm_gals_comm1",
-		"mm_gals_ccu2mm",
-		"mm_gals_ipu12mm",
-		"mm_gals_img2mm",
-		"mm_gals_cam2mm",
-		"mm_gals_ipu2mm",
-		"mm_mdp_dl_txck",
-		"mm_ipu_dl_txck",
-		"mm_mdp_rdma0",
-		"mm_mdp_rdma1",
-		"mm_mdp_rsz0",
-		"mm_mdp_rsz1",
-		"mm_mdp_tdshp",
-		"mm_mdp_wrot0",
-		"mm_mdp_wdma0",
-		"mm_fake_eng",
-		"mm_disp_ovl0",
-		"mm_disp_ovl0_2l",
-		"mm_disp_ovl1_2l",
-		"mm_disp_rdma0",
-		"mm_disp_rdma1",
-		"mm_disp_wdma0",
-		"mm_disp_color0",
-		"mm_disp_ccorr0",
-		"mm_disp_aal0",
-		"mm_disp_gamma0",
-		"mm_disp_dither0",
-		"mm_disp_split",
-		"mm_dsi0_mmck",
-		"mm_dsi0_ifck",
-		"mm_dpi_mmck",
-		"mm_dpi_ifck",
-		"mm_fake_eng2",
-		"mm_mdp_dl_rxck",
-		"mm_ipu_dl_rxck",
-		"mm_26m",
-		"mm_mmsys_r2y",
-		"mm_disp_rsz",
-		"mm_mdp_aal",
-		"mm_mdp_hdr",
-		"mm_dbi_mmck",
-		"mm_dbi_ifck",
-		/* VENC */
-		"venc_larb",
-		"venc_venc",
-		"venc_jpgenc",
-		/* VDE */
-		"vdec_cken",
-		"vdec_larb1_cken",
-	};
-	*num = ARRAY_SIZE(clks);
-	return clks;
+	return ret;
 }
 
-static void dump_cg_state(const char *clkname)
-{
-	struct clk *c = __clk_lookup(clkname);
-
-	if (IS_ERR_OR_NULL(c)) {
-		pr_notice("[%17s: NULL]\n", clkname);
-		return;
-	}
-
-	pr_notice("[%-17s: %3d]\n",
-		__clk_get_name(c),
-		__clk_get_enable_count(c));
-}
-
-#endif
-
-#if 1 /*only use for suspend test*/
+/*only use for suspend test*/
 void mtcmos_force_off(void)
 {
 	pr_notice("suspend test: dp_tx\n");
@@ -5409,4 +5249,30 @@ void mtcmos_force_off(void)
 	/* spm_mtcmos_ctrl_adsp_shut_down(STA_POWER_DOWN); */
 	spm_mtcmos_ctrl_adsp_dormant(STA_POWER_DOWN);
 }
-#endif
+
+static const struct of_device_id of_match_clk_mt6893_scpsys[] = {
+	{ .compatible = "mediatek,mt6893-scpsys", },
+	{}
+};
+
+static struct platform_driver clk_mt6893_scpsys_drv = {
+	.probe = clk_mt6893_scpsys_probe,
+	.driver = {
+		.name = "clk-mt6893-scpsys",
+		.owner = THIS_MODULE,
+		.of_match_table = of_match_clk_mt6893_scpsys,
+	},
+};
+
+static int __init clk_mt6893_scpsys_init(void)
+{
+	return platform_driver_register(&clk_mt6893_scpsys_drv);
+}
+
+static void __exit clk_mt6893_scpsys_exit(void)
+{
+}
+
+arch_initcall(clk_mt6893_scpsys_init);
+module_exit(clk_mt6893_scpsys_exit);
+MODULE_LICENSE("GPL");

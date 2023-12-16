@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include "imgsensor_sensor.h"
@@ -19,7 +11,7 @@
 
 #include "kd_camera_typedef.h"
 #include "kd_camera_feature.h"
-#include <soc/oplus/system/oplus_project.h>
+#include "imgsensor_hwcfg_custom.h"
 
 #include "imgsensor_hw.h"
 
@@ -51,20 +43,15 @@ enum IMGSENSOR_RETURN imgsensor_hw_init(struct IMGSENSOR_HW *phw)
 			(phw->pdev[i]->init)(phw->pdev[i]->pinstance);
 	}
 
+	#ifndef OPLUS_FEATURE_CAMERA_COMMON
+	pcust_pwr_cfg = imgsensor_custom_config;
+	#else /* OPLUS_FEATURE_CAMERA_COMMON */
+	pcust_pwr_cfg = Oplusimgsensor_Custom_Config();
+	#endif /* OPLUS_FEATURE_CAMERA_COMMON */
+
 	for (i = 0; i < IMGSENSOR_SENSOR_IDX_MAX_NUM; i++) {
 		psensor_pwr = &phw->sensor_pwr[i];
-		#ifdef OPLUS_FEATURE_CAMERA_COMMON
-		if (is_project(20761) || is_project(20762) || is_project(20764) || is_project(20766) || is_project(20767)) {
-			pcust_pwr_cfg =imgsensor_custom_config_even;
-		} else if (is_project(0x2167A) || is_project(0x2167B) || is_project(0x2167C) || is_project(0x2167D)) {
-		    pcust_pwr_cfg =imgsensor_custom_config_even;
-		} else if (is_project(0x216AF) || is_project(0x216B0) || is_project(0x216B1)) {
-		    pcust_pwr_cfg =imgsensor_custom_config_even;
-		} else
-			pcust_pwr_cfg = imgsensor_custom_config;
-		#else
-		pcust_pwr_cfg = imgsensor_custom_config;
-		#endif
+
 		while (pcust_pwr_cfg->sensor_idx != i &&
 		       pcust_pwr_cfg->sensor_idx != IMGSENSOR_SENSOR_IDX_NONE)
 			pcust_pwr_cfg++;
@@ -115,7 +102,7 @@ static enum IMGSENSOR_RETURN imgsensor_hw_power_sequence(
 	struct IMGSENSOR_HW_POWER_INFO   *ppwr_info;
 	struct IMGSENSOR_HW_DEVICE       *pdev;
 	int                               pin_cnt = 0;
-	#ifdef OPLUS_FEATURE_CAMERA_COMMON
+
 	while (ppwr_seq < ppower_sequence + IMGSENSOR_HW_SENSOR_MAX_NUM &&
 		ppwr_seq->name != NULL) {
 		if (!strcmp(ppwr_seq->name, PLATFORM_POWER_SEQ_NAME)) {
@@ -127,7 +114,6 @@ static enum IMGSENSOR_RETURN imgsensor_hw_power_sequence(
 		}
 		ppwr_seq++;
 	}
-	#endif
 
 	if (ppwr_seq->name == NULL)
 		return IMGSENSOR_RETURN_ERROR;
@@ -135,19 +121,11 @@ static enum IMGSENSOR_RETURN imgsensor_hw_power_sequence(
 	ppwr_info = ppwr_seq->pwr_info;
 
 	while (ppwr_info->pin != IMGSENSOR_HW_PIN_NONE &&
-	       ppwr_info->pin < IMGSENSOR_HW_PIN_MAX_NUM &&
 		ppwr_info < ppwr_seq->pwr_info + IMGSENSOR_HW_POWER_INFO_MAX) {
 
 		if (pwr_status == IMGSENSOR_HW_POWER_STATUS_ON &&
 		   ppwr_info->pin != IMGSENSOR_HW_PIN_UNDEF) {
 			pdev = phw->pdev[psensor_pwr->id[ppwr_info->pin]];
-		    pr_debug(
-		       "sensor_idx = %d, pin=%d, pin_state_on=%d, hw_id =%d\n",
-		       sensor_idx,
-		       ppwr_info->pin,
-		       ppwr_info->pin_state_on,
-		     psensor_pwr->id[ppwr_info->pin]);
-
 
 			if (pdev->set != NULL)
 				pdev->set(
@@ -180,6 +158,9 @@ static enum IMGSENSOR_RETURN imgsensor_hw_power_sequence(
 					    ppwr_info->pin,
 					    ppwr_info->pin_state_off);
 			}
+			#ifdef OPLUS_FEATURE_CAMERA_COMMON
+			oplus_imgsensor_delay_set(ppwr_info,ppwr_seq);
+			#endif
 		}
 	}
 
@@ -198,6 +179,9 @@ enum IMGSENSOR_RETURN imgsensor_hw_power(
 	enum IMGSENSOR_SENSOR_IDX sensor_idx = psensor->inst.sensor_idx;
 	char str_index[LENGTH_FOR_SNPRINTF];
 	int ret = 0;
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	struct IMGSENSOR_HW_POWER_SEQ *ppwr_seq = NULL;
+	#endif
 
 	pr_info(
 		"sensor_idx %d, power %d curr_sensor_name %s, enable list %s\n",
@@ -219,17 +203,33 @@ enum IMGSENSOR_RETURN imgsensor_hw_power(
 		ret = IMGSENSOR_RETURN_ERROR;
 		return ret;
 	}
-
-	if (!is_project(20761) && !is_project(20762) && !is_project(20764) && !is_project(20766) && !is_project(20767) &&
-	    !is_project(0x2167A) && !is_project(0x2167B) && !is_project(0x2167C) && !is_project(0x2167D) &&
-		 !is_project(0x216AF) && !is_project(0x216B0) && !is_project(0x216B1)) {
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	ppwr_seq = Oplusimgsensor_matchhwcfg_power(IMGSENSOR_POWER_MATCHMIPI_HWCFG_INDEX);
+	if (ppwr_seq != NULL) {
 		imgsensor_hw_power_sequence(
 			phw,
 			sensor_idx,
 			pwr_status,
-			platform_power_sequence,
+			ppwr_seq,
 			str_index);
 	}
+
+	ppwr_seq = Oplusimgsensor_matchhwcfg_power(IMGSENSOR_POWER_MATCHSENSOR_HWCFG_INDEX);
+	if (ppwr_seq != NULL) {
+		imgsensor_hw_power_sequence(
+			phw,
+			sensor_idx,
+			pwr_status,
+			ppwr_seq,
+			curr_sensor_name);
+	}
+	#else  //OPLUS_FEATURE_CAMERA_COMMON
+	imgsensor_hw_power_sequence(
+	    phw,
+	    sensor_idx,
+	    pwr_status,
+	    platform_power_sequence,
+	    str_index);
 
 	imgsensor_hw_power_sequence(
 	    phw,
@@ -237,7 +237,7 @@ enum IMGSENSOR_RETURN imgsensor_hw_power(
 	    pwr_status,
 	    sensor_power_sequence,
 	    curr_sensor_name);
-
+	#endif  //OPLUS_FEATURE_CAMERA_COMMON
 	return IMGSENSOR_RETURN_SUCCESS;
 }
 

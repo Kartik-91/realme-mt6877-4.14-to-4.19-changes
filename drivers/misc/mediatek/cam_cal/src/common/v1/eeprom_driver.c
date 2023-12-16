@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 #define PFX "CAM_CAL"
 #define pr_fmt(fmt) PFX "[%s] " fmt, __func__
@@ -36,7 +28,9 @@
 #include <linux/compat.h>
 #endif
 
-
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
 
 #define CAM_CAL_DRV_NAME "CAM_CAL_DRV"
 #define CAM_CAL_DEV_MAJOR_NUMBER 226
@@ -94,10 +88,10 @@ static int EEPROM_set_i2c_bus(unsigned int deviceID,
 	if (idx == IMGSENSOR_SENSOR_IDX_NONE)
 		return -EFAULT;
 
-	if (i2c_idx < I2C_DEV_IDX_1 || i2c_idx >= I2C_DEV_IDX_MAX)
+	if (i2c_idx >= I2C_DEV_IDX_MAX)
 		return -EFAULT;
 
-	client = g_pstI2Cclients[i2c_idx];
+	client = g_pstI2Cclients[(unsigned int)i2c_idx];
 	pr_debug("%s end! deviceID=%d index=%u client=%p\n",
 		 __func__, deviceID, idx, client);
 
@@ -291,6 +285,38 @@ static int EEPROM_HW_i2c_remove3(struct i2c_client *client)
 	return 0;
 }
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+/********************************************************
+ * EEPROM_HW_i2c_probe4
+ ********************************************************/
+static int EEPROM_HW_i2c_probe4
+	(struct i2c_client *client, const struct i2c_device_id *id)
+{
+	/* get sensor i2c client */
+	spin_lock(&g_spinLock);
+	g_pstI2Cclients[I2C_DEV_IDX_4] = client;
+
+	/* set I2C clock rate */
+#ifdef CONFIG_MTK_I2C_EXTENSION
+	g_pstI2Cclients[I2C_DEV_IDX_4]->timing = gi2c_dev_timing[I2C_DEV_IDX_4];
+	g_pstI2Cclients[I2C_DEV_IDX_4]->ext_flag &= ~I2C_POLLING_FLAG;
+#endif
+
+	/* Default EEPROM Slave Address Main2 = 0xa4 */
+	g_pstI2Cclients[I2C_DEV_IDX_4]->addr = 0x52;
+	spin_unlock(&g_spinLock);
+
+	return 0;
+}
+
+/*************************************************************
+ * CAMERA_HW_i2c_remove4
+ *************************************************************/
+static int EEPROM_HW_i2c_remove4(struct i2c_client *client)
+{
+	return 0;
+}
+#endif
 /*************************************************************
  * I2C related variable
  *************************************************************/
@@ -302,6 +328,33 @@ static const struct i2c_device_id
 	EEPROM_HW_i2c_id2[] = { {CAM_CAL_I2C_DEV2_NAME, 0}, {} };
 static const struct i2c_device_id
 	EEPROM_HW_i2c_id3[] = { {CAM_CAL_I2C_DEV3_NAME, 0}, {} };
+
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+/**********************************************************
+ * I2C Driver structure for Sub2
+ **********************************************************/
+static const struct i2c_device_id
+	EEPROM_HW_i2c_id4[] = { {CAM_CAL_I2C_DEV4_NAME, 0}, {} };
+#ifdef CONFIG_OF
+static const struct of_device_id EEPROM_HW4_i2c_driver_of_ids[] = {
+	{.compatible = "mediatek,camera_sub_two_eeprom",},
+	{}
+};
+#endif
+
+struct i2c_driver EEPROM_HW_i2c_driver4 = {
+	.probe = EEPROM_HW_i2c_probe4,
+	.remove = EEPROM_HW_i2c_remove4,
+	.driver = {
+		   .name = CAM_CAL_I2C_DEV4_NAME,
+		   .owner = THIS_MODULE,
+#ifdef CONFIG_OF
+		   .of_match_table = EEPROM_HW4_i2c_driver_of_ids,
+#endif
+		   },
+	.id_table = EEPROM_HW_i2c_id4,
+};
+#endif
 
 #ifdef CONFIG_OF
 static const struct of_device_id EEPROM_HW_i2c_of_ids[] = {
@@ -378,6 +431,9 @@ static int EEPROM_HW_probe(struct platform_device *pdev)
 {
 	i2c_add_driver(&EEPROM_HW_i2c_driver2);
 	i2c_add_driver(&EEPROM_HW_i2c_driver3);
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	i2c_add_driver(&EEPROM_HW_i2c_driver4);
+	#endif
 	return i2c_add_driver(&EEPROM_HW_i2c_driver);
 }
 
@@ -389,6 +445,10 @@ static int EEPROM_HW_remove(struct platform_device *pdev)
 	i2c_del_driver(&EEPROM_HW_i2c_driver);
 	i2c_del_driver(&EEPROM_HW_i2c_driver2);
 	i2c_del_driver(&EEPROM_HW_i2c_driver3);
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	i2c_del_driver(&EEPROM_HW_i2c_driver4);
+	#endif
+
 	return 0;
 }
 

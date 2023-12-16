@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifdef CONFIG_MTK_CLKMGR
 #include <mach/mt_clkmgr.h>
@@ -24,6 +16,7 @@
 #include <musb_core.h>
 #include "usb20.h"
 #include "mtk_devinfo.h"
+#include <linux/phy/phy.h>
 
 #ifdef CONFIG_OF
 #include <linux/of_address.h>
@@ -36,7 +29,63 @@
 
 #define FRA (48)
 #define PARA (28)
+#ifdef CONFIG_OF
+extern struct musb *mtk_musb;
 
+#ifdef USB2_PHY_V2
+#define USB_PHY_OFFSET 0x300
+#else
+#define USB_PHY_OFFSET 0x800
+#endif
+
+#define USBPHY_READ8(offset) \
+	readb((void __iomem *)\
+		(((unsigned long)\
+		mtk_musb->xceiv->io_priv)+USB_PHY_OFFSET+offset))
+#define USBPHY_WRITE8(offset, value)  writeb(value, (void __iomem *)\
+		(((unsigned long)mtk_musb->xceiv->io_priv)+USB_PHY_OFFSET+offset))
+#define USBPHY_SET8(offset, mask) \
+	USBPHY_WRITE8(offset, (USBPHY_READ8(offset)) | (mask))
+#define USBPHY_CLR8(offset, mask) \
+	USBPHY_WRITE8(offset, (USBPHY_READ8(offset)) & (~(mask)))
+#define USBPHY_READ32(offset) \
+	readl((void __iomem *)(((unsigned long)\
+		mtk_musb->xceiv->io_priv)+USB_PHY_OFFSET+offset))
+#define USBPHY_WRITE32(offset, value) \
+	writel(value, (void __iomem *)\
+		(((unsigned long)mtk_musb->xceiv->io_priv)+USB_PHY_OFFSET+offset))
+#define USBPHY_SET32(offset, mask) \
+	USBPHY_WRITE32(offset, (USBPHY_READ32(offset)) | (mask))
+#define USBPHY_CLR32(offset, mask) \
+	USBPHY_WRITE32(offset, (USBPHY_READ32(offset)) & (~(mask)))
+
+#ifdef MTK_UART_USB_SWITCH
+#define UART2_BASE 0x11003000
+#endif
+
+#else
+
+#include <mach/mt_reg_base.h>
+
+#define USBPHY_READ8(offset) \
+		readb((void __iomem *)(USB_SIF_BASE+USB_PHY_OFFSET+offset))
+#define USBPHY_WRITE8(offset, value) \
+		writeb(value, (void __iomem *)(USB_SIF_BASE+USB_PHY_OFFSET+offset))
+#define USBPHY_SET8(offset, mask) \
+	USBPHY_WRITE8(offset, (USBPHY_READ8(offset)) | (mask))
+#define USBPHY_CLR8(offset, mask) \
+	USBPHY_WRITE8(offset, (USBPHY_READ8(offset)) & (~mask))
+
+#define USBPHY_READ32(offset) \
+		readl((void __iomem *)(USB_SIF_BASE+USB_PHY_OFFSET+offset))
+#define USBPHY_WRITE32(offset, value) \
+		writel(value, (void __iomem *)(USB_SIF_BASE+USB_PHY_OFFSET+offset))
+#define USBPHY_SET32(offset, mask) \
+		USBPHY_WRITE32(offset, (USBPHY_READ32(offset)) | (mask))
+#define USBPHY_CLR32(offset, mask) \
+		USBPHY_WRITE32(offset, (USBPHY_READ32(offset)) & (~mask))
+
+#endif
 #ifdef FPGA_PLATFORM
 bool usb_enable_clock(bool enable)
 {
@@ -107,20 +156,10 @@ void usb_phy_switch_to_usb(void)
 #define SHFT_RG_USB20_TERM_VREF_SEL 8
 #define OFFSET_RG_USB20_PHY_REV6 0x18
 #define SHFT_RG_USB20_PHY_REV6 30
-#ifdef OPLUS_FEATURE_CHG_BASIC
-void usb_phy_tuning(struct musb *musb)
-#else
 void usb_phy_tuning(void)
-#endif
 {
 	static bool inited;
 	static s32 u2_vrt_ref, u2_term_ref, u2_enhance;
-#ifdef OPLUS_FEATURE_CHG_BASIC
-	static s32 u2_vrt_ref_dt, u2_term_ref_dt, u2_enhance_dt;
-	static s32 host_u2_vrt_ref_dt, host_u2_term_ref_dt, host_u2_enhance_dt;
-	s32 val;
-#endif
-
 	struct device_node *of_node;
 
 	if (!inited) {
@@ -128,66 +167,21 @@ void usb_phy_tuning(void)
 		u2_vrt_ref = 5;
 		u2_term_ref = 5;
 		u2_enhance = 1;
-#ifdef OPLUS_FEATURE_CHG_BASIC
-		u2_vrt_ref_dt = 5;
-		u2_term_ref_dt = 5;
-		u2_enhance_dt = 1;
-
-		host_u2_vrt_ref_dt = 5;
-		host_u2_term_ref_dt = 5;
-		host_u2_enhance_dt = 1;
-#endif
 
 		of_node = of_find_compatible_node(NULL,
 			NULL, "mediatek,phy_tuning");
 		if (of_node) {
 			/* value won't be updated if property not being found */
-#ifdef OPLUS_FEATURE_CHG_BASIC
-		of_property_read_u32(of_node,
-			"u2_vrt_ref", (u32 *) &u2_vrt_ref_dt);
-		of_property_read_u32(of_node,
-			"u2_term_ref", (u32 *) &u2_term_ref_dt);
-		of_property_read_u32(of_node,
-			"u2_enhance", (u32 *) &u2_enhance_dt);
-
-		if (of_property_read_u32(of_node,
-			"host_u2_vrt_ref", (u32 *) &val) >= 0)
-			host_u2_vrt_ref_dt = val;
-		else
-			host_u2_vrt_ref_dt = u2_vrt_ref_dt;
-		if (of_property_read_u32(of_node,
-			"host_u2_term_ref", (u32 *) &val) >= 0)
-			host_u2_term_ref_dt = val;
-		else
-			host_u2_term_ref_dt = u2_term_ref_dt;
-		if (of_property_read_u32(of_node,
-			"host_u2_enhance", (u32 *) &val) >= 0)
-			host_u2_enhance_dt = val;
-		else
-			host_u2_enhance_dt = u2_enhance_dt;
-#else
 			of_property_read_u32(of_node,
 				"u2_vrt_ref", (u32 *) &u2_vrt_ref);
 			of_property_read_u32(of_node,
 				"u2_term_ref", (u32 *) &u2_term_ref);
 			of_property_read_u32(of_node,
 				"u2_enhance", (u32 *) &u2_enhance);
-#endif
 		}
 		inited = true;
 	}
 
-#ifdef OPLUS_FEATURE_CHG_BASIC
-	if(musb->is_host) {
-		u2_vrt_ref = host_u2_vrt_ref_dt;
-		u2_term_ref = host_u2_term_ref_dt;
-		u2_enhance = host_u2_enhance_dt;
-	} else {
-		u2_vrt_ref = u2_vrt_ref_dt;
-		u2_term_ref = u2_term_ref_dt;
-		u2_enhance = u2_enhance_dt;
-	}
-#endif
 	if (u2_vrt_ref != -1) {
 		if (u2_vrt_ref <= VAL_MAX_WIDTH_3) {
 			USBPHY_CLR32(OFFSET_RG_USB20_VRT_VREF_SEL,
@@ -327,6 +321,7 @@ bool usb_prepare_clock(bool enable)
 
 	return 1;
 }
+EXPORT_SYMBOL(usb_prepare_clock);
 
 static DEFINE_SPINLOCK(musb_reg_clock_lock);
 
@@ -397,6 +392,7 @@ exit:
 	    real_enable, real_disable);
 	return 1;
 }
+EXPORT_SYMBOL(usb_enable_clock);
 
 #ifdef CONFIG_MTK_UART_USB_SWITCH
 bool usb_phy_check_in_uart_mode(void)
@@ -504,19 +500,19 @@ void usb_phy_switch_to_usb(void)
 void set_usb_phy_mode(int mode)
 {
 	switch (mode) {
-	case PHY_DEV_ACTIVE:
+	case PHY_MODE_USB_DEVICE:
 	/* VBUSVALID=1, AVALID=1, BVALID=1, SESSEND=0, IDDIG=1, IDPULLUP=1 */
 		USBPHY_CLR32(0x6C, (0x10<<0));
 		USBPHY_SET32(0x6C, (0x2F<<0));
 		USBPHY_SET32(0x6C, (0x3F<<8));
 		break;
-	case PHY_HOST_ACTIVE:
+	case PHY_MODE_USB_HOST:
 	/* VBUSVALID=1, AVALID=1, BVALID=1, SESSEND=0, IDDIG=0, IDPULLUP=1 */
 		USBPHY_CLR32(0x6c, (0x12<<0));
 		USBPHY_SET32(0x6c, (0x2d<<0));
 		USBPHY_SET32(0x6c, (0x3f<<8));
 		break;
-	case PHY_IDLE_MODE:
+	case PHY_MODE_INVALID:
 	/* VBUSVALID=0, AVALID=0, BVALID=0, SESSEND=1, IDDIG=0, IDPULLUP=1 */
 		USBPHY_SET32(0x6c, (0x11<<0));
 		USBPHY_CLR32(0x6c, (0x2e<<0));
@@ -614,7 +610,7 @@ void usb_phy_poweron(void)
 }
 
 /* M17_USB_PWR Sequence 20160603.xls */
-static void usb_phy_savecurrent_internal(void)
+void usb_phy_savecurrent_internal(void)
 {
 #ifdef CONFIG_MTK_UART_USB_SWITCH
 	if (in_uart_mode) {
@@ -688,7 +684,7 @@ static void usb_phy_savecurrent_internal(void)
 
 	udelay(1);
 
-	set_usb_phy_mode(PHY_IDLE_MODE);
+	set_usb_phy_mode(PHY_MODE_INVALID);
 }
 
 void usb_phy_savecurrent(void)
@@ -696,13 +692,9 @@ void usb_phy_savecurrent(void)
 	usb_phy_savecurrent_internal();
 	DBG(0, "usb save current success\n");
 }
-
+EXPORT_SYMBOL(usb_phy_savecurrent);
 /* M17_USB_PWR Sequence 20160603.xls */
-#ifdef OPLUS_FEATURE_CHG_BASIC
-void usb_phy_recover(struct musb *musb)
-#else
 void usb_phy_recover(void)
-#endif
 {
 	unsigned int efuse_val = 0;
 
@@ -814,18 +806,16 @@ void usb_phy_recover(void)
 	USBPHY_SET32(0x18, (0x1<<28));
 	USBPHY_CLR32(0x18, (0xf<<0));
 	USBPHY_SET32(0x18, (0x5<<0));
-#ifdef OPLUS_FEATURE_CHG_BASIC
-	usb_phy_tuning(musb);
-#else
+
 	usb_phy_tuning();
-#endif
 
 	DBG(0, "usb recovery success\n");
 }
-
+EXPORT_SYMBOL(usb_phy_recover);
 /* BC1.2 */
 void Charger_Detect_Init(void)
 {
+#if 0
 	if ((get_boot_mode() == META_BOOT) ||
 		(get_boot_mode() == ADVMETA_BOOT) ||
 		!mtk_musb) {
@@ -833,6 +823,7 @@ void Charger_Detect_Init(void)
 				__func__, mtk_musb);
 		return;
 	}
+#endif
 
 	usb_prepare_enable_clock(true);
 
@@ -846,9 +837,11 @@ void Charger_Detect_Init(void)
 
 	DBG(0, "%s\n", __func__);
 }
+EXPORT_SYMBOL(Charger_Detect_Init);
 
 void Charger_Detect_Release(void)
 {
+#if 0
 	if ((get_boot_mode() == META_BOOT) ||
 		(get_boot_mode() == ADVMETA_BOOT) ||
 		!mtk_musb) {
@@ -856,6 +849,7 @@ void Charger_Detect_Release(void)
 				__func__, mtk_musb);
 		return;
 	}
+#endif
 
 	usb_prepare_enable_clock(true);
 
@@ -868,6 +862,7 @@ void Charger_Detect_Release(void)
 
 	DBG(0, "%s\n", __func__);
 }
+EXPORT_SYMBOL(Charger_Detect_Release);
 
 void usb_phy_context_save(void)
 {

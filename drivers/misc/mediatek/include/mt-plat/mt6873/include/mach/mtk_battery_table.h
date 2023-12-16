@@ -1,20 +1,12 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef _MTK_BATTERY_TABLE_H
 #define _MTK_BATTERY_TABLE_H
 
-#include "mtk_battery.h"
+#include "v1/mtk_battery.h"
 
 #ifndef _DEA_MODIFY_
 #else
@@ -200,13 +192,7 @@ int g_temperature[MAX_TABLE] = {
 #define BAT_NTC_47 0
 
 #if (BAT_NTC_10 == 1)
-#ifndef OPLUS_FEATURE_CHG_BASIC
-/* Yichun.Chen  PSW.BSP.CHG  2019-03-04  for NTC pull up R */
 #define RBAT_PULL_UP_R             24000
-#else
-#define RBAT_PULL_UP_R             16000
-#endif
-
 #endif
 
 #if (BAT_NTC_47 == 1)
@@ -218,7 +204,7 @@ int g_temperature[MAX_TABLE] = {
 #define BIF_NTC_R 16000
 
 #if (BAT_NTC_10 == 1)
-struct FUELGAUGE_TEMPERATURE Fg_Temperature_Table[27] = {
+struct FUELGAUGE_TEMPERATURE Fg_Temperature_Table[21] = {
 		{-40, 195652},
 		{-35, 148171},
 		{-30, 113347},
@@ -239,13 +225,7 @@ struct FUELGAUGE_TEMPERATURE Fg_Temperature_Table[27] = {
 		{45, 4917},
 		{50, 4161},
 		{55, 3535},
-		{60, 3014},
-		{65, 2586},
-		{70, 2228},
-		{75, 1925},
-		{80, 1669},
-		{85, 1452},
-		{90, 1268}
+		{60, 3014}
 };
 #endif
 

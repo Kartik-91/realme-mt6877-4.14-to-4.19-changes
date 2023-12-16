@@ -34,7 +34,7 @@
 #include <linux/slab.h>
 #include "tzbatt_initcfg.h"
 #include <linux/power_supply.h>
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 extern int mt6360_get_chg_thermal_temperature(int *temp);
 
 
@@ -66,12 +66,12 @@ static char g_bind8[20] = { 0 };
 static char g_bind9[20] = { 0 };
 
 struct NTC_TEMPERATURE {
-	int NTC_Temp;
-	int TemperatureR;
+	int ntc_temp;
+	int temperaturer;
 };
 
 #define TEMPERATURE_TBL_SIZE 121
-#define mtk_chg_mos_TEMP_CRIT 100
+#define MTK_CHG_MOS_TEMP_CRIT 100
 static struct NTC_TEMPERATURE CHG_MOS_Temperature_Table_2073x[] = {
 	{-20, 1741010},
 	{-19, 1737351},
@@ -197,17 +197,17 @@ static struct NTC_TEMPERATURE CHG_MOS_Temperature_Table_2073x[] = {
 };
 
 static struct NTC_TEMPERATURE CHG_MOS_Temperature_Table[] = {
-	{-20,1790339},
-	{-19,1789683},
-	{-18,1788989},
-	{-17,1788254},
-	{-16,1787477},
-	{-15,1786655},
-	{-14,1785786},
-	{-13,1784869},
-	{-12,1783901},
-	{-11,1782880},
-	{-10,1781803},
+	{-20, 1790339},
+	{-19, 1789683},
+	{-18, 1788989},
+	{-17, 1788254},
+	{-16, 1787477},
+	{-15, 1786655},
+	{-14, 1785786},
+	{-13, 1784869},
+	{-12, 1783901},
+	{-11, 1782880},
+	{-10, 1781803},
 	{-9, 1780668},
 	{-8, 1779473},
 	{-7, 1778214},
@@ -317,7 +317,7 @@ static struct NTC_TEMPERATURE CHG_MOS_Temperature_Table[] = {
 	{97, 862002},
 	{98, 848116},
 	{99, 834328},
-	{100,820646},
+	{100, 820646},
 };
 
 static int size = 120;
@@ -497,8 +497,8 @@ static void mtk_chg_mos_ntc_switch(void)
 {
 	int i;
 	for (i = size - 1; i >= 0; i--)
-		CHG_MOS_Temperature_Table[i].TemperatureR =
-				CHG_MOS_Temperature_Table_2073x[i].TemperatureR;
+		CHG_MOS_Temperature_Table[i].temperaturer =
+				CHG_MOS_Temperature_Table_2073x[i].temperaturer;
 }
 
 
@@ -517,34 +517,34 @@ static int mtk_chg_mos_get_temp(struct thermal_zone_device *thermal, int *t)
 		voocphy_size = (sizeof(CHG_MOS_Temperature_Table_21061) / sizeof(CHG_MOS_Temperature_Table_21061[0]));
 
 		for (i = voocphy_size- 1; i >= 0; i--) {
-			if (CHG_MOS_Temperature_Table_21061[i].TemperatureR >= temp_uv)
+			if (CHG_MOS_Temperature_Table_21061[i].temperaturer >= temp_uv)
 				break;
 			else if (i == 0)
 				break;
 		}
 
 		if (i < voocphy_size- 1 && i > 0) {
-			now_volt = CHG_MOS_Temperature_Table_21061[i].TemperatureR;
-			next_volt = CHG_MOS_Temperature_Table_21061[i+1].TemperatureR;
-			real_temp = (now_volt - temp_uv) * 1000/(now_volt - next_volt) + CHG_MOS_Temperature_Table_21061[i].NTC_Temp * 1000;
+			now_volt = CHG_MOS_Temperature_Table_21061[i].temperaturer;
+			next_volt = CHG_MOS_Temperature_Table_21061[i+1].temperaturer;
+			real_temp = (now_volt - temp_uv) * 1000/(now_volt - next_volt) + CHG_MOS_Temperature_Table_21061[i].ntc_temp * 1000;
 		} else if (i <= 0) {
-			real_temp = CHG_MOS_Temperature_Table_21061[0].NTC_Temp;
+			real_temp = CHG_MOS_Temperature_Table_21061[0].ntc_temp;
 		} else {
-			real_temp = CHG_MOS_Temperature_Table_21061[voocphy_size- 1].NTC_Temp;
+			real_temp = CHG_MOS_Temperature_Table_21061[voocphy_size- 1].ntc_temp;
 		}
 
 		pr_err("[%s] i= %d, real_temp, %d voocphy_size =%d  temp_uv =%d\n", __func__, i, real_temp, voocphy_size, temp_uv);
 	} else {
-		real_temp = CHG_MOS_Temperature_Table[size].NTC_Temp * 1000;
+		real_temp = CHG_MOS_Temperature_Table[size].ntc_temp * 1000;
 
 		for (i = size - 1; i > 0; i--) {
-			if (temp_uv > CHG_MOS_Temperature_Table[i].TemperatureR) {
+			if (temp_uv > CHG_MOS_Temperature_Table[i].temperaturer) {
 			} else {
 				i = (i + 1) <= 120 ? (i + 1) : 120;
 				now_temp_idx = (i - 1) > 0 ? (i - 1) : 0;
-				next_volt = CHG_MOS_Temperature_Table[i].TemperatureR;
-				now_volt = CHG_MOS_Temperature_Table[now_temp_idx].TemperatureR;
-				real_temp = (now_volt - temp_uv) * 1000/(now_volt - next_volt) + CHG_MOS_Temperature_Table[now_temp_idx].NTC_Temp * 1000;
+				next_volt = CHG_MOS_Temperature_Table[i].temperaturer;
+				now_volt = CHG_MOS_Temperature_Table[now_temp_idx].temperaturer;
+				real_temp = (now_volt - temp_uv) * 1000/(now_volt - next_volt) + CHG_MOS_Temperature_Table[now_temp_idx].ntc_temp * 1000;
 				break;
 			}
 		}
@@ -601,7 +601,7 @@ struct thermal_zone_device *thermal, int trip, int *temp)
 static int mtk_chg_mos_get_crit_temp(struct thermal_zone_device *thermal,
 				      int *temperature)
 {
-	*temperature = mtk_chg_mos_TEMP_CRIT;
+	*temperature = MTK_CHG_MOS_TEMP_CRIT;
 	return 0;
 }
 
@@ -620,7 +620,6 @@ static struct thermal_zone_device_ops mtk_chg_mos_dev_ops = {
 
 static int mtk_chg_mos_read(struct seq_file *m, void *v)
 {
-
 	seq_printf(m,
 		"[mtk_chg_mos_read] trip_0_temp=%d,trip_1_temp=%d,trip_2_temp=%d,trip_3_temp=%d,\n",
 		trip_temp[0], trip_temp[1], trip_temp[2], trip_temp[3]);

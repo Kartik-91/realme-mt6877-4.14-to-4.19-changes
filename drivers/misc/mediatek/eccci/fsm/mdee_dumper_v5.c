@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2019 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (C) 2015 MediaTek Inc.
  */
 
 #include <linux/kernel.h>
@@ -23,9 +15,8 @@
 #include "ccci_fsm_sys.h"
 
 //#ifdef OPLUS_FEATURE_MODEM_MINIDUMP
-#include <soc/oppo/mmkey_log.h>
+#include <soc/oplus/mmkey_log.h>
 //#endif /*OPLUS_FEATURE_MODEM_MINIDUMP*/
-
 #ifndef DB_OPT_DEFAULT
 #define DB_OPT_DEFAULT    (0)	/* Dummy macro define to avoid build error */
 #endif
@@ -59,7 +50,7 @@ static void ccci_aed_v5(struct ccci_fsm_ee *mdee, unsigned int dump_flag,
 	struct ccci_per_md *per_md_data = ccci_get_per_md_data(mdee->md_id);
 	int md_dbg_dump_flag = per_md_data->md_dbg_dump_flag;
 #endif
-
+	int ret = 0;
 //#ifdef OPLUS_FEATURE_MODEM_MINIDUMP
     int temp_i;
     int checkID = 0;
@@ -67,8 +58,6 @@ static void ccci_aed_v5(struct ccci_fsm_ee *mdee, unsigned int dump_flag,
     char *logBuf;
     char *aed_str_for_hash = NULL;
 //#endif /*OPLUS_FEATURE_MODEM_MINIDUMP*/
-
-	int ret = 0;
 
 	if (!mem_layout) {
 		CCCI_ERROR_LOG(md_id, FSM,
@@ -98,41 +87,40 @@ static void ccci_aed_v5(struct ccci_fsm_ee *mdee, unsigned int dump_flag,
 	}
 	memset(mdee->ex_start_time, 0x0, sizeof(mdee->ex_start_time));
 //#ifdef OPLUS_FEATURE_MODEM_MINIDUMP
-  #define MCU_CORE_MSG "(MCU_core"
-  aed_str_for_hash = aed_str;
-  if( aed_str_for_hash != NULL ) {
-    if( (strncmp(aed_str_for_hash, MCU_CORE_MSG, strlen(MCU_CORE_MSG)) == 0) ) {
-      while(aed_str_for_hash[0] != '\n') {
-        ++aed_str_for_hash;
-      }
-      ++aed_str_for_hash; //skip '\n'
-    }
-    hashId = BKDRHash(aed_str_for_hash, strlen(aed_str_for_hash));
-  }
-  else {
-    CCCI_ERROR_LOG(md_id, FSM, "aed_str_for_hash is null!!");
-  }
-  logBuf = vmalloc(BUF_LOG_LENGTH);
-  if ((logBuf != NULL)&&(aed_str_for_hash != NULL)) {
-    for (temp_i = 0 ; (temp_i < BUF_LOG_LENGTH) && (temp_i < strlen(aed_str_for_hash)) ; temp_i++) {
-     if(aed_str_for_hash[temp_i] == '\n') {
-          checkID++;
-          CCCI_ERROR_LOG(md_id, FSM, "checkID = %d",checkID);
-          if(2 == checkID) {
-              logBuf[temp_i] = '\0';
-              break;
-          }
-          logBuf[temp_i] = ' ';
-      }else {
-          logBuf[temp_i] = aed_str_for_hash[temp_i];
-      }
+	#define MCU_CORE_MSG "(MCU_core"
+	aed_str_for_hash = aed_str;
+	if( aed_str_for_hash != NULL ) {
+		if( (strncmp(aed_str_for_hash, MCU_CORE_MSG, strlen(MCU_CORE_MSG)) == 0) ) {
+			while(aed_str_for_hash[0] != '\n') {
+				++aed_str_for_hash;
+			}
+			++aed_str_for_hash; //skip '\n'
+		}
+		hashId = BKDRHash(aed_str_for_hash, strlen(aed_str_for_hash));
+	} else {
+		CCCI_ERROR_LOG(md_id, FSM, "aed_str_for_hash is null!!");
+	}
+	logBuf = vmalloc(BUF_LOG_LENGTH);
+	if ((logBuf != NULL)&&(aed_str_for_hash != NULL)) {
+		for (temp_i = 0 ; (temp_i < BUF_LOG_LENGTH) && (temp_i < strlen(aed_str_for_hash)) ; temp_i++) {
+			if(aed_str_for_hash[temp_i] == '\n') {
+				checkID++;
+				CCCI_ERROR_LOG(md_id, FSM, "checkID = %d",checkID);
+				if( 2 == checkID ) {
+					logBuf[temp_i] = '\0';
+					break;
+				}
+				logBuf[temp_i] = ' ';
+			} else {
+				logBuf[temp_i] = aed_str_for_hash[temp_i];
+			}
       //end
-    }
-    logBuf[BUF_LOG_LENGTH - 1] = '\0';
-    CCCI_NORMAL_LOG(md_id, FSM, "modem crash wirte to critical log. hashid = %u, cause = %s.", hashId, logBuf);
-    mm_keylog_write_modemdump(hashId, logBuf, MODEM_MONITOR_ID, "modem");
-    vfree(logBuf);
-  }
+		}
+		logBuf[BUF_LOG_LENGTH - 1] = '\0';
+		CCCI_NORMAL_LOG(md_id, FSM, "modem crash wirte to critical log. hashid = %u, cause = %s.", hashId, logBuf);
+		mm_keylog_write_modemdump(hashId, logBuf, MODEM_MONITOR_ID, "modem");
+		vfree(logBuf);
+	}
 //#endif /*OPLUS_FEATURE_MODEM_MINIDUMP*/
 	/* MD ID must sync with aee_dump_ccci_debug_info() */
  err_exit1:
@@ -1002,22 +990,3 @@ int mdee_dumper_v5_alloc(struct ccci_fsm_ee *mdee)
 	mdee->ops = &mdee_ops_v5;
 	return 0;
 }
-
-//#ifdef OPLUS_FEATURE_MODEM_MINIDUMP
-unsigned int BKDRHash(const char* str, unsigned int len)
-{
-     unsigned int seed = 131; /* 31 131 1313 13131 131313 etc.. */
-     unsigned int hash = 0;
-     int i    = 0;
-
-    if (str == NULL) {
-        return 0;
-    }
-
-    for(i = 0; i < len; str++, i++) {
-        hash = (hash * seed) + (*str);
-    }
-
-    return hash;
-}
-//#endif /*OPLUS_FEATURE_MODEM_MINIDUMP*/

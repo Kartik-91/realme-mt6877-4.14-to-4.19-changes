@@ -20,7 +20,7 @@
 #include <linux/delay.h>
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #include <linux/fs.h>
 /*#include <asm/atomic.h>*/
 

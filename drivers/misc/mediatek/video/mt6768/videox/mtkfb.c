@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <generated/autoconf.h>
 #include <linux/module.h>
@@ -96,9 +88,6 @@ static bool no_update;
 static struct disp_session_input_config session_input;
 long dts_gpio_state;
 
-#ifdef OPLUS_BUG_STABILITY
-extern int __attribute((weak)) oplus_mtkfb_custom_data_init(struct platform_device *pdev) { return 0; };
-#endif /* OPLUS_BUG_STABILITY */
 
 /* macro definiton */
 #define ALIGN_TO(x, n)  (((x) + ((n) - 1)) & ~((n) - 1))
@@ -1004,7 +993,6 @@ unsigned int mtkfb_fm_auto_test(void)
 
 	mtkfb_pan_display_impl(&mtkfb_fbi->var, mtkfb_fbi);
 	msleep(100);
-
 	primary_display_idlemgr_kick(__func__, 1);
 	result = primary_display_lcm_ATA();
 
@@ -2534,9 +2522,7 @@ static int mtkfb_probe(struct platform_device *pdev)
 			return -EPROBE_DEFER;
 		}
 	}
-	#ifdef OPLUS_BUG_STABILITY
-	oplus_mtkfb_custom_data_init(pdev);
-	#endif
+
 	_parse_tag_videolfb();
 
 	init_state = 0;
@@ -2659,21 +2645,11 @@ static int mtkfb_probe(struct platform_device *pdev)
 
 	if (!strcmp(mtkfb_find_lcm_driver(),
 		"nt35521_hd_dsi_vdo_truly_rt5081_drv")) {
+#ifdef CONFIG_MTK_CCCI_DRIVER
 		register_ccci_sys_call_back(MD_SYS1,
 			MD_DISPLAY_DYNAMIC_MIPI, mipi_clk_change);
-	}
-#ifdef OPLUS_BUG_STABILITY
-	if (!strcmp(mtkfb_find_lcm_driver(),"ilt9881h_txd_hdp_dsi_vdo_lcm_drv")
-      ||!strcmp(mtkfb_find_lcm_driver(),"ilt9881h_truly_hdp_dsi_vdo_lcm_drv")
-      ||!strcmp(mtkfb_find_lcm_driver(),"nt36525b_hlt_hdp_dsi_vdo_lcm_drv")
-      ||!strcmp(mtkfb_find_lcm_driver(),"nt36525b_hlt_psc_ac_boe_vdo")
-      ||!strcmp(mtkfb_find_lcm_driver(),"ilt9882n_truly_even_hdp_dsi_vdo_lcm")
-      ||!strcmp(mtkfb_find_lcm_driver(),"ilt7807s_hlt_even_hdp_dsi_vdo_lcm")
-      ||!strcmp(mtkfb_find_lcm_driver(),"nt36525b_hlt_psc_ac_vdo")) {
-		register_ccci_sys_call_back(MD_SYS1,
-			MD_DISPLAY_DYNAMIC_MIPI, mipi_clk_change);
-	}
 #endif
+	}
 
 	MSG_FUNC_LEAVE();
 	pr_info("disp driver(2) %s end\n", __func__);
@@ -2731,16 +2707,10 @@ static void mtkfb_shutdown(struct platform_device *pdev)
 	MTKFB_LOG("[FB Driver] %s()\n", __func__);
 	if (primary_display_is_sleepd()) {
 		MTKFB_LOG("mtkfb has been power off\n");
-		#ifdef OPLUS_BUG_STABILITY
-		primary_display_shutdown();
-		#endif
 		return;
 	}
 	primary_display_set_power_mode(FB_SUSPEND);
 	primary_display_suspend();
-	#ifdef OPLUS_BUG_STABILITY
-	primary_display_shutdown();
-	#endif
 	MTKFB_LOG("[FB Driver] leave %s\n", __func__);
 }
 

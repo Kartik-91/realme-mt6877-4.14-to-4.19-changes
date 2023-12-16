@@ -170,3 +170,17 @@ config MTK_TRUSTED_MEMORY_SUBSYSTEM
 	  be registered to this subsystem easily.
 	  Say Y if you would like to enable this feature.
 	  If unsure, say N.
+
+config MTK_SSMR
+	tristate "MTK Shareable Secure Memory Region"
+	default y
+	select CMA
+	select DMA_CMA
+	select ZONE_MOVABLE_CMA
+	help
+	  Enable the support of MediaTek shareable secure memory region.
+	  This driver provide a interface for trust driver to allocate /free
+	  secure memory from linux kernel system.
+	  Say Y if you would like to build it in kernel image.
+	  Say M if you would like to build it as a kernel module.
+	  If unsure, say N.

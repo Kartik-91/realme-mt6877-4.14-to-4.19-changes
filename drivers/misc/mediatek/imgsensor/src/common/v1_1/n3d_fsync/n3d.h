@@ -1,20 +1,11 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2021 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef __N3D_H__
 #define __N3D_H__
 
-#include <linux/atomic.h>
 #include <linux/mutex.h>
 
 #include "n3d_clk.h"
@@ -28,12 +19,13 @@ struct SENINF_N3D {
 	dev_t dev_no;
 	struct cdev *pchar_dev;
 	struct class *pclass;
+	struct device *dev;
 
 	struct SENINF_N3D_CLK clk;
 	struct base_reg regs;
 
 	struct mutex n3d_mutex;
-	atomic_t n3d_open_cnt;
+	int is_powered;
 
 	struct sensor_info *sync_sensors[MAX_NUM_OF_SUPPORT_SENSOR];
 	unsigned int fl_result[MAX_NUM_OF_SUPPORT_SENSOR];

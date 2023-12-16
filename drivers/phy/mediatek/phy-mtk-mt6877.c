@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (C) 2020 MediaTek Inc.
  */
 
 
@@ -26,6 +18,7 @@
 #include <linux/phy/phy.h>
 #include <dt-bindings/phy/phy.h>
 #include <linux/delay.h>
+
 #include "phy-mtk.h"
 
 #ifdef CONFIG_MTK_USB2JTAG_SUPPORT
@@ -429,12 +422,14 @@ static void phy_savecurrent(struct mtk_phy_instance *instance)
 	udelay(2000);
 	u3phywrite32(U3D_U2PHYDTM0, RG_DPPULLDOWN_OFST,
 #ifndef OPLUS_FEATURE_CHG_BASIC
+/* Set internal pull down instead */
 		RG_DPPULLDOWN, 1);
 #else
 		RG_DPPULLDOWN, 0);
 #endif
 	u3phywrite32(U3D_U2PHYDTM0, RG_DMPULLDOWN_OFST,
 #ifndef OPLUS_FEATURE_CHG_BASIC
+/* Set internal pull down instead */
 		RG_DMPULLDOWN, 1);
 #else
 		RG_DMPULLDOWN, 0);
@@ -484,6 +479,7 @@ reg_done:
 #define VAL_MAX_WIDTH_2	0x3
 #define VAL_MAX_WIDTH_3	0x7
 #ifdef OPLUS_FEATURE_CHG_BASIC
+/* Add for usb host eye digram */
 #define VAL_MAX_WIDTH_4	0xf
 extern unsigned int usb_mode;
 #endif
@@ -492,6 +488,7 @@ static void usb_phy_tuning(struct mtk_phy_instance *instance)
 {
 	s32 u2_vrt_ref, u2_term_ref, u2_enhance;
 #ifdef OPLUS_FEATURE_CHG_BASIC
+/* usb host eye digram */
 	s32 host_u2_vrt_ref, host_u2_term_ref, host_u2_enhance;
 	s32 u2_discth, host_u2_discth;
 #endif
@@ -502,6 +499,7 @@ static void usb_phy_tuning(struct mtk_phy_instance *instance)
 		instance->phy_tuning.u2_term_ref = 6;
 		instance->phy_tuning.u2_enhance = 1;
 #ifdef OPLUS_FEATURE_CHG_BASIC
+/* Add for usb host eye digram */
 		instance->phy_tuning.u2_discth = -1;
 		instance->phy_tuning.host_u2_vrt_ref = 6;
 		instance->phy_tuning.host_u2_term_ref = 6;
@@ -519,6 +517,7 @@ static void usb_phy_tuning(struct mtk_phy_instance *instance)
 			of_property_read_u32(of_node, "u2_enhance",
 				(u32 *) &instance->phy_tuning.u2_enhance);
 #ifdef OPLUS_FEATURE_CHG_BASIC
+/* Add for usb host eye digram */
 			of_property_read_u32(of_node, "u2_discth",
 				(u32 *) &instance->phy_tuning.u2_discth);
 			of_property_read_u32(of_node, "host_u2_vrt_ref",
@@ -534,6 +533,7 @@ static void usb_phy_tuning(struct mtk_phy_instance *instance)
 		instance->phy_tuning.inited = true;
 	}
 #ifndef OPLUS_FEATURE_CHG_BASIC
+/* Add for usb host eye digram */
 	u2_vrt_ref = instance->phy_tuning.u2_vrt_ref;
 	u2_term_ref = instance->phy_tuning.u2_term_ref;
 	u2_enhance = instance->phy_tuning.u2_enhance;
@@ -577,6 +577,7 @@ static void usb_phy_tuning(struct mtk_phy_instance *instance)
 		}
 	}
 #ifdef OPLUS_FEATURE_CHG_BASIC
+/* Add for usb eye digram */
 	if (u2_discth != -1) {
 		if (u2_discth <= VAL_MAX_WIDTH_4) {
 			u3phywrite32(U3D_USBPHYACR6,
@@ -637,6 +638,7 @@ static void phy_recover(struct mtk_phy_instance *instance)
 	u3phywrite32(U3D_U2PHYDTM0, RG_DMPULLDOWN_OFST,
 		RG_DMPULLDOWN, 0);
 #ifdef OPLUS_FEATURE_CHG_BASIC
+/* Set internal pull down instead */
 	/* clean internal pull down*/
 	u3phywrite32(U3D_USBPHYACR6, RG_USB20_PHY_REV_OFST, (0x2 << 24), 0x0);
 #endif

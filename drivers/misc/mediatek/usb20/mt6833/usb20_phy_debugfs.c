@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -385,7 +377,6 @@ static int rg_usb20_term_vref_sel_show(struct seq_file *s, void *unused)
 					SHFT_RG_USB20_TERM_VREF_SEL,
 					MSK_RG_USB20_TERM_VREF_SEL,
 					BIT_WIDTH_3, str);
-
 	seq_printf(s, "\n%s = %s\n", FILE_RG_USB20_TERM_VREF_SEL, str);
 	return 0;
 }
@@ -399,7 +390,6 @@ static int rg_usb20_hstx_srctrl_show(struct seq_file *s, void *unused)
 	    usb20_phy_debugfs_read_val(OFFSET_RG_USB20_HSTX_SRCTRL,
 			SHFT_RG_USB20_HSTX_SRCTRL,
 			MSK_RG_USB20_HSTX_SRCTRL, BIT_WIDTH_3, str);
-
 	seq_printf(s, "\n%s = %s\n", FILE_RG_USB20_HSTX_SRCTRL, str);
 	return 0;
 }

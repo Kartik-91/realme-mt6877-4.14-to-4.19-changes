@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2021 MediaTek Inc.
+*/
 
 #include <linux/module.h>
 #include <linux/stat.h>
@@ -18,7 +10,7 @@
 #include <linux/err.h>
 #include <linux/slab.h>
 
-#include <mt-plat/charger_class.h>
+#include <mt-plat/v1/charger_class.h>
 
 static struct class *charger_class;
 
@@ -32,6 +24,7 @@ static ssize_t charger_show_name(struct device *dev,
 		       chg_dev->props.alias_name : "anonymous");
 }
 
+/*
 static int charger_suspend(struct device *dev, pm_message_t state)
 {
 	struct charger_device *chg_dev = to_charger_device(dev);
@@ -51,6 +44,7 @@ static int charger_resume(struct device *dev)
 
 	return 0;
 }
+*/
 
 static void charger_device_release(struct device *dev)
 {
@@ -794,37 +788,6 @@ int charger_dev_enable_bleed_discharge(struct charger_device *charger_dev,
 }
 EXPORT_SYMBOL(charger_dev_enable_bleed_discharge);
 
-#ifdef OPLUS_FEATURE_CHG_BASIC
-int charger_dev_send_hvdcp_pattern_ex(struct charger_device *charger_dev, bool en)
-{
-	if (charger_dev != NULL && charger_dev->ops != NULL &&
-					   charger_dev->ops->send_hvdcp_pattern_ex)
-		return charger_dev->ops->send_hvdcp_pattern_ex(charger_dev, en);
-
-	return -ENOTSUPP;
-}
-EXPORT_SYMBOL(charger_dev_send_hvdcp_pattern_ex);
-
-int charger_dev_reset_hvdcp_ta_ex(struct charger_device *chg_dev)
-{
-	if (chg_dev != NULL && chg_dev->ops != NULL &&
-	    chg_dev->ops->reset_hvdcp_ta_ex)
-		return chg_dev->ops->reset_hvdcp_ta_ex(chg_dev);
-
-	return -ENOTSUPP;
-}
-EXPORT_SYMBOL(charger_dev_reset_hvdcp_ta_ex);
-
-int charger_dev_hvdcp_can_enabled(struct charger_device *chg_dev, bool *en)
-{
-	if (chg_dev != NULL && chg_dev->ops != NULL && chg_dev->ops->hvdcp_can_enabled)
-		return chg_dev->ops->hvdcp_can_enabled(chg_dev, en);
-
-	return -ENOTSUPP;
-}
-EXPORT_SYMBOL(charger_dev_hvdcp_can_enabled);
-#endif /*CONFIG_OPLUS_CHARGER_MTK6769*/
-
 static DEVICE_ATTR(name, 0444, charger_show_name, NULL);
 
 static struct attribute *charger_class_attrs[] = {
@@ -971,8 +934,10 @@ static int __init charger_class_init(void)
 		return PTR_ERR(charger_class);
 	}
 	charger_class->dev_groups = charger_groups;
+	/*
 	charger_class->suspend = charger_suspend;
 	charger_class->resume = charger_resume;
+	*/
 	return 0;
 }
 

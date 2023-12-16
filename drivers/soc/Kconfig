@@ -16,6 +16,7 @@ source "drivers/soc/tegra/Kconfig"
 source "drivers/soc/ti/Kconfig"
 source "drivers/soc/ux500/Kconfig"
 source "drivers/soc/versatile/Kconfig"
+source "drivers/soc/xilinx/Kconfig"
 source "drivers/soc/zte/Kconfig"
 
 #ifdef OPLUS_FEATURE_LOWMEM_DBG
@@ -48,10 +49,14 @@ source "drivers/soc/oplus/healthinfo/Kconfig"
 source "drivers/soc/oplus/midas/Kconfig"
 #endif
 
-#Add for NandSwap
-source "drivers/soc/oplus/oplus_nandswap/Kconfig"
 #ifdef OPLUS_FEATURE_MIDAS
 source "drivers/soc/oplus/oplus_als_cali_value/Kconfig"
 #endif
 
+#Add for NandSwap
+source "drivers/soc/oplus/oplus_nandswap/Kconfig"
+
+#ifdef OPLUS_FEATURE_HEALTHINFO
+source "drivers/soc/oplus/healthinfo/Kconfig"
+#endif /* OPLUS_FEATURE_HEALTHINFO */
 endmenu

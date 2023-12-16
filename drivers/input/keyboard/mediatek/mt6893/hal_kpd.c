@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (C) 2019 MediaTek Inc.
  */
 
 #include <linux/of.h>
@@ -57,7 +49,7 @@ void long_press_reboot_function_setting(void)
 #ifdef CONFIG_MTK_PMIC_NEW_ARCH /*for pmic not ready*/
 	/* unlock PMIC protect key */
 	pmic_set_register_value(PMIC_RG_CPS_W_KEY, 0x4729);
-	if (kpd_enable_lprst && get_boot_mode() == NORMAL_BOOT) {
+	if (kpd_enable_lprst && kpd_dts_data.boot_mode == NORMAL_BOOT) {
 		kpd_info("Normal Boot long press reboot selection\n");
 
 #ifdef CONFIG_KPD_PMIC_LPRST_TD
@@ -191,14 +183,6 @@ void kpd_pmic_pwrkey_hal(unsigned long pressed)
 	input_sync(kpd_input_dev);
 	kpd_print(KPD_SAY "(%s) HW keycode =%d using PMIC\n",
 	       pressed ? "pressed" : "released", kpd_dts_data.kpd_sw_pwrkey);
-
-	#if IS_ENABLED(CONFIG_OPLUS_FEATURE_THEIA)
-	if(pressed){
-		//we should canel per work
-		black_screen_timer_restart();
-		bright_screen_timer_restart();
-	}
-	#endif
 }
 
 static int mrdump_eint_state;

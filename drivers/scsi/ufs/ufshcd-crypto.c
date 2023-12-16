@@ -71,7 +71,7 @@ int ufshcd_crypto_cap_find(struct ufs_hba *hba,
 
 	return -EINVAL;
 }
-EXPORT_SYMBOL(ufshcd_crypto_cap_find);
+EXPORT_SYMBOL_GPL(ufshcd_crypto_cap_find);
 
 /**
  * ufshcd_crypto_cfg_entry_write_key - Write a key into a crypto_cfg_entry
@@ -414,9 +414,9 @@ cont:
 
 	lrbp->crypto_enable = true;
 	lrbp->crypto_key_slot = bc->bc_keyslot;
-	if (bc->hie_ext4)
-		lrbp->data_unit_num = (u64)(cmd->cmnd[5] | (cmd->cmnd[4] << 8)
-			| (cmd->cmnd[3] << 16) | (cmd->cmnd[2] << 24));
+
+	if (bc->hie_ext4 == true)
+		lrbp->data_unit_num = blk_rq_pos(cmd->request) >> 3;
 	else
 		lrbp->data_unit_num = bc->bc_dun[0];
 

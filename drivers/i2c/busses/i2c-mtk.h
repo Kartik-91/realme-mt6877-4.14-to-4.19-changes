@@ -1,16 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2014 MediaTek Inc.
- * Author: Xudong.chen <xudong.chen@mediatek.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
+
 #ifndef __I2C_MTK_H__
 #define __I2C_MTK_H__
 
@@ -21,7 +13,7 @@
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/sched/clock.h>
-//#include <linux/sched.h>
+#include <linux/sched.h>
 #include <linux/delay.h>
 #include <linux/errno.h>
 #include <linux/err.h>
@@ -451,9 +443,7 @@ struct mt_i2c {
 	struct mtk_i2c_pll *i2c_pll_info;
 	struct i2c_info rec_info[I2C_RECORD_LEN];
 #ifdef OPLUS_FEATURE_CHG_BASIC
-	struct pinctrl *pctrl;
-	int reset_bus;
-	int err_count_for_reset;
+		struct pinctrl *pctrl;
 #endif /*OPLUS_FEATURE_CHG_BASIC*/
 };
 

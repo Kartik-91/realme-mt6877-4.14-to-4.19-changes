@@ -94,9 +94,6 @@ static short up_mid_tol = 15;
 static short up_tolerance = 15;
 static short down_tolerance = 15;
 static short mid_down_tol = 15;
-static float position_distance_degree = 0.2;
-static float position_degree = 0.4;
-static float side_position_degree = 1.1;
 static short up_mid_distance;
 static short mid_down_distance;
 static short calib_UpValueSum, calib_MdValueSum, calib_DnValueSum;
@@ -1042,17 +1039,17 @@ void initialCalibValue(short calib_dnHall_UpV, short calib_dnHall_MdV,
 	calib_dnHall_UD_distance = Minus(calib_dnHall_UpV, calib_dnHall_DnV);
 	if (g_the_chip->project_info) {
 		up_mid_tol = (short)(abs(calib_UpValueMin - calib_MdValueMin)
-			* position_degree);
+			* 4 / 10);
 		up_tolerance = (short)(abs(calib_UpValueMin - calib_MdValueMin)
-			* side_position_degree);
+			* 11 / 10);
 		mid_down_tol = (short)(abs(calib_MdValueMin - calib_DnValueMin)
-			* position_degree);
+			*  4 / 10);
 		down_tolerance = (short)(abs(calib_MdValueMin -
-				calib_DnValueMin) * side_position_degree);
+				calib_DnValueMin) * 11 / 10);
 		up_mid_distance = (short)(abs(calib_UpValueMin -
-				calib_MdValueMin) * position_distance_degree);
+				calib_MdValueMin) * 2 / 10);
 		mid_down_distance = (short)(abs(calib_MdValueMin -
-				calib_DnValueMin) * position_distance_degree);
+				calib_DnValueMin) * 2 / 10);
 	}
 	TRI_KEY_LOG("Upmin:%d, Mdmin:%d, Dnmin:%d,",
 		"up_mid_tol:%d, mid_down_tol:%d\n",

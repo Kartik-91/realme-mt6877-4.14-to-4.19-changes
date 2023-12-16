@@ -1,14 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2011-2015 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2021 MediaTek Inc.
+ * Author: Fred-YC Yu <fred-yc.yu@mediatek.com>
  */
 #include <linux/module.h>       /* needed by all modules */
 #include <linux/init.h>         /* needed by module macros */
@@ -33,6 +26,8 @@
 #include "mcupm_ipi_id.h"
 #include "mcupm_ipi_table.h"
 #include "mcupm_driver.h"
+#include "mcupm_timesync.h"
+
 #ifdef CONFIG_OF_RESERVED_MEM
 #include <linux/of_reserved_mem.h>
 #define MCUPM_MEM_RESERVED_KEY "mediatek,reserve-memory-mcupm_share"
@@ -292,7 +287,7 @@ static inline void mcupm_log_timer_add(void)
 	}
 }
 
-static void mcupm_log_timeout(unsigned long data)
+static void mcupm_log_timeout(struct timer_list *timer)
 {
 	if (buf_info->r_pos != buf_info->w_pos) {
 		mcupm_log_if_wake();
@@ -430,8 +425,7 @@ static ssize_t mcupm_mobile_log_store(struct device *kobj,
 	return n;
 }
 
-DEVICE_ATTR(mcupm_mobile_log, 0644, mcupm_mobile_log_show,
-	mcupm_mobile_log_store);
+DEVICE_ATTR_RW(mcupm_mobile_log);
 
 unsigned int __init mcupm_logger_init(phys_addr_t start, phys_addr_t limit)
 {
@@ -484,7 +478,7 @@ int __init mcupm_logger_init_done(void)
 		if (unlikely(ret != 0))
 			return ret;
 
-		setup_timer(&mcupm_log_timer, &mcupm_log_timeout, 0);
+		timer_setup(&mcupm_log_timer, &mcupm_log_timeout, 0);
 		mcupm_log_timer.expires = 0;
 
 		mcupm_logger_inited = 1;
@@ -513,7 +507,7 @@ static ssize_t mcupm_alive_show(struct device *kobj,
 	return snprintf(buf, PAGE_SIZE, "%s\n",
 			mcupm_plt_ackdata ? "Alive" : "Dead");
 }
-DEVICE_ATTR(mcupm_alive, 0444, mcupm_alive_show, NULL);
+DEVICE_ATTR_RO(mcupm_alive);
 
 int __init mcupm_plt_init(void)
 {
@@ -673,11 +667,14 @@ static void mcupm_ipi_timeout(int id)
 	}
 
 	if (id >= MCUPM_MBOX_TOTAL || id < 0) {
-		pr_debug("[mcupm] %s: mbox=%d out of info table dev", __func__, id);
+		pr_debug("[mcupm] %s: mbox=%d out of info table dev",
+		__func__, id);
 		return;
 	}
 
-	pr_debug("[mcupm]mbox=%d irq num=%d", id, mcupm_ipidev.mbdev->info_table[id].irq_num);
+	pr_debug("[mcupm]mbox=%d irq num=%d",
+		id,
+		mcupm_ipidev.mbdev->info_table[id].irq_num);
 	mt_irq_dump_status(mcupm_ipidev.mbdev->info_table[id].irq_num);
 
 	pr_debug("[mcupm]mbox=%d timeout setreg(%p)=%x clrreg(%p)=%x sendreg(%p)=%x recvreg(%p)=%x\n",
@@ -791,6 +788,24 @@ int mcupm_thread(void *data)
 	return 0;
 }
 #endif
+#ifdef CONFIG_PM
+static int mt6779_mcupm_suspend(struct device *dev)
+{
+	mcupm_timesync_suspend();
+	return 0;
+}
+
+static int mt6779_mcupm_resume(struct device *dev)
+{
+	mcupm_timesync_resume();
+	return 0;
+}
+
+static const struct dev_pm_ops mt6779_mcupm_dev_pm_ops = {
+	.suspend = mt6779_mcupm_suspend,
+	.resume  = mt6779_mcupm_resume,
+};
+#endif
 
 static const struct of_device_id mcupm_of_match[] = {
 	{ .compatible = "mediatek,mcupm", },
@@ -812,6 +827,10 @@ static struct platform_driver mtk_mcupm_driver = {
 		.name = "mcupm",
 		.owner = THIS_MODULE,
 		.of_match_table = mcupm_of_match,
+#ifdef CONFIG_PM
+		.pm = &mt6779_mcupm_dev_pm_ops,
+#endif
+
 	},
 	.id_table = mcupm_id_table,
 };
@@ -885,6 +904,11 @@ static int __init mcupm_module_init(void)
 #ifdef CONFIG_MEDIATEK_EMI
 	mcupm_lock_emi_mpu();
 #endif
+	if (mcupm_timesync_init()) {
+		pr_info("MCUPM timesync init fail\n");
+		return -1;
+	}
+
 	return 0;
 }
 

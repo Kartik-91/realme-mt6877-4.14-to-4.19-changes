@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2015 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/clk.h>
 #include <linux/iopoll.h>
@@ -418,6 +410,7 @@
 	#define DISP_OVL3_2L_OUT0_MOUT_TO_DISP_WDMA1		0x2
 #define MT6885_DSI1_SEL_IN		0xFF0
 	#define DSI1_SEL_IN_FROM_DISP_DITHER1_MOUT	0x1
+	#define DSI1_SEL_IN_FROM_DSC_WRAP0			0x3
 #define MT6885_DISP_WDMA1_SEL_IN	0xFF4
 	#define MT6885_WDMA1_SEL_IN_FROM_DISP_DITHER1_MOUT	0x0
 	#define MT6885_WDMA1_SEL_IN_FROM_DISP_TOVL1_OUT0_MOUT	0x2
@@ -5910,6 +5903,7 @@ void mtk_ddp_remove_dsc_prim_MT6873(struct mtk_drm_crtc *mtk_crtc,
 void mtk_ddp_insert_dsc_prim_MT6885(struct mtk_drm_crtc *mtk_crtc,
 	struct cmdq_pkt *handle)
 {
+	struct mtk_panel_params *panel_ext = mtk_drm_get_lcm_ext_params(&mtk_crtc->base);
 	unsigned int addr, value;
 
 	/* remove DISP_DITHER0_MOUT -> DSI0_SEL*/
@@ -5953,6 +5947,14 @@ void mtk_ddp_insert_dsc_prim_MT6885(struct mtk_drm_crtc *mtk_crtc,
 	if (!mtk_crtc->is_dual_pipe)
 		return;
 
+	/*DSC_WARP0-> DSI1*/
+	if (panel_ext && panel_ext->output_mode == MTK_PANEL_DUAL_PORT) {
+		addr = MT6885_DSI1_SEL_IN;
+		value = DSI1_SEL_IN_FROM_DSC_WRAP0;
+		cmdq_pkt_write(handle, mtk_crtc->gce_obj.base,
+			       mtk_crtc->config_regs_pa + addr, value, ~0);
+	}
+
 	/* remove MT6885_DISP_DITHER1_MOUT_EN -> DSI1_SEL*/
 	addr = MT6885_DISP_DITHER1_MOUT_EN;
 	value = DISP_DITHER1_MOUT_EN_TO_DSI1_SEL;
@@ -5980,6 +5982,7 @@ void mtk_ddp_insert_dsc_prim_MT6885(struct mtk_drm_crtc *mtk_crtc,
 void mtk_ddp_remove_dsc_prim_MT6885(struct mtk_drm_crtc *mtk_crtc,
 	struct cmdq_pkt *handle)
 {
+	struct mtk_panel_params *panel_ext = mtk_drm_get_lcm_ext_params(&mtk_crtc->base);
 	unsigned int addr, value;
 
 	/* DISP_DITHER0_MOUT -> DISP_PQ0_SOUT */
@@ -6018,6 +6021,14 @@ void mtk_ddp_remove_dsc_prim_MT6885(struct mtk_drm_crtc *mtk_crtc,
 
 	if (!mtk_crtc->is_dual_pipe)
 		return;
+
+	/*DSC_WARP0-> DSI1*/
+	if (panel_ext && panel_ext->output_mode == MTK_PANEL_DUAL_PORT) {
+		addr = MT6885_DSI1_SEL_IN;
+		value = 0;
+		cmdq_pkt_write(handle, mtk_crtc->gce_obj.base,
+			       mtk_crtc->config_regs_pa + addr, value, ~0);
+	}
 
 	/* MT6885_DISP_DITHER1_MOUT_EN -> PQ1_SOUT */
 	addr = MT6885_DISP_DITHER1_MOUT_EN;
@@ -6415,6 +6426,7 @@ void mtk_disp_mutex_add_comp_with_cmdq(struct mtk_drm_crtc *mtk_crtc,
 				       struct cmdq_pkt *handle,
 				       unsigned int mutex_id)
 {
+	struct mtk_panel_params *panel_ext = mtk_drm_get_lcm_ext_params(&mtk_crtc->base);
 	struct mtk_disp_mutex *mutex = NULL;
 	struct mtk_ddp *ddp = NULL;
 	unsigned int reg;
@@ -6467,6 +6479,14 @@ void mtk_disp_mutex_add_comp_with_cmdq(struct mtk_drm_crtc *mtk_crtc,
 								  mutex->id),
 				       ddp->data->mutex_mod[id],
 				       ddp->data->mutex_mod[id]);
+			if (panel_ext && panel_ext->output_mode == MTK_PANEL_DUAL_PORT &&
+			    id == DDP_COMPONENT_DSC0) {
+				cmdq_pkt_write(handle, mtk_crtc->gce_obj.base, ddp->regs_pa +
+					       DISP_REG_MUTEX_MOD(ddp->data, mutex->id),
+					       MT6885_MUTEX_MOD0_DISP_DSC1,
+					       MT6885_MUTEX_MOD0_DISP_DSC1);
+				DDPINFO("mutex_add_comp /w cmdq mutex%d add DSC1\n", mutex->id);
+			}
 		} else {
 			cmdq_pkt_write(handle, mtk_crtc->gce_obj.base,
 				       ddp->regs_pa +
@@ -6531,6 +6551,7 @@ void mtk_disp_mutex_remove_comp_with_cmdq(struct mtk_drm_crtc *mtk_crtc,
 					  struct cmdq_pkt *handle,
 					  unsigned int mutex_id)
 {
+	struct mtk_panel_params *panel_ext = mtk_drm_get_lcm_ext_params(&mtk_crtc->base);
 	struct mtk_disp_mutex *mutex = NULL;
 	struct mtk_ddp *ddp = NULL;
 
@@ -6566,6 +6587,14 @@ void mtk_disp_mutex_remove_comp_with_cmdq(struct mtk_drm_crtc *mtk_crtc,
 								  mutex->id),
 				       ~(ddp->data->mutex_mod[id]),
 				       ddp->data->mutex_mod[id]);
+			if (panel_ext && panel_ext->output_mode == MTK_PANEL_DUAL_PORT &&
+			    id == DDP_COMPONENT_DSC0) {
+				cmdq_pkt_write(handle, mtk_crtc->gce_obj.base, ddp->regs_pa +
+					       DISP_REG_MUTEX_MOD(ddp->data, mutex->id),
+					       ~((unsigned int)MT6885_MUTEX_MOD0_DISP_DSC1),
+					       (unsigned int)MT6885_MUTEX_MOD0_DISP_DSC1);
+				DDPINFO("mutex_remove_comp /w cmdq mutex%d add DSC1\n", mutex->id);
+			}
 		} else {
 			cmdq_pkt_write(handle, mtk_crtc->gce_obj.base,
 				       ddp->regs_pa +
@@ -7240,7 +7269,8 @@ void mmsys_config_dump_reg_mt6873(void __iomem *config_regs)
  */
 void mmsys_config_dump_analysis_mt6885(void __iomem *config_regs)
 {
-	unsigned int idx = 0, bit = 0, len = 0;
+	int len = 0;
+	unsigned int idx = 0, bit = 0;
 	unsigned int reg = 0;
 	char clock_on[512] = {'\0'};
 	char *pos = NULL;
@@ -7317,8 +7347,7 @@ void mmsys_config_dump_analysis_mt6885(void __iomem *config_regs)
 			else
 				len = sprintf(pos, "%s,", "n");
 
-			if (len >= 0)
-				pos += len;
+			pos += len;
 
 			if ((ready[idx] & (1 << bit)))
 				len = sprintf(pos, "%s", "r");
@@ -7948,8 +7977,7 @@ void mmsys_config_dump_analysis_mt6833(void __iomem *config_regs)
 			len = sprintf(pos, "%s,", "v");
 		else
 			len = sprintf(pos, "%s,", "n");
-		if (len >= 0)
-			pos += len;
+		pos += len;
 
 		if ((ready & (1 << i)))
 			len = sprintf(pos, "%s", "r");

@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #define LOG_TAG "DSI"
 
@@ -1969,35 +1961,6 @@ int mipi_clk_change(int msg, int en)
 			def_data_rate = 460;
 			if (dsi_params->mode != CMD_MODE)
 				def_dsi_hbp = 0xD2; /* adaptive HBP value */
-#ifdef OPLUS_BUG_STABILITY
-		} else if (dsi_params->dynamic_switch_mipi == 1) {
-			unsigned int hbp_wc;
-			unsigned int dsiTmpBufBpp;
-
-			//def_dsi_hbp = 0xD2; /* adaptive HBP value */
-			if ((dsi_params->data_format).format == LCM_DSI_FORMAT_RGB565)
-				dsiTmpBufBpp = 2;
-			else
-				dsiTmpBufBpp = 3;
-
-			if (dsi_params->mode == SYNC_EVENT_VDO_MODE ||
-				dsi_params->mode == BURST_VDO_MODE ||
-				dsi_params->switch_mode == SYNC_EVENT_VDO_MODE ||
-				dsi_params->switch_mode == BURST_VDO_MODE) {
-
-				hbp_wc = ((dsi_params->horizontal_backporch_dyn+
-					dsi_params->horizontal_sync_active_dyn) *
-					dsiTmpBufBpp - 10);
-			} else {
-				hbp_wc =
-				(dsi_params->horizontal_backporch_dyn * dsiTmpBufBpp - 10);
-				}
-			hbp_wc = ALIGN_TO((hbp_wc), 4);
-			def_dsi_hbp = hbp_wc;
-			def_data_rate = dsi_params->data_rate_dyn;
-
-			pr_err("%s, name=%s, def_dsi_hbp=%d, def_data_rate=%d\n", __func__, mtkfb_lcm_name, def_dsi_hbp,def_data_rate);
-#endif
 		} else {
 			DISPERR("%s,lcm(%s) not support change mipi clock\n",
 				__func__, mtkfb_lcm_name);
@@ -2181,8 +2144,6 @@ void DSI_PHY_TIMCONFIG(enum DISP_MODULE_ENUM module,
 	unsigned int hs_trail;
 	unsigned int hs_trail_m, hs_trail_n;
 	unsigned char timcon_temp;
-	/* Yuwei.Zhang.MULTIMEDIA.DISPLAY.LCD. MTK's patch(ALPS06641072) for fixing dyn clock */
-	unsigned int temp_data_rate = 0;
 	DISPFUNC();
 
 #ifdef CONFIG_FPGA_EARLY_PORTING
@@ -2295,15 +2256,10 @@ void DSI_PHY_TIMCONFIG(enum DISP_MODULE_ENUM module,
 		timcon3.CLK_HS_POST = NS_TO_CYCLE((96 + 52 * ui), cycle_time) +
 					NS_TO_CYCLE_MOD((96 + 52 * ui), cycle_time);
 	} else {
-		/* Yuwei.Zhang.MULTIMEDIA.DISPLAY.LCD. MTK's patch(ALPS06641072) for fixing dyn clock */
-		if (dsi_params->data_rate != 0)
-			temp_data_rate = dsi_params->data_rate;
-		else
-			temp_data_rate = dsi_params->PLL_CLOCK * 2;
 		hs_trail_m = 1;
 		hs_trail_n = (dsi_params->HS_TRAIL == 0) ?
 			(NS_TO_CYCLE(((hs_trail_m * 0x4 * ui) + 0x50)
-			* temp_data_rate, 0x1F40) + 0x1) :
+			* dsi_params->PLL_CLOCK * 2, 0x1F40) + 0x1) :
 			dsi_params->HS_TRAIL;
 		/* +3 is recommended from designer becauase of HW latency */
 		timcon0.HS_TRAIL = (hs_trail_m > hs_trail_n) ? hs_trail_m : hs_trail_n;
@@ -2323,7 +2279,7 @@ void DSI_PHY_TIMCONFIG(enum DISP_MODULE_ENUM module,
 			timcon0.HS_ZERO -= timcon0.HS_PRPR;
 
 		timcon0.LPX = (dsi_params->LPX == 0) ?
-			(NS_TO_CYCLE(temp_data_rate * 0x4b, 0x1F40) + 0x1) :
+			(NS_TO_CYCLE(dsi_params->PLL_CLOCK * 2 * 0x4B, 0x1F40)	+ 0x1) :
 			dsi_params->LPX;
 		if (timcon0.LPX < 1)
 			timcon0.LPX = 1;
@@ -2344,7 +2300,7 @@ void DSI_PHY_TIMCONFIG(enum DISP_MODULE_ENUM module,
 			(0x2 * timcon0.LPX) : dsi_params->DA_HS_EXIT;
 
 		timcon2.CLK_TRAIL = ((dsi_params->CLK_TRAIL == 0) ?
-			NS_TO_CYCLE(0x64 * temp_data_rate,
+			NS_TO_CYCLE(0x64 * dsi_params->PLL_CLOCK * 2,
 			0x1F40) : dsi_params->CLK_TRAIL) + 0x01;
 		/* CLK_TRAIL can't be 1. */
 		if (timcon2.CLK_TRAIL < 2)
@@ -2356,7 +2312,7 @@ void DSI_PHY_TIMCONFIG(enum DISP_MODULE_ENUM module,
 			dsi_params->CLK_ZERO;
 
 		timcon3.CLK_HS_PRPR = (dsi_params->CLK_HS_PRPR == 0) ?
-			NS_TO_CYCLE(0x50 * temp_data_rate,
+			NS_TO_CYCLE(0x50 * dsi_params->PLL_CLOCK * 2,
 			0x1F40) : dsi_params->CLK_HS_PRPR;
 
 		if (timcon3.CLK_HS_PRPR < 1)
@@ -4916,34 +4872,6 @@ static void lcm_set_reset_pin(UINT32 value)
 	}
 }
 
-long lcm_bias_vsp(UINT32 value)
-{
-	pr_debug("[lcm]set vsp value is %d\n",value);
-	if (value)
-		disp_dts_gpio_select_state(DTS_GPIO_STATE_LCD_BIAS_ENP1);
-	else
-		disp_dts_gpio_select_state(DTS_GPIO_STATE_LCD_BIAS_ENP0);
-	return 0;
-}
-
-void lcm_bias_vsn(UINT32 value)
-{
-	 pr_debug("[lcm]set vsn value is %d\n",value);
-
-	if (value)
-		disp_dts_gpio_select_state(DTS_GPIO_STATE_LCD_BIAS_ENN1);
-	else
-		disp_dts_gpio_select_state(DTS_GPIO_STATE_LCD_BIAS_ENN0);
-}
-
-static void lcm_vddio18_enable(UINT32 value)
-{
-	if (value)
-		disp_dts_gpio_select_state(DTS_GPIO_STATE_LCD_VDDIO18_EN1);
-	else
-		disp_dts_gpio_select_state(DTS_GPIO_STATE_LCD_VDDIO18_EN0);
-}
-
 static void lcm1_set_reset_pin(UINT32 value)
 {
 	if (value)
@@ -4965,7 +4893,7 @@ static void lcm_udelay(UINT32 us)
 static void lcm_mdelay(UINT32 ms)
 {
 	if (ms < 10)
-		udelay(ms * 1000);	
+		udelay(ms * 1000);
 	else if (ms <= 20)
 		usleep_range(ms*1000, (ms+1)*1000);
 	else
@@ -5155,15 +5083,6 @@ int ddp_dsi_set_lcm_utils(enum DISP_MODULE_ENUM module,
 	}
 
 	utils->set_reset_pin = lcm_set_reset_pin;
-#ifndef OPLUS_BUG_STABILITY
-	utils->set_gpio_lcd_enp_bias = lcm_bias_vsp;
-	utils->set_gpio_lcd_enn_bias = lcm_bias_vsn;
-	utils->set_gpio_lcm_vddio_ctl = lcm_vddio18_enable;
-#else
-	utils->set_gpio_lcd_enp_bias = lcm_bias_vsp;
-	utils->set_gpio_lcd_enn_bias = lcm_bias_vsn;
-	utils->set_gpio_lcm_vddio_ctl = lcm_vddio18_enable;
-#endif
 	utils->udelay = lcm_udelay;
 	utils->mdelay = lcm_mdelay;
 	utils->set_te_pin = NULL;
@@ -5272,9 +5191,7 @@ int ddp_dsi_set_lcm_utils(enum DISP_MODULE_ENUM module,
 	utils->set_gpio_pull_enable =
 		(int (*)(unsigned int, unsigned char))mt_set_gpio_pull_enable;
 #else
-#ifndef OPLUS_BUG_STABILITY
 	utils->set_gpio_lcd_enp_bias = lcd_enp_bias_setting;
-#endif //OPLUS_BUG_STABILITY
 #endif
 #endif
 
@@ -8269,6 +8186,5 @@ void DSI_dynfps_send_cmd(
 
 /*-------------------------------DynFPS end------------------------------*/
 #endif
-
 
 

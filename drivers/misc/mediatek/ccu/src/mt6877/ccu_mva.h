@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2016 MediaTek Inc.
  */
 
 #ifndef _CCU_MVA_H_
@@ -22,12 +14,13 @@
 #include "mach/pseudo_m4u.h"
 #elif defined(CONFIG_MTK_IOMMU)
 #include "mtk_iommu.h"
-#include <dt-bindings/memory/mt6853-larb-port.h>
+#include <dt-bindings/memory/mt6877-larb-port.h>
 #else
 #include "m4u.h"
 #endif
 
 struct CcuMemInfo {
+	unsigned int chksum;
 	int shareFd;
 	char *va;
 	unsigned int align_mva;

@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include <linux/clk.h>
@@ -50,6 +42,7 @@ gseninf_clk_freq[SENINF_CLK_IDX_FREQ_IDX_NUM] = {
 };
 
 #ifdef IMGSENSOR_DFS_CTRL_ENABLE
+struct mtk_pm_qos_request imgsensor_qos;
 struct pm_qos_request imgsensor_qos;
 
 int imgsensor_dfs_ctrl(enum DFS_OPTION option, void *pbuff)
@@ -60,23 +53,26 @@ int imgsensor_dfs_ctrl(enum DFS_OPTION option, void *pbuff)
 
 	switch (option) {
 	case DFS_CTRL_ENABLE:
-		pm_qos_add_request(&imgsensor_qos, PM_QOS_CAM_FREQ, 0);
+		mtk_pm_qos_add_request(&imgsensor_qos, PM_QOS_CAM_FREQ, 0);
 		pr_debug("seninf PMQoS turn on\n");
 		break;
 	case DFS_CTRL_DISABLE:
-		pm_qos_remove_request(&imgsensor_qos);
+		mtk_pm_qos_remove_request(&imgsensor_qos);
+		pm_qos_add_request(&imgsensor_qos, PM_QOS_CAM_FREQ, 0);
 		pr_debug("seninf PMQoS turn off\n");
 		break;
 	case DFS_UPDATE:
 		pr_debug(
 			"seninf Set isp clock level:%d\n",
 			*(unsigned int *)pbuff);
+		mtk_pm_qos_update_request(&imgsensor_qos, *(unsigned int *)pbuff);
 		pm_qos_update_request(&imgsensor_qos, *(unsigned int *)pbuff);
 
 		break;
 	case DFS_RELEASE:
 		pr_debug(
 			"seninf release and set isp clk request to 0\n");
+		mtk_pm_qos_update_request(&imgsensor_qos, 0);
 		pm_qos_update_request(&imgsensor_qos, 0);
 		break;
 	case DFS_SUPPORTED_ISP_CLOCKS:
@@ -166,17 +162,32 @@ enum SENINF_RETURN seninf_clk_init(struct SENINF_CLK *pclk)
 		}
 	}
 #ifdef CONFIG_PM_SLEEP
+	pclk->seninf_wake_lock = wakeup_source_register(
+			NULL, "seninf_lock_wakelock");
+	if (!pclk->seninf_wake_lock) {
+		pr_info("failed to get seninf_wake_lock\n");
+		return SENINF_RETURN_ERROR;
+	}
 	wakeup_source_init(&pclk->seninf_wake_lock, "seninf_lock_wakelock");
 #endif
 	atomic_set(&pclk->wakelock_cnt, 0);
 
 	return SENINF_RETURN_SUCCESS;
 }
+#ifdef HAVE_SENINF_CLK_EXIT
+void seninf_clk_exit(struct SENINF_CLK *pclk)
+{
+#ifdef CONFIG_PM_SLEEP
+	wakeup_source_unregister(pclk->seninf_wake_lock);
+#endif
+}
+#endif
 
 int seninf_clk_set(struct SENINF_CLK *pclk,
 					struct ACDK_SENSOR_MCLK_STRUCT *pmclk)
 {
 	int i, ret = 0;
+	unsigned int idx_tg, idx_freq;
 
 	if (pmclk->TG >= SENINF_CLK_TG_MAX_NUM ||
 	    pmclk->freq > SENINF_CLK_MCLK_FREQ_MAX ||
@@ -195,6 +206,9 @@ int seninf_clk_set(struct SENINF_CLK *pclk,
 	for (i = 0; pmclk->freq != gseninf_clk_freq[i]; i++)
 		;
 
+	idx_tg = pmclk->TG + SENINF_CLK_IDX_TG_MIN_NUM;
+	idx_freq = i + SENINF_CLK_IDX_FREQ_MIN_NUM;
+
 	if (pmclk->on) {
 		/* Workaround for timestamp: TG1 always ON */
 		if (clk_prepare_enable(
@@ -206,39 +220,38 @@ int seninf_clk_set(struct SENINF_CLK *pclk,
 			&pclk->enable_cnt[SENINF_CLK_IDX_TG_TOP_MUX_CAMTG]);
 
 		if (clk_prepare_enable(
-			pclk->mclk_sel[pmclk->TG + SENINF_CLK_IDX_TG_MIN_NUM]))
+			pclk->mclk_sel[idx_tg]))
 			PK_PR_ERR("[CAMERA SENSOR] failed tg=%d\n", pmclk->TG);
 		else
 			atomic_inc(
-		&pclk->enable_cnt[pmclk->TG + SENINF_CLK_IDX_TG_MIN_NUM]);
+		&pclk->enable_cnt[idx_tg]);
 
 		if (clk_prepare_enable(
-			pclk->mclk_sel[i + SENINF_CLK_IDX_FREQ_MIN_NUM]))
+			pclk->mclk_sel[idx_freq]))
 			PK_PR_ERR("[CAMERA SENSOR] failed freq idx= %d\n", i);
 		else
-			atomic_inc(&pclk->enable_cnt[i
-					+ SENINF_CLK_IDX_FREQ_MIN_NUM]);
+			atomic_inc(&pclk->enable_cnt[idx_freq]);
 
 		ret = clk_set_parent(
-			pclk->mclk_sel[pmclk->TG + SENINF_CLK_IDX_TG_MIN_NUM],
-			pclk->mclk_sel[i + SENINF_CLK_IDX_FREQ_MIN_NUM]);
+			pclk->mclk_sel[idx_tg],
+			pclk->mclk_sel[idx_freq]);
 	} else {
 		if (atomic_read
-			(&pclk->enable_cnt[i + SENINF_CLK_IDX_FREQ_MIN_NUM])
+			(&pclk->enable_cnt[idx_freq])
 			> 0) {
 			clk_disable_unprepare(
-			pclk->mclk_sel[i + SENINF_CLK_IDX_FREQ_MIN_NUM]);
+			pclk->mclk_sel[idx_freq]);
 			atomic_dec(
-			&pclk->enable_cnt[i + SENINF_CLK_IDX_FREQ_MIN_NUM]);
+			&pclk->enable_cnt[idx_freq]);
 		}
 
 		if (atomic_read(
-		&pclk->enable_cnt[pmclk->TG + SENINF_CLK_IDX_TG_MIN_NUM])
+		&pclk->enable_cnt[idx_tg])
 		> 0) {
 			clk_disable_unprepare(
-			pclk->mclk_sel[pmclk->TG + SENINF_CLK_IDX_TG_MIN_NUM]);
+			pclk->mclk_sel[idx_tg]);
 			atomic_dec(
-		&pclk->enable_cnt[pmclk->TG + SENINF_CLK_IDX_TG_MIN_NUM]);
+		&pclk->enable_cnt[idx_tg]);
 		}
 
 		/* Workaround for timestamp: TG1 always ON */
@@ -263,7 +276,7 @@ void seninf_clk_open(struct SENINF_CLK *pclk)
 
 	if (atomic_inc_return(&pclk->wakelock_cnt) == 1) {
 #ifdef CONFIG_PM_SLEEP
-		__pm_stay_awake(&pclk->seninf_wake_lock);
+		__pm_stay_awake(pclk->seninf_wake_lock);
 #endif
 	}
 
@@ -293,7 +306,7 @@ void seninf_clk_release(struct SENINF_CLK *pclk)
 
 	if (atomic_dec_and_test(&pclk->wakelock_cnt)) {
 #ifdef CONFIG_PM_SLEEP
-		__pm_relax(&pclk->seninf_wake_lock);
+		__pm_relax(pclk->seninf_wake_lock);
 #endif
 	}
 }

@@ -1,16 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * Power Delivery Core Driver
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include "inc/pd_dpm_pdo_select.h"
@@ -370,7 +360,11 @@ bool dpm_find_match_req_info(struct dpm_rdo_info_t *req_info,
 			req_info->max_uw = sink->uw;
 			req_info->oper_uw = select.max_uw;
 		} else {
+#ifndef OPLUS_FEATURE_CHG_BASIC
 			req_info->max_ma = sink->ma;
+#else
+			req_info->max_ma = source.ma;
+#endif
 			req_info->oper_ma = MIN(sink->ma, source.ma);
 		}
 

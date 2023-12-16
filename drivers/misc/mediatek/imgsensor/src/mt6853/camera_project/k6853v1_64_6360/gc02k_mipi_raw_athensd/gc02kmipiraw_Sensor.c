@@ -643,19 +643,26 @@ static void custom1_setting(void)
 
 static kal_uint32 set_test_pattern_mode(kal_bool enable)
 {
-	LOG_INF("enable: %d\n", enable);
-
-	if (enable) {
-		write_cmos_sensor(0xfe, 0x00);
-		write_cmos_sensor(0x8c, 0x01);
-	} else {
-		write_cmos_sensor(0xfe, 0x00);
-		write_cmos_sensor(0x8c, 0x00);
-	}
-	spin_lock(&imgsensor_drv_lock);
-	imgsensor.test_pattern = enable;
-	spin_unlock(&imgsensor_drv_lock);
-	return ERROR_NONE;
+    LOG_INF("enable: %d\n", enable);
+    if (enable) {
+        write_cmos_sensor(0xfe, 0x00);
+        write_cmos_sensor(0x43, 0x00);
+        write_cmos_sensor(0x3f, 0x00);
+        write_cmos_sensor(0x8c, 0x11);
+        write_cmos_sensor(0x8d, 0x0a);
+        write_cmos_sensor(0xfe, 0x00);
+    } else {
+        write_cmos_sensor(0xfe, 0x00);
+        write_cmos_sensor(0x43, 0x07);
+        write_cmos_sensor(0x3f, 0x40);
+        write_cmos_sensor(0x8c, 0x10);
+        write_cmos_sensor(0x8d, 0x02);
+        write_cmos_sensor(0xfe, 0x00);
+    }
+    spin_lock(&imgsensor_drv_lock);
+    imgsensor.test_pattern = enable;
+    spin_unlock(&imgsensor_drv_lock);
+    return ERROR_NONE;
 }
 
 static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)

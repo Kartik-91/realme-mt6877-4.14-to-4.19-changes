@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/kernel.h>
 #include <linux/mm.h>
@@ -87,23 +79,6 @@
 #include "ddp_rsz.h"
 #include "disp_tphint.h"
 
-#ifdef OPLUS_BUG_STABILITY
-#include <mt-plat/mtk_boot_common.h>
-extern unsigned long oplus_silence_mode;
-extern unsigned int oplus_fp_silence_mode;
-#endif /* OPLUS_BUG_STABILITY */
-
-/* #ifdef OPLUS_FEATURE_ONSCREENFINGERPRINT */
-/*
- * modify for fingerprint notify frigger
- */
-#include <linux/fb.h>
-extern bool oplus_fp_notify_up_delay;
-extern bool oplus_fp_notify_down_delay;
-extern void fingerprint_send_notify(struct fb_info *fbi, uint8_t fingerprint_op_mode);
-extern bool oplus_display_fppress_support;
-extern bool oplus_display_aod_ramless_support;
-/* #endif */ /* OPLUS_FEATURE_ONSCREENFINGERPRINT */
 
 #define DDP_OUTPUT_LAYID 4
 
@@ -399,7 +374,7 @@ int _ioctl_prepare_present_fence(unsigned long arg)
 {
 	int ret = 0;
 	void __user *argp = (void __user *)arg;
-	struct fence_data data;
+	struct mtk_sync_create_fence_data data;
 	struct disp_present_fence pf;
 	static unsigned int fence_idx;
 	struct disp_sync_info *l_info = NULL;
@@ -1095,25 +1070,6 @@ long __frame_config(unsigned long arg)
 	switch (DISP_SESSION_TYPE(cfg->session_id)) {
 	case DISP_SESSION_PRIMARY:
 		primary_display_frame_cfg(cfg);
-		#ifdef OPLUS_FEATURE_ONSCREENFINGERPRINT
-		/*
-		* add for fingerprint notify frigger
-		*/
-		if (oplus_display_fppress_support) {
-			if (oplus_fp_notify_down_delay && ((cfg->hbm_en & 0x2) > 0)) {
-				/*
-				* modify for ramless aod fingerprint unlock,
-				* no uiready should be sent on ramless aod cmd mode
-				*/
-				if (oplus_display_aod_ramless_support && !primary_display_is_video_mode()) {
-					printk("ramless aod cmd mode, do not send uiready1\n");
-				} else {
-					oplus_fp_notify_down_delay = false;
-					fingerprint_send_notify(NULL, 1);
-				}
-			}
-		}
-		#endif/*OPLUS_FEATURE_ONSCREENFINGERPRINT*/
 		break;
 	case DISP_SESSION_EXTERNAL:
 #if ((defined CONFIG_MTK_HDMI_SUPPORT) || \
@@ -1126,15 +1082,6 @@ long __frame_config(unsigned long arg)
 		ovl2mem_frame_cfg(cfg);
 		break;
 	}
-#ifdef OPLUS_FEATURE_ONSCREENFINGERPRINT
-	/*
-	* add for fingerprint notify frigger
-	*/
-	if (oplus_fp_notify_up_delay && ((cfg->hbm_en & 0x2) == 0)) {
-		oplus_fp_notify_up_delay = false;
-		fingerprint_send_notify(NULL, 0);
-	}
-#endif
 
 	disp_input_free_dirty_roi(cfg);
 error1:
@@ -1814,10 +1761,6 @@ long mtk_disp_mgr_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		return _ioctl_wait_touch_hint(arg);
 	case DISP_IOCTL_GET_SUPPORTED_FPS:
 		return _ioctl_get_supported_fps(arg);
-#ifdef OPLUS_BUG_STABILITY
-	case DISP_IOCTL_GET_LCM_MODULE_INFO:
-		return _ioctl_get_lcm_module_info(arg);
-#endif /* OPLUS_BUG_STABILITY */
 #ifdef CONFIG_MTK_HIGH_FRAME_RATE
 	case DISP_IOCTL_GET_MULTI_CONFIGS:
 		return _ioctl_get_multi_configs(arg);
@@ -2041,15 +1984,6 @@ static int mtk_disp_mgr_probe(struct platform_device *pdev)
 	class_dev = (struct class_device *)device_create(mtk_disp_mgr_class,
 						NULL, mtk_disp_mgr_devno,
 						NULL, DISP_SESSION_DEVICE);
-
-	#ifdef OPLUS_BUG_STABILITY
-	if ((oppo_boot_mode == OPPO_SILENCE_BOOT)
-			||(get_boot_mode() == OPPO_SAU_BOOT)) {
-		printk("%s OPPO_SILENCE_BOOT set oplus_silence_mode to 1\n", __func__);
-		oplus_silence_mode = 1;
-		oplus_fp_silence_mode = 1;
-	}
-	#endif /* OPLUS_BUG_STABILITY */
 	disp_sync_init();
 
 	external_display_control_init();

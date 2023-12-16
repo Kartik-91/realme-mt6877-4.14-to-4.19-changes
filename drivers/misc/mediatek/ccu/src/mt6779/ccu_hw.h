@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2016 MediaTek Inc.
  */
 
 #ifndef _MT6798_CCU_HW_H_
@@ -29,13 +21,13 @@ extern void cam_mtcmos_check(void);
 #define CCU_STA_REG_QOS_BW_G            CCU_INFO29
 
 /*
- * KuanFu Yeh@20160715
- * Spare Register         Data Type        Field
- * 0        int32        APMCU mailbox addr.
- * 1        int32        CCU mailbox addr.
- * 2        int32        DRAM log buffer addr.1
- * 3        int32        DRAM log buffer addr.2
- */
+* KuanFu Yeh@20160715
+* Spare Register         Data Type        Field
+* 0        int32        APMCU mailbox addr.
+* 1        int32        CCU mailbox addr.
+* 2        int32        DRAM log buffer addr.1
+* 3        int32        DRAM log buffer addr.2
+*/
 #define CCU_DATA_REG_MAILBOX_APMCU        CCU_INFO00
 #define CCU_DATA_REG_MAILBOX_CCU        CCU_INFO01
 #define CCU_DATA_REG_LOG_BUF0                CCU_INFO02

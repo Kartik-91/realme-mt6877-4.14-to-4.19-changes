@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
  */
 #include <linux/kernel.h>
 #include <linux/cdev.h>
@@ -32,11 +24,13 @@
 #include <linux/of_gpio.h>
 #include <linux/of_address.h>
 #include "ccci_config.h"
+#include "ccci_common_config.h"
 
 #ifdef FEATURE_INFORM_NFC_VSIM_CHANGE
 #include <mach/mt6605.h>
 #endif
 #ifdef FEATURE_RF_CLK_BUF
+#include <mtk-clkbuf-bridge.h>
 #include <mtk_clkbuf_ctl.h>
 #endif
 #ifdef CONFIG_MTK_OTP
@@ -44,6 +38,7 @@
 #endif
 
 #include "ccci_core.h"
+#include "ccci_auxadc.h"
 #include "ccci_bm.h"
 #include "ccci_modem.h"
 #include "port_rpc.h"
@@ -77,7 +72,14 @@ static struct gpio_item gpio_mapping_table[] = {
 static int get_md_gpio_val(unsigned int num)
 {
     //#ifdef OPLUS_FEATURE_THREESTATE_GPIO
-    if(is_project(0x2169E) || is_project(0x2169F) || is_project(0x216CA) ||is_project(0x216C9) || is_project(21711) || is_project(21712) || is_project(20730) || is_project(20731) || is_project(20732) || is_project(20761) || is_project(20762) || is_project(20764) || is_project(20766) || is_project(20767) || is_project(0x2167A) || is_project(0x2167B) || is_project(0x2167C) || is_project(0x2167D) || is_project(0x216AF) || is_project(0x216B0) || is_project(0x216B1))
+    if(is_project(20375) || is_project(20376) || is_project(20377) || is_project(20378) || is_project(20379) || is_project(0x2037A)
+        || is_project(20361) || is_project(20362) || is_project(20363) || is_project(20364) || is_project(20365) || is_project(20366)
+        || is_project(20271) || is_project(20272) || is_project(20273) || is_project(20274)
+        || is_project(0x2027A) || is_project(0x2027B) || is_project(0x2027C) || is_project(0x2027D)
+        || is_project(21281) || is_project(21282) || is_project(21283)
+        || is_project(21331) || is_project(21332) || is_project(21333) || is_project(21334) || is_project(21335) || is_project(21336) || is_project(21337) || is_project(21338) || is_project(21339)||is_project(21361) || is_project(21362) || is_project(21363) || is_project(21107) || is_project(22875) || is_project(22876)
+        || is_project(22603) || is_project(22604) || is_project(22609) || is_project(22669) || is_project(0x2266A) || is_project(0x2266B) || is_project(0x2266C) || is_project(0x2260A) || is_project(0x2260B)
+        || is_project(21711) || is_project(21712) || is_project(0x216C9) || is_project(0x2162E) || is_project(0x2169E) || is_project(0x2169F) || is_project(0x216CA))
     {
         return gpio_get_tristate_input(num);
     }
@@ -105,7 +107,8 @@ static int get_md_adc_val(__attribute__((unused))unsigned int num)
 #ifdef CONFIG_MEDIATEK_MT6577_AUXADC
 	return ccci_get_adc_val();
 #endif
-	CCCI_ERROR_LOG(0, RPC, "ERR:CONFIG AUXADC and IIO not ready");
+	CCCI_ERROR_LOG(0, RPC, "%s:ERR:CONFIG AUXADC and IIO not ready",
+		__func__);
 	return -1;
 }
 
@@ -125,7 +128,9 @@ static int get_md_adc_info(__attribute__((unused))char *adc_name,
 #ifdef CONFIG_MEDIATEK_MT6577_AUXADC
 	return ccci_get_adc_num();
 #endif
-	CCCI_ERROR_LOG(0, RPC, "ERR:CONFIG AUXADC and IIO not ready");
+
+	CCCI_ERROR_LOG(0, RPC, "%s:ERR:CONFIG AUXADC and IIO not ready",
+		__func__);
 	return -1;
 }
 
@@ -203,6 +208,29 @@ static int get_md_gpio_info(char *gpio_name,
 	return gpio_id;
 }
 
+static void md_drdi_gpio_status_scan(void)
+{
+	int i;
+	int size;
+	int gpio_id;
+	int gpio_md_view;
+	char *curr;
+	int val;
+
+	CCCI_BOOTUP_LOG(0, RPC, "scan didr gpio status\n");
+	for (i = 0; i < ARRAY_SIZE(gpio_mapping_table); i++) {
+		curr = gpio_mapping_table[i].gpio_name_from_md;
+		size = strlen(curr) + 1;
+		gpio_md_view = -1;
+		gpio_id = get_md_gpio_info(curr, size, &gpio_md_view);
+		if (gpio_id >= 0) {
+			val = get_md_gpio_val(gpio_id);
+			CCCI_BOOTUP_LOG(0, RPC, "GPIO[%s]%d(%d@md),val:%d\n",
+					curr, gpio_id, gpio_md_view, val);
+		}
+	}
+}
+
 static int get_dram_type_clk(int *clk, int *type)
 {
 	return -1;
@@ -248,8 +276,8 @@ struct eint_node_struct eint_node_prop = {
 
 static int get_eint_attr_val(int md_id, struct device_node *node, int index)
 {
-	int value;
-	int ret = 0, type;
+	int value = 0;
+	int ret = 0, type = 0;
 
 	/* unit of AP eint is us, but unit of MD eint is ms.
 	 * So need covertion here.
@@ -413,9 +441,9 @@ static void get_md_dtsi_debug(void)
 	output.retValue = 0;
 	ret = snprintf(input.strName, sizeof(input.strName), "%s",
 		"mediatek,md_drdi_rf_set_idx");
-	if (ret < 0 || ret >= sizeof(input.strName)) {
-		CCCI_ERROR_LOG(-1, RPC,
-			"%s-%d:snprintf fail,ret = %d\n", __func__, __LINE__, ret);
+	if (ret <= 0 || ret >= sizeof(input.strName)) {
+		CCCI_ERROR_LOG(-1, RPC, "%s:snprintf input.strName fail\n",
+			__func__);
 		return;
 	}
 	get_md_dtsi_val(&input, &output);
@@ -1227,10 +1255,8 @@ static void rpc_msg_handler(struct port_t *port, struct sk_buff *skb)
 				skb->len, RPC_MAX_BUF_SIZE);
 		goto err_out;
 	}
-	if (rpc_buf->header.reserved < 0 ||
-		rpc_buf->header.reserved > RPC_REQ_BUFFER_NUM ||
-	    rpc_buf->para_num < 0 ||
-		rpc_buf->para_num > RPC_MAX_ARG_NUM) {
+	if (rpc_buf->header.reserved > RPC_REQ_BUFFER_NUM ||
+	    rpc_buf->para_num > RPC_MAX_ARG_NUM) {
 		CCCI_ERROR_LOG(md_id, RPC,
 			"invalid RPC index %d/%d\n",
 			rpc_buf->header.reserved, rpc_buf->para_num);
@@ -1367,6 +1393,7 @@ static int port_rpc_init(struct port_t *port)
 	if (first_init) {
 		get_dtsi_eint_node(port->md_id);
 		get_md_dtsi_debug();
+		md_drdi_gpio_status_scan();
 		first_init = 0;
 	}
 	return 0;

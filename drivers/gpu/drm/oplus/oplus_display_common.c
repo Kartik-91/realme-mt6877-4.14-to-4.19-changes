@@ -11,6 +11,10 @@
 ***************************************************************/
 #include <oplus_display_common.h>
 #include "display_panel/oplus_display_panel.h"
+#ifdef CONFIG_OPLUS_OFP_V2
+/* add for ofp */
+#include "oplus_display_onscreenfingerprint.h"
+#endif
 
 #define PANEL_SERIAL_NUM_REG 0xA1
 #define PANEL_REG_READ_LEN   10
@@ -35,6 +39,18 @@ extern unsigned long aod_light_mode;
 extern bool oplus_fp_notify_down_delay;
 extern bool oplus_fp_notify_up_delay;
 extern int power_mode;
+extern unsigned int m_da;
+extern unsigned int m_db;
+extern unsigned int m_dc;
+
+char oplus_rx_reg[PANEL_TX_MAX_BUF] = {0x0};
+char oplus_rx_len = 0;
+
+enum {
+	REG_WRITE = 0,
+	REG_READ,
+	REG_X,
+};
 
 extern struct drm_device* get_drm_device(void);
 extern int mtk_drm_setbacklight(struct drm_crtc *crtc, unsigned int level);
@@ -44,6 +60,8 @@ extern int oplus_mtk_drm_setcabc(struct drm_crtc *crtc, unsigned int hbm_mode);
 extern int oplus_mtk_drm_setseed(struct drm_crtc *crtc, unsigned int seed_mode);
 extern int mtkfb_set_aod_backlight_level(unsigned int level);
 extern bool oplus_mtk_drm_get_hbm_state(void);
+extern int dsi_display_read_panel_reg(char cmd, char *data, size_t len);
+extern void ddic_dsi_send_cmd(unsigned int cmd_num, char val[20]);
 
 enum {
 	CABC_LEVEL_0,
@@ -62,7 +80,7 @@ int oplus_display_set_brightness(void *buf)
 
 	printk("%s %d\n", __func__, oplus_set_brightness);
 
-	if (oplus_set_brightness > oplus_max_brightness || oplus_set_brightness < OPLUS_MIN_BRIGHTNESS) {
+	if (oplus_set_brightness > oplus_max_brightness) {
 		printk(KERN_ERR "%s, brightness:%d out of scope\n", __func__, oplus_set_brightness);
 		return -1;
 	}
@@ -100,6 +118,7 @@ int oplus_display_panel_get_max_brightness(void *buf)
 	return 0;
 }
 
+#ifndef CONFIG_OPLUS_OFP_V2
 int oplus_display_panel_get_hbm(void *buf)
 {
 	unsigned int *hbm = buf;
@@ -134,6 +153,7 @@ int oplus_display_panel_set_hbm(void *buf)
 
 	return 0;
 }
+#endif
 
 int oplus_display_panel_get_serial_number(void *buf)
 {
@@ -164,11 +184,15 @@ int oplus_display_set_cabc_status(void *buf)
 	cabc_mode = (unsigned long)(*c_mode);
 
 	cabc_true_mode = cabc_mode;
+	if (!ddev) {
+		printk("set cabc status ddev fail\n");
+		return 0;
+	}
 	/* this debug cmd only for crtc0 */
 	crtc = list_first_entry(&(ddev)->mode_config.crtc_list,
 				typeof(*crtc), head);
-	if (!crtc) {
-		printk(KERN_ERR "find crtc fail\n");
+	if (IS_ERR_OR_NULL(crtc)) {
+		printk("find crtc fail\n");
 		return -1;
 	}
 	mtk_crtc = to_mtk_crtc(crtc);
@@ -190,8 +214,18 @@ int oplus_display_set_cabc_status(void *buf)
 		cabc_true_mode = cabc_back_flag;
 	} else if (cabc_sun_flag == 1) {
 		if (cabc_back_flag == CABC_LEVEL_0 || mtk_crtc->panel_ext->params->oplus_display_global_dre) {
-			disp_aal_set_dre_en(1);
-			printk("%s sun enable dre\n", __func__);
+			if (mtk_crtc->panel_ext->params->backlight_dsiable_threhold) {
+				if (oplus_display_brightness < mtk_crtc->panel_ext->params->backlight_dsiable_threhold) {
+					disp_aal_set_dre_en(0);
+					printk("%s sun disable dre\n", __func__);
+				} else {
+					disp_aal_set_dre_en(1);
+					printk("%s sun enable dre\n", __func__);
+				}
+			} else {
+				disp_aal_set_dre_en(1);
+				printk("%s sun enable dre\n", __func__);
+			}
 		} else {
 			disp_aal_set_dre_en(0);
 			printk("%s sun disable dre\n", __func__);
@@ -202,8 +236,18 @@ int oplus_display_set_cabc_status(void *buf)
 	printk("%s,cabc mode is %d\n", __func__, cabc_true_mode);
 
 	if ((cabc_true_mode == CABC_LEVEL_0 && cabc_back_flag == CABC_LEVEL_0) || mtk_crtc->panel_ext->params->oplus_display_global_dre) {
-		disp_aal_set_dre_en(1);
-		printk("%s enable dre\n", __func__);
+		if (mtk_crtc->panel_ext->params->backlight_dsiable_threhold) {
+			if (oplus_display_brightness < mtk_crtc->panel_ext->params->backlight_dsiable_threhold) {
+				disp_aal_set_dre_en(0);
+				printk("%s disable dre\n", __func__);
+			} else {
+				disp_aal_set_dre_en(1);
+				printk("%s enable dre\n", __func__);
+			}
+		} else {
+			disp_aal_set_dre_en(1);
+			printk("%s sun enable dre\n", __func__);
+		}
 	} else {
 		disp_aal_set_dre_en(0);
 		printk("%s disable dre\n", __func__);
@@ -236,6 +280,92 @@ int oplus_display_panel_set_closebl_flag(void *buf)
 
 	return 0;
 }
+
+int oplus_big_endian_copy(void *dest, void *src, int count)
+{
+	int index = 0, knum = 0, rc = 0;
+	uint32_t *u_dest = (uint32_t*) dest;
+	char *u_src = (char*) src;
+
+	if (dest == NULL || src == NULL) {
+		printk("%s null pointer\n", __func__);
+		return -EINVAL;
+	}
+
+	if (dest == src) {
+		return rc;
+	}
+
+	while (count > 0) {
+		u_dest[index] = ((u_src[knum] << 24) | (u_src[knum+1] << 16) | (u_src[knum+2] << 8) | u_src[knum+3]);
+		index += 1;
+		knum += 4;
+		count = count - 1;
+	}
+
+	return rc;
+}
+
+int oplus_display_panel_get_reg(void *data)
+{
+	struct panel_reg_get *panel_reg = data;
+	uint32_t u32_bytes = sizeof(uint32_t)/sizeof(char);
+
+	u32_bytes = oplus_rx_len%u32_bytes ? (oplus_rx_len/u32_bytes + 1) : oplus_rx_len/u32_bytes;
+	oplus_big_endian_copy(panel_reg->reg_rw, oplus_rx_reg, u32_bytes);
+	panel_reg->lens = oplus_rx_len;
+
+	return 0;
+}
+
+int oplus_display_panel_set_reg(void *data)
+{
+	char reg[PANEL_TX_MAX_BUF] = {0x0};
+	char payload[PANEL_TX_MAX_BUF] = {0x0};
+	u32 value = 0;
+	int len = 0, index = 0;
+	struct panel_reg_rw *reg_rw = data;
+
+	if (reg_rw->lens > PANEL_REG_MAX_LENS) {
+		pr_err("error: wrong input reg len\n");
+		return -EINVAL;
+	}
+
+	/*begin read*/
+	if (reg_rw->rw_flags == REG_READ) {
+		value = reg_rw->cmd;
+		len = reg_rw->lens;
+
+		dsi_display_read_panel_reg(value, reg, len);
+
+		for (index = 0; index < len; index++) {
+			printk("%x ", reg[index]);
+		}
+
+		memcpy(oplus_rx_reg, reg, PANEL_TX_MAX_BUF);
+		oplus_rx_len = len;
+
+		return 0;
+	}
+	/*end read*/
+
+	/*begin write*/
+	if (reg_rw->rw_flags == REG_WRITE) {
+		memcpy(payload, reg_rw->value, reg_rw->lens);
+		reg[0] = reg_rw->cmd;
+		len = reg_rw->lens;
+		for (index=0; index < len; index++) {
+			reg[index + 1] = payload[index];
+		}
+		ddic_dsi_send_cmd(len, reg);
+
+		return 0;
+	}
+	/*end write*/
+	printk("%s error: please check the args!\n", __func__);
+	return -1;
+}
+
 
 int oplus_display_panel_get_esd(void *buf)
 {
@@ -317,6 +447,20 @@ int oplus_display_panel_set_seed(void *buf)
 	return 0;
 }
 
+int oplus_display_panel_get_id(void *buf)
+{
+	struct panel_id *panel_rid = buf;
+
+	pr_err("%s: 0xDA= 0x%x, 0xDB=0x%x, 0xDC=0x%x\n", __func__, m_da, m_db, m_dc);
+
+	panel_rid->DA = (uint32_t)m_da;
+	panel_rid->DB = (uint32_t)m_db;
+	panel_rid->DC = (uint32_t)m_dc;
+
+	return 0;
+}
+
+#ifndef CONFIG_OPLUS_OFP_V2
 int oplus_panel_get_aod_light_mode(void *buf)
 {
 	unsigned int *aod_lm = buf;
@@ -368,6 +512,7 @@ int oplus_display_panel_notify_fp_press(void *buf)
 
 	return 0;
 }
+#endif
 
 extern unsigned char aod_area_set_flag;
 extern struct aod_area oplus_aod_area[RAMLESS_AOD_AREA_NUM];

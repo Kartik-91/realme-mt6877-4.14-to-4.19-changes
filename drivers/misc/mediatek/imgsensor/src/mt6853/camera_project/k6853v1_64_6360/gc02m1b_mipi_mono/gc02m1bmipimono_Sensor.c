@@ -36,7 +36,7 @@
 #include "imgsensor_hw.h"
 #include "imgsensor_common.h"
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
-#include "soc/oppo/oppo_project.h"
+#include <soc/oplus/system/oplus_project.h>
 #endif
 
 /****************************Modify Following Strings for Debug****************************/

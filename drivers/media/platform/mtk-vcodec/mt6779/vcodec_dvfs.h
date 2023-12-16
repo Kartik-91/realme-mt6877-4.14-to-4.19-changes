@@ -1,15 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2018 MediaTek Inc.
- * Author: Cheng-Jung Ho <cheng-jung.ho@mediatek.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef __VCODEC_DVFS_H__
@@ -27,6 +18,7 @@ struct codec_history {
 	long long submit[MAX_HISTORY];
 	long long start[MAX_HISTORY];
 	long long end[MAX_HISTORY];
+	long long sw_time[MAX_HISTORY];
 	long long submit_interval;
 	int cur_idx;
 	int cur_cnt;
@@ -40,6 +32,7 @@ struct codec_job {
 	long long submit;
 	long long start;
 	long long end;
+	int hw_kcy;
 	int mhz;
 	struct codec_job *next;
 };
@@ -62,4 +55,5 @@ u64 match_freq(int target_mhz, u64 *freq_list, u32 freq_cnt);
 
 /* Free unused/all history */
 int free_hist(struct codec_history **head, int only_unused);
+int free_hist_by_handle(void *handle, struct codec_history **head);
 #endif

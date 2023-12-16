@@ -1,30 +1,11 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- *  Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef __LINUX_MT6370_PMU_BLED_H
 #define __LINUX_MT6370_PMU_BLED_H
-#ifdef OPLUS_BUG_COMPATIBILITY
-#if defined(CONFIG_DRM_PANEL_BOE_BOE_ILI7807S_VDO) || \
-	defined(CONFIG_DRM_PANEL_BOE_ILI7807S_60HZ_VDO) || \
-	defined(CONFIG_DRM_PANEL_TM_NT36672C_60HZ_VDO)
-#define MT6370_BLED_EXTEN_SHIFT (7)
- enum control_mode {
-	I2C_MODE = 0,
-	EX_MODE,
-};
-extern void _gate_ic_mode_switch(enum control_mode mode);
-#endif
-#endif
+
 struct mt6370_pmu_bled_platdata {
 	uint8_t ext_en_pin:1;
 	uint8_t chan_en:4;
@@ -87,14 +68,4 @@ struct mt6370_pmu_bled_platdata {
 #define MT6370_PWM_LPF_COEFSHFT		(2)
 #define MT6370_PWM_LPF_ENSHFT		(1)
 #define MT6370_BLED_CURR_MODESHFT	(0)
-#ifdef OPLUS_BUG_COMPATIBILITY
-#if defined(CONFIG_DRM_PANEL_BOE_BOE_ILI7807S_VDO) || \
-	defined(CONFIG_DRM_PANEL_BOE_ILI7807S_60HZ_VDO) || \
-	defined(CONFIG_DRM_PANEL_TM_NT36672C_60HZ_VDO)
-#define MT6370_BLED_EN_SHIFT (6)
-extern int esd_brightness;
-extern void mt6370_pmu_reg_a0(unsigned int bled_enable);
-extern void mt6370_pmu_reg_a3(unsigned int value);
-#endif
-#endif
 #endif

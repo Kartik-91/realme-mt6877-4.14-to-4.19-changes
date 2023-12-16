@@ -66,7 +66,7 @@ struct imgsensor_struct {
 
     kal_uint16 current_fps;         //current max fps
     kal_bool   autoflicker_en;      //record autoflicker enable or disable
-    kal_bool test_pattern;          //record test pattern mode or not
+    kal_uint8 test_pattern;          //record test pattern mode or not
     enum MSDK_SCENARIO_ID_ENUM current_scenario_id;//current scenario id
     kal_uint8  ihdr_mode;           //ihdr mode 0: disable, 1: ihdr, 2:mVHDR, 9:zigzag
 
@@ -76,7 +76,9 @@ struct imgsensor_struct {
 /* SENSOR PRIVATE STRUCT FOR CONSTANT*/
 struct imgsensor_info_struct {
     kal_uint32 sensor_id;           //record sensor id defined in Kd_imgsensor.h
+    #ifdef VENDOR_EDIT
     kal_uint16 module_id;
+    #endif
     kal_uint32 checksum_value;      //checksum value for Camera Auto Test
     struct imgsensor_mode_struct pre;       //preview scenario relative information
     struct imgsensor_mode_struct cap;       //capture scenario relative information

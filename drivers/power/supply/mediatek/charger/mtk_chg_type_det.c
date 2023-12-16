@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2021 MediaTek Inc.
+*/
 
 #include <generated/autoconf.h>
 #include <linux/kernel.h>
@@ -46,42 +38,36 @@
 #include <mach/upmu_sw.h>
 #include <mach/upmu_hw.h>
 #include <mt-plat/mtk_boot.h>
-#include <mt-plat/charger_type.h>
-#ifdef OPLUS_FEATURE_CHG_BASIC
-#include <mt-plat/charger_class.h>
-#endif
+#include <mt-plat/v1/charger_type.h>
+#include <mt-plat/v1/mtk_charger.h>
 #include <pmic.h>
 #include <tcpm.h>
 
 #ifdef OPLUS_FEATURE_CHG_BASIC
 #include <linux/delay.h>
+#define CHG_DETECT_DELAY 450
 #endif
 #include "mtk_charger_intf.h"
 
+struct tag_bootmode {
+	u32 size;
+	u32 tag;
+	u32 bootmode;
+	u32 boottype;
+};
 
-#ifdef CONFIG_OPLUS_CHARGER_MTK6769
-//add by lukaili notify fuelgauge for other charger
-extern void oplus_gauge_set_event(int event);
-extern void fg_charger_in_handler(void);
-extern int door_open;
-bool is_fuelgauge_apply(void)
-{
-	return false;
-}
-#endif
 
-#ifndef CONFIG_OPPO_CHARGER_MTK6769
-//add by lukaili notify fuelgauge for other charger
-#ifndef CONFIG_OPLUS_CHARGER_MTK6771
+#ifdef OPLUS_FEATURE_CHG_BASIC
+/* notify fuelgauge for other charger */
 extern void oplus_gauge_set_event(int event);
-#endif
+
 extern void fg_charger_in_handler(void);
 extern void oplus_chg_suspend_charger(void);
+/* Add for door_open dump */
 extern int door_open;
-#ifndef CONFIG_OPLUS_CHARGER_MTK6771
+
 extern bool is_fuelgauge_apply(void);
 extern bool is_mtksvooc_project;
-#endif
 #endif
 
 
@@ -111,10 +97,6 @@ void __attribute__((weak)) fg_charger_in_handler(void)
 	pr_notice("%s not defined\n", __func__);
 }
 
-#ifdef CONFIG_OPLUS_CHARGER_MTK6771
-enum charger_type g_chr_type;
-#endif
-
 struct chg_type_info {
 	struct device *dev;
 	struct charger_consumer *chg_consumer;
@@ -133,9 +115,13 @@ struct chg_type_info {
 	struct work_struct chg_in_work;
 	bool ignore_usb;
 	bool plugin;
-#ifdef OPLUS_FEATURE_CHG_BASIC
 	bool bypass_chgdet;
+#ifdef OPLUS_FEATURE_CHG_BASIC
 	unsigned int chgdet_mdelay;
+#endif
+#ifdef CONFIG_MACH_MT6771
+	struct power_supply *chr_psy;
+	struct notifier_block psy_nb;
 #endif
 };
 
@@ -208,11 +194,30 @@ struct mt_charger {
 static int mt_charger_online(struct mt_charger *mtk_chg)
 {
 	int ret = 0;
-#if defined(OPLUS_FEATURE_CHG_BASIC) && !defined(CONFIG_OPLUS_CHARGER_MT6370_TYPEC)
-	int boot_mode = 0;
+	struct device *dev = NULL;
+	struct device_node *boot_node = NULL;
+	struct tag_bootmode *tag = NULL;
+	int boot_mode = 11;//UNKNOWN_BOOT
+	dev = mtk_chg->dev;
+	if (dev != NULL){
+		boot_node = of_parse_phandle(dev->of_node, "bootmode", 0);
+		if (!boot_node){
+			chr_err("%s: failed to get boot mode phandle\n", __func__);
+		}
+		else {
+			tag = (struct tag_bootmode *)of_get_property(boot_node,
+								"atag,boot", NULL);
+			if (!tag){
+				chr_err("%s: failed to get atag,boot\n", __func__);
+			}
+			else
+				boot_mode = tag->bootmode;
+		}
+	}
 
 	if (!mtk_chg->chg_online) {
-		boot_mode = get_boot_mode();
+// workaround for mt6768
+		//boot_mode = get_boot_mode();
 		if (boot_mode == KERNEL_POWER_OFF_CHARGING_BOOT ||
 		    boot_mode == LOW_POWER_OFF_CHARGING_BOOT) {
 			pr_notice("%s: Unplug Charger/USB\n", __func__);
@@ -222,19 +227,11 @@ static int mt_charger_online(struct mt_charger *mtk_chg)
 				kernel_power_off();
 		}
 	}
-#endif /* OPLUS_FEATURE_CHG_BASIC && !CONFIG_OPLUS_CHARGER_MT6370_TYPEC */
 
 	return ret;
 }
 
 /* Power Supply Functions */
-#ifdef OPLUS_FEATURE_CHG_BASIC
-#if defined(CONFIG_OPLUS_CHARGER_MTK6769) || defined(CONFIG_OPLUS_CHARGER_MT6370_TYPEC)
-bool pmic_chrdet_status(void);
-#else /*CONFIG_OPLUS_CHARGER_MTK6769*/
-extern bool mt6360_get_vbus_status(void);
-#endif /*CONFIG_OPLUS_CHARGER_MTK6769*/
-#endif /* OPLUS_FEATURE_CHG_BASIC */
 static int mt_charger_get_property(struct power_supply *psy,
 	enum power_supply_property psp, union power_supply_propval *val)
 {
@@ -246,22 +243,35 @@ static int mt_charger_get_property(struct power_supply *psy,
 		/* Force to 1 in all charger type */
 		if (mtk_chg->chg_type != CHARGER_UNKNOWN)
 			val->intval = 1;
-#ifdef OPLUS_FEATURE_CHG_BASIC
-		if ((get_boot_mode() == KERNEL_POWER_OFF_CHARGING_BOOT
-				|| get_boot_mode() == LOW_POWER_OFF_CHARGING_BOOT)
-				&& (val->intval == 0)) {
-#if defined(CONFIG_OPLUS_CHARGER_MTK6769) || defined(CONFIG_OPLUS_CHARGER_MT6370_TYPEC)
-			val->intval = pmic_chrdet_status();
-#else /*CONFIG_OPLUS_CHARGER_MTK6769*/
-			val->intval = mt6360_get_vbus_status();
-#endif /*CONFIG_OPLUS_CHARGER_MTK6769*/
-			printk(KERN_ERR "%s: kpoc[%d]\n", __func__, val->intval);
-		}
-#endif /* OPLUS_FEATURE_CHG_BASIC */
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		val->intval = mtk_chg->chg_type;
 		break;
+	case POWER_SUPPLY_PROP_USB_TYPE:
+		switch (mtk_chg->chg_type) {
+		case STANDARD_HOST:
+			val->intval = POWER_SUPPLY_USB_TYPE_SDP;
+			pr_info("%s: Charger Type: STANDARD_HOST\n", __func__);
+			break;
+		case NONSTANDARD_CHARGER:
+			val->intval = POWER_SUPPLY_USB_TYPE_DCP;
+			pr_info("%s: Charger Type: NONSTANDARD_CHARGER\n", __func__);
+			break;
+		case CHARGING_HOST:
+			val->intval = POWER_SUPPLY_USB_TYPE_CDP;
+			pr_info("%s: Charger Type: CHARGING_HOST\n", __func__);
+			break;
+		case STANDARD_CHARGER:
+			val->intval = POWER_SUPPLY_USB_TYPE_DCP;
+			pr_info("%s: Charger Type: STANDARD_CHARGER\n", __func__);
+			break;
+		case CHARGER_UNKNOWN:
+			val->intval = POWER_SUPPLY_USB_TYPE_UNKNOWN;
+			pr_info("%s: Charger Type: CHARGER_UNKNOWN\n", __func__);
+			break;
+		default:
+		break;
+	}
 	default:
 		return -EINVAL;
 	}
@@ -272,11 +282,6 @@ static int mt_charger_get_property(struct power_supply *psy,
 #ifdef OPLUS_FEATURE_CHG_BASIC
 extern bool oplus_chg_wake_update_work(void);
 #endif
-
-
-#ifdef OPLUS_FEATURE_TP_BASIC
-extern void switch_usb_state(int usb_state);
-#endif /*OPLUS_FEATURE_TP_BASIC*/
 #ifdef CONFIG_EXTCON_USB_CHG
 static void usb_extcon_detect_cable(struct work_struct *work)
 {
@@ -326,17 +331,18 @@ static int mt_charger_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		mtk_chg->chg_type = val->intval;
 #ifdef OPLUS_FEATURE_CHG_BASIC
-		if ((mtk_chg->chg_type != CHARGER_UNKNOWN) && (door_open == 1)) {
-			pr_err("%s enter dump, chg_type:%d\n", __func__, mtk_chg->chg_type);
-			BUG_ON(1);
-		}
-#endif
-#ifdef OPLUS_FEATURE_CHG_BASIC
 		if (mtk_chg->chg_type != CHARGER_UNKNOWN) {
 			if (battery_psy)
 				power_supply_changed(battery_psy);
 			oplus_chg_wake_update_work();
 		}
+#else
+		if (mtk_chg->chg_type != CHARGER_UNKNOWN)
+			charger_manager_force_disable_power_path(
+				cti->chg_consumer, MAIN_CHARGER, false);
+		else if (!cti->tcpc_kpoc)
+			charger_manager_force_disable_power_path(
+				cti->chg_consumer, MAIN_CHARGER, true);
 #endif
 		break;
 	default:
@@ -354,12 +360,12 @@ static int mt_charger_set_property(struct power_supply *psy,
 #else
 			((mtk_chg->chg_type == NONSTANDARD_CHARGER) && oplus_get_chg_unwakelock() == 0)) {
 #endif
-			mt_usb_connect();
+			mt_usb_connect_v1();
 			#ifdef CONFIG_EXTCON_USB_CHG
 			info->vbus_state = 1;
 			#endif
 		} else {
-			mt_usb_disconnect();
+			mt_usb_disconnect_v1();
 			#ifdef CONFIG_EXTCON_USB_CHG
 			info->vbus_state = 0;
 			#endif
@@ -373,6 +379,9 @@ static int mt_charger_set_property(struct power_supply *psy,
 			&info->wq_detcable, info->debounce_jiffies);
 	#endif
 #ifndef OPLUS_FEATURE_CHG_BASIC
+#ifdef CONFIG_MACH_MT6771
+	power_supply_changed(mtk_chg->chg_psy);
+#endif
 	power_supply_changed(mtk_chg->ac_psy);
 	power_supply_changed(mtk_chg->usb_psy);
 #endif /* OPLUS_FEATURE_CHG_BASIC */
@@ -480,28 +489,39 @@ static int pd_tcp_notifier_call(struct notifier_block *pnb,
 	struct tcp_notify *noti = data;
 	struct chg_type_info *cti = container_of(pnb,
 		struct chg_type_info, pd_nb);
-	int vbus, pd_sink_voltage, pd_sink_current = 0;
-	static bool is_audio_charger_converter = false;
-	struct power_supply *psy = NULL;
-	union power_supply_propval propval;
+	int vbus = 0;
+	struct power_supply *ac_psy = power_supply_get_by_name("ac");
+	struct power_supply *usb_psy = power_supply_get_by_name("usb");
+	struct mt_charger *mtk_chg_ac;
+	struct mt_charger *mtk_chg_usb;
+
+	if (IS_ERR_OR_NULL(usb_psy)) {
+		chr_err("%s, fail to get usb_psy\n", __func__);
+		return NOTIFY_BAD;
+	}
+	if (IS_ERR_OR_NULL(ac_psy)) {
+		chr_err("%s, fail to get ac_psy\n", __func__);
+		return NOTIFY_BAD;
+	}
+
+	mtk_chg_ac = power_supply_get_drvdata(ac_psy);
+	if (IS_ERR_OR_NULL(mtk_chg_ac)) {
+		chr_err("%s, fail to get mtk_chg_ac\n", __func__);
+		return NOTIFY_BAD;
+	}
+
+	mtk_chg_usb = power_supply_get_drvdata(usb_psy);
+	if (IS_ERR_OR_NULL(mtk_chg_usb)) {
+		chr_err("%s, fail to get mtk_chg_usb\n", __func__);
+		return NOTIFY_BAD;
+	}
 
 	switch (event) {
-#ifdef OPLUS_FEATURE_CHG_BASIC
 	case TCP_NOTIFY_SINK_VBUS:
-		mutex_lock(&param_lock);
-		pd_sink_voltage = noti->vbus_state.mv;
-		pd_sink_current = noti->vbus_state.ma;
-		pr_info("%s sink vbus %dmV %dmA type(0x%02X)\n", __func__,
-			pd_sink_voltage, pd_sink_current,
-			noti->vbus_state.type);
-		if (pd_sink_voltage && pd_sink_current) {
-			is_audio_charger_converter = true;
-		} else {
-			is_audio_charger_converter = false;
-		}
-		mutex_unlock(&param_lock);
+		if (tcpm_inquire_typec_attach_state(cti->tcpc) ==
+						   TYPEC_ATTACHED_AUDIO)
+			plug_in_out_handler(cti, !!noti->vbus_state.mv, true);
 		break;
-#endif
 	case TCP_NOTIFY_TYPEC_STATE:
 		if (noti->typec_state.old_state == TYPEC_UNATTACHED &&
 		    (noti->typec_state.new_state == TYPEC_ATTACHED_SNK ||
@@ -509,32 +529,30 @@ static int pd_tcp_notifier_call(struct notifier_block *pnb,
 		    noti->typec_state.new_state == TYPEC_ATTACHED_NORP_SRC)) {
 			pr_info("%s USB Plug in, pol = %d\n", __func__,
 					noti->typec_state.polarity);
-#ifdef OPLUS_FEATURE_TP_BASIC
-			pr_info("%s call switch_usb_state = 1 \n", __func__);
-			switch_usb_state(1);
-#endif /*OPLUS_FEATURE_TP_BASIC*/
-
 #ifdef OPLUS_FEATURE_CHG_BASIC
-			cti->chgdet_mdelay = 450;
+			cti->chgdet_mdelay = CHG_DETECT_DELAY;
 #endif
 			plug_in_out_handler(cti, true, false);
 #ifdef OPLUS_FEATURE_CHG_BASIC
-//add by lukaili notify fuelgauge for other charger
-#ifndef CONFIG_OPLUS_CHARGER_MTK6771
+/* notify fuelgauge for other charger */
 			if (is_fuelgauge_apply() == true) {
 				fg_charger_in_handler();
 				oplus_gauge_set_event(CHARGER_NOTIFY_START_CHARGING);
 			}
 #endif
-#endif
 		} else if ((noti->typec_state.old_state == TYPEC_ATTACHED_SNK ||
 		    noti->typec_state.old_state == TYPEC_ATTACHED_CUSTOM_SRC ||
-			noti->typec_state.old_state == TYPEC_ATTACHED_NORP_SRC)
+		    noti->typec_state.old_state == TYPEC_ATTACHED_NORP_SRC ||
+		    noti->typec_state.old_state == TYPEC_ATTACHED_AUDIO)
 			&& noti->typec_state.new_state == TYPEC_UNATTACHED) {
 			if (cti->tcpc_kpoc) {
 				vbus = battery_get_vbus();
 				pr_info("%s KPOC Plug out, vbus = %d\n",
 					__func__, vbus);
+				mtk_chg_ac->chg_type = CHARGER_UNKNOWN;
+				mtk_chg_usb->chg_type = CHARGER_UNKNOWN;
+				power_supply_changed(ac_psy);
+				power_supply_changed(usb_psy);
 #ifndef OPLUS_FEATURE_CHG_BASIC
 				queue_work_on(cpumask_first(cpu_online_mask),
 					      cti->pwr_off_wq,
@@ -543,23 +561,15 @@ static int pd_tcp_notifier_call(struct notifier_block *pnb,
 				break;
 			}
 			pr_info("%s USB Plug out\n", __func__);
-#ifdef OPLUS_FEATURE_TP_BASIC
-			pr_info("%s call switch_usb_state = 0 \n", __func__);
-			switch_usb_state(0);
-#endif /*OPLUS_FEATURE_TP_BASIC*/
-
 #ifdef OPLUS_FEATURE_CHG_BASIC
 			cti->chgdet_mdelay = 0;
 #endif
 			plug_in_out_handler(cti, false, false);
 #ifdef OPLUS_FEATURE_CHG_BASIC
-//add by lukaili notify fuelgauge for other charger
-#ifndef CONFIG_OPLUS_CHARGER_MTK6771
 		if (is_fuelgauge_apply() == true) {
 			fg_charger_in_handler();
 			oplus_gauge_set_event(CHARGER_NOTIFY_STOP_CHARGING);
 		}
-#endif
 #endif
 		} else if (noti->typec_state.old_state == TYPEC_ATTACHED_SRC &&
 			noti->typec_state.new_state == TYPEC_ATTACHED_SNK) {
@@ -575,47 +585,8 @@ static int pd_tcp_notifier_call(struct notifier_block *pnb,
                         cti->chgdet_mdelay = 0;
 #endif
 			plug_in_out_handler(cti, false, true);
-#ifdef OPLUS_FEATURE_CHG_BASIC
-		} else if (noti->typec_state.new_state == TYPEC_ATTACHED_AUDIO) {
-			/* AUDIO plug in */
-			pr_info("%s audio plug in\n", __func__);
-
-			if (!psy)
-				psy = power_supply_get_by_name("charger");
-
-			if (is_audio_charger_converter) {
-				propval.intval = 1;
-				power_supply_set_property(psy,
-					POWER_SUPPLY_PROP_ONLINE, &propval);
-				propval.intval = NONSTANDARD_CHARGER;
-				power_supply_set_property(psy,
-					POWER_SUPPLY_PROP_CHARGE_TYPE, &propval);
-			} else {
-				propval.intval = 0;
-				power_supply_set_property(psy,
-					POWER_SUPPLY_PROP_ONLINE, &propval);
-				propval.intval = CHARGER_UNKNOWN;
-				power_supply_set_property(psy,
-					POWER_SUPPLY_PROP_CHARGE_TYPE, &propval);
-			}
-
-		} else if (noti->typec_state.old_state == TYPEC_ATTACHED_AUDIO
-			&& noti->typec_state.new_state == TYPEC_UNATTACHED) {
-			/* AUDIO plug out */
-			pr_info("%s audio plug out\n", __func__);
-
-			if (!psy)
-				psy = power_supply_get_by_name("charger");
-
-			propval.intval = 0;
-			power_supply_set_property(psy,
-				POWER_SUPPLY_PROP_ONLINE, &propval);
-			propval.intval = CHARGER_UNKNOWN;
-			power_supply_set_property(psy,
-				POWER_SUPPLY_PROP_CHARGE_TYPE, &propval);
 		}
-#endif
-	break;
+		break;
 	}
 	return NOTIFY_OK;
 }
@@ -636,6 +607,7 @@ static int chgdet_task_threadfn(void *data)
 		pr_notice("%s: power supply get fail\n", __func__);
 		return -ENODEV;
 	}
+
 	pr_info("%s: ++\n", __func__);
 	while (!kthread_should_stop()) {
 		ret = wait_event_interruptible(cti->waitq,
@@ -726,6 +698,98 @@ static void init_extcon_work(struct work_struct *work)
 }
 #endif
 
+#ifdef CONFIG_MACH_MT6771
+static int mt6370_psy_notifier(struct notifier_block *nb,
+				unsigned long event, void *data)
+{
+	struct power_supply *psy = data;
+	struct power_supply *type_psy = NULL;
+
+	struct chg_type_info *cti = container_of(nb,
+					struct chg_type_info, psy_nb);
+
+	union power_supply_propval pval;
+	int ret;
+
+	if (event != PSY_EVENT_PROP_CHANGED) {
+		pr_info("%s, event not equal\n", __func__);
+		return NOTIFY_DONE;
+	}
+
+	if (IS_ERR_OR_NULL(cti->chr_psy)) {
+		cti->chr_psy = power_supply_get_by_name("mt6370_pmu_charger");
+		if (IS_ERR_OR_NULL(cti->chr_psy)) {
+			pr_info("fail to get chr_psy\n");
+			cti->chr_psy = NULL;
+			return NOTIFY_DONE;
+		}
+	} else
+		pr_info("%s, get mt6370 psy success, event(%d)\n", __func__, event);
+
+	/*psy is mt6370, type_psy is charger_type psy*/
+	if (psy != cti->chr_psy) {
+		pr_info("power supply not equal\n");
+		return NOTIFY_DONE;
+	}
+
+	type_psy = power_supply_get_by_name("charger");
+	if (!type_psy) {
+		pr_info("%s: get power supply failed\n",
+			__func__);
+		return NOTIFY_DONE;
+	}
+
+	if (event != PSY_EVENT_PROP_CHANGED) {
+		pr_info("%s: get event power supply failed\n",
+			__func__);
+		return NOTIFY_DONE;
+	}
+
+	ret = power_supply_get_property(psy,
+				POWER_SUPPLY_PROP_ONLINE, &pval);
+	if (ret < 0) {
+		pr_info("psy failed to get online prop\n");
+		return NOTIFY_DONE;
+	}
+
+	ret = power_supply_set_property(type_psy, POWER_SUPPLY_PROP_ONLINE,
+		&pval);
+	if (ret < 0)
+		pr_info("%s: type_psy online failed, ret = %d\n",
+			__func__, ret);
+
+	ret = power_supply_get_property(psy,
+				POWER_SUPPLY_PROP_USB_TYPE, &pval);
+	if (ret < 0) {
+		pr_info("failed to get usb type prop\n");
+		return NOTIFY_DONE;
+	}
+
+	switch (pval.intval) {
+	case POWER_SUPPLY_USB_TYPE_SDP:
+		pval.intval = STANDARD_HOST;
+		break;
+	case POWER_SUPPLY_USB_TYPE_DCP:
+		pval.intval = STANDARD_CHARGER;
+		break;
+	case POWER_SUPPLY_USB_TYPE_CDP:
+		pval.intval = CHARGING_HOST;
+		break;
+	default:
+		pval.intval = CHARGER_UNKNOWN;
+		break;
+	}
+
+	ret = power_supply_set_property(type_psy, POWER_SUPPLY_PROP_CHARGE_TYPE,
+		&pval);
+	if (ret < 0)
+		pr_info("%s: type_psy type failed, ret = %d\n",
+			__func__, ret);
+
+	return NOTIFY_DONE;
+}
+#endif
+
 static int mt_charger_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -734,6 +798,10 @@ static int mt_charger_probe(struct platform_device *pdev)
 	#ifdef CONFIG_EXTCON_USB_CHG
 	struct usb_extcon_info *info;
 	#endif
+	struct device *dev = NULL;
+	struct device_node *boot_node = NULL;
+	struct tag_bootmode *tag = NULL;
+	int boot_mode = 11;//UNKNOWN_BOOT
 
 	pr_info("%s\n", __func__);
 
@@ -809,9 +877,22 @@ static int mt_charger_probe(struct platform_device *pdev)
 		goto err_get_tcpc_dev;
 	}
 
-	ret = get_boot_mode();
-	if (ret == KERNEL_POWER_OFF_CHARGING_BOOT ||
-	    ret == LOW_POWER_OFF_CHARGING_BOOT)
+	dev = &(pdev->dev);
+	if (dev != NULL) {
+		boot_node = of_parse_phandle(dev->of_node, "bootmode", 0);
+		if (!boot_node) {
+			chr_err("%s: failed to get boot mode phandle\n", __func__);
+		} else {
+			tag = (struct tag_bootmode *)of_get_property(boot_node, "atag,boot", NULL);
+			if (!tag)
+				chr_err("%s: failed to get atag,boot\n", __func__);
+			else
+				boot_mode = tag->bootmode;
+		}
+	}
+	//ret = get_boot_mode();
+	if (boot_mode == KERNEL_POWER_OFF_CHARGING_BOOT ||
+	    boot_mode == LOW_POWER_OFF_CHARGING_BOOT)
 		cti->tcpc_kpoc = true;
 	pr_info("%s KPOC(%d)\n", __func__, cti->tcpc_kpoc);
 
@@ -838,6 +919,17 @@ static int mt_charger_probe(struct platform_device *pdev)
 	mt_chg->cti = cti;
 	platform_set_drvdata(pdev, mt_chg);
 	device_init_wakeup(&pdev->dev, true);
+
+#ifdef CONFIG_MACH_MT6771
+	cti->psy_nb.notifier_call = mt6370_psy_notifier;
+	ret = power_supply_reg_notifier(&cti->psy_nb);
+	if (ret)
+		pr_info("fail to register notifer\n");
+
+	cti->chr_psy = power_supply_get_by_name("mt6370_pmu_charger");
+	if (IS_ERR_OR_NULL(cti->chr_psy))
+		pr_info("%s, fail to get chr_psy\n", __func__);
+#endif
 
 	#ifdef CONFIG_EXTCON_USB_CHG
 	info = devm_kzalloc(mt_chg->dev, sizeof(*info), GFP_KERNEL);
@@ -948,7 +1040,6 @@ bool upmu_is_chr_det(void)
 /* Legacy api to prevent build error */
 
 #ifdef OPLUS_FEATURE_CHG_BASIC
-/* Yichun.Chen  PSW.BSP.CHG  2019-08-12  for aging issue */
 extern int wakeup_fg_algo_atomic(unsigned int flow_state);
 #define FG_INTR_CHARGER_OUT	4
 #define FG_INTR_CHARGER_IN	8
@@ -967,7 +1058,6 @@ static void notify_charger_status(bool cur_charger_exist)
 	pre_charger_exist = cur_charger_exist;
 }
 #endif
-
 bool pmic_chrdet_status(void)
 {
 	if (upmu_is_chr_det()){
@@ -987,7 +1077,6 @@ bool pmic_chrdet_status(void)
 	}
 	pr_notice("%s: No charger\n", __func__);
 #ifdef OPLUS_FEATURE_CHG_BASIC
-/* Yichun.Chen  PSW.BSP.CHG  2019-08-11  for aging issue */
 	notify_charger_status(false);
 #endif
 	return false;
@@ -1033,7 +1122,7 @@ static void __exit mt_charger_det_exit(void)
 	platform_driver_unregister(&mt_charger_driver);
 }
 
-subsys_initcall(mt_charger_det_init);
+device_initcall(mt_charger_det_init);
 module_exit(mt_charger_det_exit);
 
 #ifdef CONFIG_TCPC_CLASS

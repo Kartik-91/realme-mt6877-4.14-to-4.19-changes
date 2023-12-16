@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2017 MediaTek Inc.
  */
 
 #include <linux/module.h>
@@ -198,6 +190,7 @@ void sys_timer_timesync_verify_sspm(void)
 	struct plt_ipi_data_s ipi_data;
 #ifndef SSPM_V2
 	int ackdata = 0;
+	int ret = 0;
 #endif
 	u32 ts_h = 0, ts_l = 0;
 	u64 ts_sspm, ts_ap1, ts_ap2, temp_u64[2];
@@ -216,8 +209,12 @@ void sys_timer_timesync_verify_sspm(void)
 	ipi_data.cmd = PLT_TIMESYNC_SRAM_TEST;
 
 #ifndef SSPM_V2
-	sspm_ipi_send_sync(IPI_ID_PLATFORM, IPI_OPT_WAIT,
+	ret = sspm_ipi_send_sync(IPI_ID_PLATFORM, IPI_OPT_WAIT,
 		&ipi_data, sizeof(ipi_data) / SSPM_MBOX_SLOT_SIZE, &ackdata, 1);
+
+	if (ret != 0) {
+		pr_info("sspm_ipi_send_sync failed, ret=%d\n", ret);
+	}
 
 	/* wait until sspm writes sspm-view timestamp to sram */
 	while (1) {

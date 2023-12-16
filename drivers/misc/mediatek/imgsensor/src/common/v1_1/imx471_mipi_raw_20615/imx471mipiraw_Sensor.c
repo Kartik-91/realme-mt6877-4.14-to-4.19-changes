@@ -3025,7 +3025,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 				return ERROR_MSDK_IS_ACTIVATED;
 		}
 		case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
-			*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -17130000;
+			*(MUINT32 *)(uintptr_t)(*(feature_data + 1)) = -2230000;
 			break;
 #endif
 	default:

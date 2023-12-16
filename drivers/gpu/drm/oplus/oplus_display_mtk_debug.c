@@ -23,7 +23,7 @@ extern void drm_invoke_fps_chg_callbacks(unsigned int new_fps);
 
 
 /* log level config */
-int oplus_disp_drv_log_level = OPLUS_DISP_DRV_LOG_LEVEL_INFO; /*After STR5 should set OPLUS_DISP_DRV_LOG_LEVEL_INFO*/
+int oplus_disp_drv_log_level = OPLUS_DISP_DRV_LOG_LEVEL_DEBUG; /*After STR5 should set OPLUS_DISP_DRV_LOG_LEVEL_INFO*/
 EXPORT_SYMBOL(oplus_disp_drv_log_level);
 
 int oplus_display_set_mtk_loglevel(void *buf)

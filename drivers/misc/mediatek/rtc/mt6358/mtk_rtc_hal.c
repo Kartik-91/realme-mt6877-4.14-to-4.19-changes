@@ -1,17 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2010 MediaTek, Inc.
- *
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
+* Copyright (C) 2021 MediaTek Inc.
+*/
 #ifdef pr_fmt
 #undef pr_fmt
 #endif
@@ -107,24 +97,7 @@ u16 rtc_spare_reg[RTC_SPAR_NUM][3] = {
 	{RTC_PDN2, 0x1, 15},
 	{RTC_SPAR0, 0x1, 6},
 	{RTC_SPAR0, 0x1, 7},
-	{RTC_AL_HOU, 0xff, 8},
-#ifdef CONFIG_OPLUS_CHARGER_MTK6771
-	{RTC_SPAR0, 0x1, 8},
-	{RTC_SPAR0, 0x1, 9},
-	{RTC_SPAR0, 0x1, 10},
-	{RTC_SPAR0, 0x1, 11},
-#endif /* CONFIG_OPLUS_CHARGER_MTK6771 */
-#ifdef CONFIG_OPLUS_CHARGER_MTK6771
-	{RTC_AL_DOW, 0xff, 8}, //battery electricity
-	{RTC_SPAR0, 0x1, 12},
-	{RTC_SPAR0, 0x1, 13},
-#endif 
-#ifdef OPLUS_FEATURE_AGINGTEST
-	{RTC_SPAR0, 0x01, 14},
-#endif /*OPLUS_FEATURE_AGINGTEST */
-#ifdef CONFIG_OPLUS_CHARGER_MTK6771
-	{RTC_SPAR0, 0x01, 15},
-#endif /* OPLUS_BUG_STABILITY */
+	{RTC_AL_HOU, 0xff, 8}
 };
 
 static int rtc_eosc_cali_td = 8;

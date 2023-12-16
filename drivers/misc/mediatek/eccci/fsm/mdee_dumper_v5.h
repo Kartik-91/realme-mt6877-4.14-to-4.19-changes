@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2019 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (C) 2015 MediaTek Inc.
  */
 
 #ifndef __MDEE_DUMPER_V5_H__
@@ -239,10 +231,5 @@ struct mdee_dumper_v5 {
 	/* request by modem, change to 2k: include struct ex_PL_log*/
 	unsigned char ex_pl_info[MD_HS1_FAIL_DUMP_SIZE];
 };
-//#ifdef OPLUS_FEATURE_MODEM_MINIDUMP
-#define MODEM_MONITOR_ID          509    //modem crash
-#define BUF_LOG_LENGTH            2148
-unsigned int BKDRHash(const char* str, unsigned int len);
-//#endif /*OPLUS_FEATURE_MODEM_MINIDUMP*/
 #endif	/* __MDEE_DUMPER_V5_H__ */
 

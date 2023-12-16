@@ -135,6 +135,21 @@ struct aod_area {
 	int gray;
 };
 
+
+#ifdef CONFIG_OPLUS_CRC_CHECK_SUPPORT
+/* store reg value returned on crc check */
+struct crc_check_value {
+	char reg_14_1st_0;
+	char reg_14_1st_1;
+	char reg_14_2nd_0;
+	char reg_14_2nd_1;
+	char reg_15_1st_0;
+	char reg_15_1st_1;
+	char reg_15_2nd_0;
+	char reg_15_2nd_1;
+};
+#endif
+
 #define RAMLESS_AOD_AREA_NUM		6
 #define RAMLESS_AOD_PAYLOAD_SIZE	100
 

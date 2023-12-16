@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+* Copyright (C) 2021 MediaTek Inc.
+*/
 
 #include "accdet.h"
 #if PMIC_ACCDET_KERNEL
@@ -50,9 +42,12 @@
 
 /********************grobal variable definitions******************/
 #ifdef OPLUS_BUG_COMPATIBILITY
+/* 2020/01/14,add for hp delay detection */
 struct delayed_work hp_detect_work;
+/* 2020/01/14,add for dump log */
 extern int door_open;
 #ifdef CONFIG_HSKEY_BLOCK
+/* 2020/04/12,add for hs key blocking for 1s after insterting */
 struct delayed_work hskey_block_work;
 bool g_hskey_block_flag;
 #endif /* CONFIG_HSKEY_BLOCK */
@@ -913,12 +908,14 @@ static void send_key_event(u32 keycode, u32 flag)
 {
 	#ifdef OPLUS_BUG_COMPATIBILITY
 	#ifdef CONFIG_HSKEY_BLOCK
+	/* 2020/04/12,add for hs key blocking for 1s after insterting */
 	pr_info("[accdet][send_key_event]g_hskey_block_flag = %d\n", g_hskey_block_flag);
 	if (g_hskey_block_flag) {
 		pr_info("[accdet][send_key_event]No key event in 1s after inserting 4-pole headsets\n");
 		return;
 	}
 	#endif /* CONFIG_HSKEY_BLOCK */
+	/* 2020/01/14,add for not sending hook key release when plugging out */
 	pr_info("[accdet][send_key_event]eint_accdet_sync_flag = %d, cur_eint_state = %d\n",
 		eint_accdet_sync_flag, cur_eint_state);
 	if (((eint_accdet_sync_flag && (cur_eint_state == EINT_PIN_PLUG_OUT))
@@ -1570,12 +1567,15 @@ static int pmic_eint_queue_work(int eintID)
 				jiffies + MICBIAS_DISABLE_TIMER);
 		}
 #ifdef OPLUS_BUG_COMPATIBILITY
+		/* 2020/01/14,add for hp delay detection */
 		if (cur_eint_state == EINT_PIN_PLUG_IN) {
 #ifdef CONFIG_HSKEY_BLOCK
+			/* 2020/04/12,add for hs key blocking for 1s after insterting */
 			g_hskey_block_flag = true;
 			schedule_delayed_work(&hskey_block_work, msecs_to_jiffies(1500));
 #endif /* CONFIG_HSKEY_BLOCK */
 			#ifdef OPLUS_ARCH_EXTENDS
+			/* 2020/01/14,add for dump log out of workqueue */
 			if (door_open == 1) {
 					pr_info("%s: enter dump\n", __func__);
 					BUG_ON(1);
@@ -1585,6 +1585,7 @@ static int pmic_eint_queue_work(int eintID)
 			schedule_delayed_work(&hp_detect_work, msecs_to_jiffies(500));
 		} else {
 #ifdef CONFIG_HSKEY_BLOCK
+			/* 2020/04/12,add for hs key blocking for 1s after insterting */
 			cancel_delayed_work_sync(&hskey_block_work);
 #endif /* CONFIG_HSKEY_BLOCK */
 			pr_info("[accdet_eint_func]delayed work 0ms scheduled when plugging out\n");
@@ -1800,6 +1801,7 @@ static void accdet_eint_handler(void)
 #endif
 
 #ifdef CONFIG_HSKEY_BLOCK
+/* add for hs key blocking for 1s after insterting */
 static void disable_hskey_block_callback(struct work_struct *work)
 {
 	pr_info("[accdet][disable_hskey_block_callback]:\n");
@@ -2513,8 +2515,10 @@ int mt_accdet_probe(struct platform_device *dev)
 	INIT_WORK(&eint_work, eint_work_callback);
 
 	#ifdef OPLUS_BUG_COMPATIBILITY
+	/* 2020/01/14,add for hp delay detection */
 	INIT_DELAYED_WORK(&hp_detect_work, eint_work_callback);
 	#ifdef CONFIG_HSKEY_BLOCK
+	/* 2020/04/12,add for hs key blocking for 1s after insterting */
 	INIT_DELAYED_WORK(&hskey_block_work, disable_hskey_block_callback);
 	#endif /* CONFIG_HSKEY_BLOCK */
 	#endif /* OPLUS_BUG_COMPATIBILITY */

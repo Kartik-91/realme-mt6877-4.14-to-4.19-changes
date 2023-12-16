@@ -68,8 +68,9 @@ typedef struct imgsensor_struct {
 	kal_uint16 current_fps;            //current max fps
 	kal_bool   autoflicker_en;        //record autoflicker enable or disable
 	kal_bool test_pattern;            //record test pattern mode or not
+	//#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	kal_bool enable_secure;	/* run as secure driver or not */
-	//#endif /*VENDOR_EDIT*/
+	//#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 	enum MSDK_SCENARIO_ID_ENUM current_scenario_id;//current scenario id
 	kal_uint8  ihdr_en;                //ihdr enable or disable
 
@@ -79,6 +80,7 @@ typedef struct imgsensor_struct {
 /* SENSOR PRIVATE STRUCT FOR CONSTANT*/
 typedef struct imgsensor_info_struct {
 	kal_uint16 sensor_id;			//record sensor id defined in Kd_imgsensor.h
+	//#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	kal_uint16 module_id;
 	//#endif
 	kal_uint32 checksum_value;        //checksum value for Camera Auto Test

@@ -1,15 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
+
 #include "imgsensor_common.h"
 
 #include <linux/atomic.h>
@@ -43,6 +36,9 @@ enum IMGSENSOR_HW_PIN {
 enum IMGSENSOR_HW_PIN_STATE {
 	IMGSENSOR_HW_PIN_STATE_LEVEL_0,
 	IMGSENSOR_HW_PIN_STATE_LEVEL_1000,
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	IMGSENSOR_HW_PIN_STATE_LEVEL_1050,
+#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 	IMGSENSOR_HW_PIN_STATE_LEVEL_1100,
 	IMGSENSOR_HW_PIN_STATE_LEVEL_1200,
 	IMGSENSOR_HW_PIN_STATE_LEVEL_1210,
@@ -73,6 +69,9 @@ enum IMGSENSOR_HW_PIN_STATE {
 #define	Vol_Low   IMGSENSOR_HW_PIN_STATE_LEVEL_0
 #define Vol_High  IMGSENSOR_HW_PIN_STATE_LEVEL_HIGH
 #define	Vol_1000  IMGSENSOR_HW_PIN_STATE_LEVEL_1000
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+#define	Vol_1050  IMGSENSOR_HW_PIN_STATE_LEVEL_1050
+#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 #define	Vol_1100  IMGSENSOR_HW_PIN_STATE_LEVEL_1100
 #define	Vol_1200  IMGSENSOR_HW_PIN_STATE_LEVEL_1200
 #define	Vol_1210  IMGSENSOR_HW_PIN_STATE_LEVEL_1210
@@ -96,15 +95,18 @@ enum IMGSENSOR_HW_ID {
 #define IMGSENSOR_I2C_DRV_NAME_0  "kd_camera_hw"
 #define IMGSENSOR_I2C_DRV_NAME_1  "kd_camera_hw_bus2"
 #define IMGSENSOR_I2C_DRV_NAME_2  "kd_camera_hw_bus3"
+#define IMGSENSOR_I2C_DRV_NAME_3  "kd_camera_hw_bus4"
 
 #define IMGSENSOR_I2C_OF_DRV_NAME_0 "mediatek,camera_main"
 #define IMGSENSOR_I2C_OF_DRV_NAME_1 "mediatek,camera_sub"
 #define IMGSENSOR_I2C_OF_DRV_NAME_2 "mediatek,camera_main_two"
+#define IMGSENSOR_I2C_OF_DRV_NAME_3 "mediatek,camera_sub_two"
 
 enum IMGSENSOR_I2C_DEV {
 	IMGSENSOR_I2C_DEV_0,
 	IMGSENSOR_I2C_DEV_1,
 	IMGSENSOR_I2C_DEV_2,
+	IMGSENSOR_I2C_DEV_3,
 	IMGSENSOR_I2C_DEV_MAX_NUM,
 };
 
@@ -151,6 +153,7 @@ extern struct IMGSENSOR_HW_POWER_SEQ platform_power_sequence[];
 extern struct IMGSENSOR_HW_POWER_SEQ sensor_power_sequence[];
 extern enum IMGSENSOR_RETURN
 	(*hw_open[IMGSENSOR_HW_ID_MAX_NUM])(struct IMGSENSOR_HW_DEVICE **);
+
 
 #endif
 

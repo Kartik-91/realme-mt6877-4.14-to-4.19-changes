@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 /******************************************************************************
@@ -49,7 +41,7 @@
 #include <clk-mt6873-pg.h>
 
 /* MET: define to enable MET*/
-#define ISP_MET_READY
+//#define ISP_MET_READY
 
 /* #define EP_STAGE */
 #ifdef EP_STAGE
@@ -62,9 +54,11 @@
 #endif
 
 /* EP no need to adjust upper bound of kernel log count */
-//#define EP_NO_K_LOG_ADJUST
+#define EP_NO_K_LOG_ADJUST
 #endif
 #define ENABLE_TIMESYNC_HANDLE /* able/disable TimeSync related for EP */
+
+#define EP_NO_K_LOG_ADJUST
 
 #ifdef CONFIG_COMPAT
 /* 64 bit */
@@ -253,13 +247,13 @@ static const struct of_device_id isp_of_ids[] = {
 		.compatible = "mediatek,camsys",
 	},
 	{
-		.compatible = "mediatek,camsys_rawa",
+		.compatible = "mediatek,camsys_a",
 	},
 	{
-		.compatible = "mediatek,camsys_rawb",
+		.compatible = "mediatek,camsys_b",
 	},
 	{
-		.compatible = "mediatek,camsys_rawc",
+		.compatible = "mediatek,camsys_c",
 	},
 	{
 		.compatible = "mediatek,cam1_inner",
@@ -386,7 +380,7 @@ static struct isp_sec_dapc_reg lock_reg;
 static unsigned int sec_on;
 
 #ifdef CONFIG_PM_SLEEP
-struct wakeup_source isp_wake_lock;
+struct wakeup_source *isp_wake_lock;
 #endif
 static int g_WaitLockCt;
 
@@ -795,7 +789,7 @@ static bool g_is_dumping[ISP_DEV_NODE_NUM] = {0};
 							'\0';\
 						LOG_DBG("%s",\
 						    &ptr[NORMAL_STR_LEN*i]);\
-					} else{\
+					} else {\
 						LOG_DBG("%s",\
 						    &ptr[NORMAL_STR_LEN*i]);\
 						break;\
@@ -810,7 +804,7 @@ static bool g_is_dumping[ISP_DEV_NODE_NUM] = {0};
 						    '\0';\
 						LOG_INF("%s",\
 						    &ptr[NORMAL_STR_LEN*i]);\
-					} else{\
+					} else {\
 						LOG_INF("%s",\
 						    &ptr[NORMAL_STR_LEN*i]);\
 						break;\
@@ -825,7 +819,7 @@ static bool g_is_dumping[ISP_DEV_NODE_NUM] = {0};
 							'\0';\
 						LOG_NOTICE("%s",\
 						    &ptr[NORMAL_STR_LEN*i]);\
-					} else{\
+					} else {\
 						LOG_NOTICE("%s",\
 						    &ptr[NORMAL_STR_LEN*i]);\
 						break;\
@@ -863,12 +857,12 @@ static bool g_is_dumping[ISP_DEV_NODE_NUM] = {0};
 		unsigned int logT = 0;\
 		if (ppb_in > 1) {\
 			ppb = 1;\
-		} else{\
+		} else {\
 			ppb = ppb_in;\
 		} \
 		if (logT_in > _LOG_ERR) {\
 			logT = _LOG_ERR;\
-		} else{\
+		} else {\
 			logT = logT_in;\
 		} \
 		ptr = pSrc->_str[ppb][logT];\
@@ -881,7 +875,7 @@ static bool g_is_dumping[ISP_DEV_NODE_NUM] = {0};
 						'\0';\
 						LOG_DBG("%s",\
 						    &ptr[NORMAL_STR_LEN*i]);\
-					} else{\
+					} else {\
 						LOG_DBG("%s",\
 						    &ptr[NORMAL_STR_LEN*i]);\
 						break;\
@@ -897,7 +891,7 @@ static bool g_is_dumping[ISP_DEV_NODE_NUM] = {0};
 						\
 						LOG_INF("%s",\
 						    &ptr[NORMAL_STR_LEN*i]);\
-					} else{\
+					} else {\
 						LOG_INF("%s",\
 						    &ptr[NORMAL_STR_LEN*i]);\
 						break;\
@@ -912,7 +906,7 @@ static bool g_is_dumping[ISP_DEV_NODE_NUM] = {0};
 						'\0';\
 						LOG_NOTICE("%s",\
 						    &ptr[NORMAL_STR_LEN*i]);\
-					} else{\
+					} else {\
 						LOG_NOTICE("%s",\
 						    &ptr[NORMAL_STR_LEN*i]);\
 						break;\
@@ -3486,6 +3480,12 @@ static int ISP_WaitIrq(struct ISP_WAIT_IRQ_STRUCT *WaitIrq)
 	unsigned long long sec = 0;
 	unsigned long usec = 0;
 
+	if ((idx > 31) || (idx < 0)) {
+		LOG_NOTICE("Error: Invalid idx(%d),Status(0x%x)\n",
+			idx, WaitIrq->EventInfo.Status);
+		return -EFAULT;
+	}
+
 	/* do_gettimeofday(&time_getrequest); */
 	sec = cpu_clock(0);	  /* ns */
 	do_div(sec, 1000);	   /* usec */
@@ -4099,7 +4099,7 @@ static long ISP_ioctl(struct file *pFile, unsigned int Cmd, unsigned long Param)
 
 				} else {
 #ifdef CONFIG_PM_SLEEP
-					__pm_stay_awake(&isp_wake_lock);
+					__pm_stay_awake(isp_wake_lock);
 #endif
 					g_WaitLockCt++;
 
@@ -4117,7 +4117,7 @@ static long ISP_ioctl(struct file *pFile, unsigned int Cmd, unsigned long Param)
 
 				} else {
 #ifdef CONFIG_PM_SLEEP
-					__pm_relax(&isp_wake_lock);
+					__pm_relax(isp_wake_lock);
 #endif
 					LOG_DBG("wakelock disable!! cnt(%d)\n",
 						g_WaitLockCt);
@@ -6470,7 +6470,7 @@ static int ISP_release(struct inode *pInode, struct file *pFile)
 	if (g_WaitLockCt) {
 		LOG_INF("wakelock disable!! cnt(%d)\n", g_WaitLockCt);
 #ifdef CONFIG_PM_SLEEP
-		__pm_relax(&isp_wake_lock);
+		__pm_relax(isp_wake_lock);
 #endif
 		g_WaitLockCt = 0;
 	}
@@ -7053,7 +7053,7 @@ static int ISP_probe(struct platform_device *pDev)
 		}
 
 #ifdef CONFIG_PM_SLEEP
-		wakeup_source_init(&isp_wake_lock, "isp_lock_wakelock");
+		isp_wake_lock = wakeup_source_register(&pDev->dev, "isp_lock_wakelock");
 #endif
 
 #if (ISP_BOTTOMHALF_WORKQ == 1)

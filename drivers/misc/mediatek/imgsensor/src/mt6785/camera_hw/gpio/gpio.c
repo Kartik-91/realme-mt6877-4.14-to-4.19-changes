@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include "gpio.h"
 
@@ -174,6 +166,13 @@ static enum IMGSENSOR_RETURN gpio_set(
 	else
 #endif
 	{
+		ppinctrl_state =
+			pgpio->ppinctrl_state_cam[(unsigned int)sensor_idx][
+			((pin - IMGSENSOR_HW_PIN_PDN) << 1) + gpio_state];
+	}
+
+	mutex_lock(pgpio->pgpio_mutex);
+
 		#ifdef OPLUS_FEATURE_CAMERA_COMMON
 			#ifdef SENSOR_PLATFORM_4G_20682
 			//if ((pin == IMGSENSOR_HW_PIN_FAN53870_ENABLE) && is_project(OPPO_19040)) {
@@ -192,7 +191,6 @@ static enum IMGSENSOR_RETURN gpio_set(
 		#endif
 	}
 
-	mutex_lock(pgpio->pgpio_mutex);
 	if (ppinctrl_state != NULL && !IS_ERR(ppinctrl_state))
 		pinctrl_select_state(pgpio->ppinctrl, ppinctrl_state);
 	else

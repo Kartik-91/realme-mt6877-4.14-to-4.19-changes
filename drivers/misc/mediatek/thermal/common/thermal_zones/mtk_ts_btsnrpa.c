@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/version.h>
 #include <linux/kernel.h>
@@ -38,14 +30,13 @@
 #include <linux/iio/iio.h>
 #endif
 
-#if defined(CONFIG_OPLUS_TEMP_NTC)
+#ifdef CONFIG_OPLUS_TEMP_NTC
 #include "oplus_tempntc.h"
 #endif
 
 #ifdef CONFIG_HORAE_THERMAL_SHELL
 #include "mtk_ts_ntc_cust.h"
 #endif
-
 /*=============================================================
  *Weak functions
  *=============================================================
@@ -650,8 +641,17 @@ static int get_hw_btsnrpa_temp(void)
 	int times = 1, Channel = g_RAP_ADC_channel;
 	static int valid_temp;
 #endif
-
+#if defined (CONFIG_MACH_MT6833)
+	if (IS_ERR_OR_NULL(thermistor_ch2)) {
+		mtkts_btsnrpa_printk("invalid thermistor_ch2:0x%px\n", thermistor_ch2);
+		return ret;
+	}
+#endif
 #if defined(CONFIG_MEDIATEK_MT6577_AUXADC)
+	if (IS_ERR_OR_NULL(thermistor_ch2)) {
+		mtkts_btsnrpa_printk("invalid thermistor_ch2:0x%px\n", thermistor_ch2);
+		return ret;
+	}
 	ret = iio_read_channel_processed(thermistor_ch2, &val);
 	mtkts_btsnrpa_dprintk("%s val=%d\n", __func__, val);
 
@@ -661,11 +661,9 @@ static int get_hw_btsnrpa_temp(void)
 	}
 
 #ifdef APPLY_PRECISE_BTS_TEMP
-	/*val * 1500 * 100 / 4096 = (val * 9375) >>  8 */
-	ret = (val * 9375) >> 8;
+	ret = val * 100;
 #else
-	/*val * 1500 / 4096*/
-	ret = (val * 1500) >> 12;
+	ret = val;
 #endif
 #else
 
@@ -731,7 +729,7 @@ static int get_hw_btsnrpa_temp(void)
 #if defined(APPLY_AUXADC_CALI_DATA)
 #else
 #ifdef APPLY_PRECISE_BTS_TEMP
-	ret = ret * 9375 >> 8;
+	ret = (val * 9375) >>  8;
 #else
 	ret = ret * 1500 / 4096;
 #endif
@@ -796,7 +794,7 @@ int mtkts_btsnrpa_get_hw_temp(void)
 
 static int mtkts_btsnrpa_get_temp(struct thermal_zone_device *thermal, int *t)
 {
-#if defined(CONFIG_OPLUS_TEMP_NTC)
+#ifdef CONFIG_OPLUS_TEMP_NTC
 	if (is_ntc_switch_projects()) {
 		*t = oplus_get_pa2_con_temp();
 	} else {
@@ -1281,7 +1279,6 @@ struct file *file, const char __user *buffer, size_t count, loff_t *data)
 		return count;
 	}
 #endif
-
 	len = (count < (sizeof(ptr_param_data->desc) - 1)) ?
 				count : (sizeof(ptr_param_data->desc) - 1);
 
@@ -1492,7 +1489,6 @@ static int mtkts_btsnrpa_probe(struct platform_device *pdev)
 	mtk_ts_ntc_overide_by_cust_if_needed(&g_RAP_ntc_table, NTC_TABLE_INDEX, NTC_BTSNRPA);
 	mtk_ts_ntc_overide_by_cust_if_needed(&g_RAP_ADC_channel, ADC_CHANNEL_INDEX, NTC_BTSNRPA);
 #endif
-
 	thermistor_ch2 = devm_kzalloc(&pdev->dev, sizeof(*thermistor_ch2),
 		GFP_KERNEL);
 	if (!thermistor_ch2)

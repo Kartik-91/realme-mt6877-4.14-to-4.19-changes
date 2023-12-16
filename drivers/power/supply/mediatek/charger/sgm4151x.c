@@ -1,16 +1,4 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-/*
- * Copyright (C) 2021 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
 
 #include <linux/module.h>
 #include <linux/power_supply.h>
@@ -27,8 +15,8 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 
-#include <mt-plat/charger_class.h>
-#include "mtk_charger.h"
+#include <mt-plat/v1/charger_class.h>
+#include <mt-plat/v1/mtk_charger.h>
 #include "sgm4151x.h"
 
 static int __sgm4151x_read_byte(struct sgm4151x_device *sgm, u8 reg, u8 *data)
@@ -222,7 +210,7 @@ static int sgm4151x_set_hiz_en(struct charger_device *chg_dev, bool hiz_en)
 			SGM4151x_HIZ_EN, reg_val);
 }
 
-#if 0
+#ifdef CONFIG_CUSTOMER_SUPPORT
 static int sgm4151x_enable_shipping_mode(struct charger_device *chg_dev, bool en)
 {
 	struct sgm4151x_device *sgm = charger_get_data(chg_dev);

@@ -820,6 +820,7 @@ static struct mtk_panel_params ext_params = {
 	.hbm_dis_time = 1,
 	.oplus_hbm_on_sync_with_flush = 1,
 	.oplus_display_global_dre = 1,
+	.oplus_disable_hdr_d65 = 1,
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -837,6 +838,9 @@ static struct mtk_panel_params ext_params = {
 	.dyn = {
 		.switch_en = 1,
 	},
+	.vendor = "AMS644VA04_MTK04_20615",
+	.manufacture = "samsung1024",
+	.dsc_output_fhd = true,
 };
 
 static struct mtk_panel_params ext_params_120hz = {
@@ -853,7 +857,7 @@ static struct mtk_panel_params ext_params_120hz = {
                 .cmd = 0x05, .count = 1, .para_list[0] = 0x00, .mask_list[0] = 0x00,
         },
 	.output_mode = MTK_PANEL_DSC_SINGLE_PORT,
-    .dsc_params = {
+	.dsc_params = {
        .enable = 1,
        .ver = 17,
        .slice_mode = 1,
@@ -893,6 +897,7 @@ static struct mtk_panel_params ext_params_120hz = {
 	.hbm_dis_time = 1,
 	.oplus_hbm_on_sync_with_flush = 1,
 	.oplus_display_global_dre = 1,
+	.oplus_disable_hdr_d65 = 1,
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -904,12 +909,15 @@ static struct mtk_panel_params ext_params_120hz = {
 	.corner_pattern_tp_size_r = sizeof(top_rc_pattern_r),
 	.corner_pattern_lt_addr_r = (void *)top_rc_pattern_r,
 #endif
-    .dyn_fps = {
-        .switch_en = 1, .vact_timing_fps = 120,
-    },
+	.dyn_fps = {
+        	.switch_en = 1, .vact_timing_fps = 120,
+	},
         .dyn = {
                 .switch_en = 1,
         },
+	.vendor = "AMS644VA04_MTK04_20615",
+        .manufacture = "samsung1024",
+	.dsc_output_fhd = true,
 };
 static int mtk_panel_ext_param_set(struct drm_panel *panel,
 			 unsigned int mode)

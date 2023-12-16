@@ -33,14 +33,14 @@ extern int oplus_display_panel_set_closebl_flag(void *buf);
 extern int oplus_display_panel_get_closebl_flag(void *buf);
 extern int oplus_display_panel_set_dimlayer_enable(void *buf);
 extern int oplus_display_panel_get_dimlayer_enable(void *buf);
-extern int oplus_display_panel_set_brightness(void *buf);
-extern int oplus_display_panel_get_brightness(void *buf);
+extern int oplus_display_set_brightness(void *buf);
+extern int oplus_display_get_brightness(void *buf);
 extern int oplus_display_panel_set_cabc(void *buf);
 extern int oplus_display_panel_get_cabc(void *buf);
 extern int oplus_display_panel_set_finger_print(void *buf);
-#if defined(CONFIG_MACH_MT6785)
 extern int oplus_display_panel_set_aod_area(void *buf);
-#endif
+extern int oplus_display_panel_get_vendor(void *buf);
+
 static const struct panel_ioctl_desc panel_ioctls[] = {
 	/*PANEL_IOCTL_DEF(PANEL_IOCTL_SET_POWER, oplus_display_panel_set_pwr),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_POWER, oplus_display_panel_get_pwr),
@@ -53,9 +53,9 @@ static const struct panel_ioctl_desc panel_ioctls[] = {
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_AOD, oplus_panel_get_aod_light_mode),
 	/*PANEL_IOCTL_DEF(PANEL_IOCTL_SET_MAX_BRIGHTNESS, oplus_display_panel_set_max_brightness),*/
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_MAX_BRIGHTNESS, oplus_display_panel_get_max_brightness),
-	/*PANEL_IOCTL_DEF(PANEL_IOCTL_GET_PANELINFO, oplus_display_panel_get_vendor),
-	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_CCD, oplus_display_panel_get_ccd_check),*/
-//	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_SERIAL_NUMBER, oplus_display_panel_get_serial_number),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_PANELINFO, oplus_display_panel_get_vendor),
+	/*PANEL_IOCTL_DEF(PANEL_IOCTL_GET_CCD, oplus_display_panel_get_ccd_check),*/
+	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_SERIAL_NUMBER, oplus_display_panel_get_serial_number),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_HBM, oplus_display_panel_set_hbm),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_HBM, oplus_display_panel_get_hbm),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_DIM_ALPHA, oplus_display_panel_set_dim_alpha),
@@ -82,18 +82,17 @@ static const struct panel_ioctl_desc panel_ioctls[] = {
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_ROUNDCORNER, oplus_display_panel_get_roundcorner),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_DYNAMIC_OSC_CLOCK, oplus_display_panel_set_dynamic_osc_clock),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_DYNAMIC_OSC_CLOCK, oplus_display_panel_get_dynamic_osc_clock),*/
-	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_OPLUS_BRIGHTNESS, oplus_display_panel_set_brightness),
-	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_OPLUS_BRIGHTNESS, oplus_display_panel_get_brightness),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_OPLUS_BRIGHTNESS, oplus_display_set_brightness),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_OPLUS_BRIGHTNESS, oplus_display_get_brightness),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_LCM_CABC, oplus_display_panel_set_cabc),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_LCM_CABC, oplus_display_panel_get_cabc),
+	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_FP_PRESS, oplus_display_panel_set_finger_print),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_CABC_STATUS, oplus_display_panel_set_cabc),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_CABC_STATUS, oplus_display_panel_get_cabc),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_FP_PRESS, oplus_display_panel_set_finger_print),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_DRE_STATUS, oplus_display_panel_set_cabc),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_DRE_STATUS, oplus_display_panel_get_cabc),
-#if defined(CONFIG_MACH_MT6785)
 	PANEL_IOCTL_DEF(PANEL_IOCTL_SET_AOD_AREA, oplus_display_panel_set_aod_area),
-#endif
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_OPLUS_MAXBRIGHTNESS, oplus_display_panel_get_max_brightness),
 	/*PANEL_IOCTL_DEF(PANEL_IOCTL_SET_ESD, oplus_display_panel_set_esd),
 	PANEL_IOCTL_DEF(PANEL_IOCTL_GET_ESD, oplus_display_panel_get_esd),*/
@@ -138,14 +137,14 @@ long panel_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	int retcode = -EINVAL;
 
 	if ((nr >= PANEL_COMMOND_MAX) || (nr <= PANEL_COMMOND_BASE)) {
-		pr_err("%s invalid cmd\n", __func__);
+		pr_err("%s invalid cmd, nr:0x%x\n", __func__, nr);
 		return retcode;
 	}
 
 	ioctl = &panel_ioctls[nr];
 	func = ioctl->func;
 	if (unlikely(!func)) {
-		pr_err("%s no function\n", __func__);
+		pr_err("%s no function, nr:0x%x\n", __func__, nr);
 		retcode = -EINVAL;
 		return retcode;
 	}
@@ -159,7 +158,7 @@ long panel_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	}
 	ksize = max(max(in_size, out_size), drv_size);
 
-	pr_err("%s pid = %d, cmd = %s\n", __func__, task_pid_nr(current), ioctl->name);
+	pr_debug("%s pid = %d, cmd = %s\n", __func__, task_pid_nr(current), ioctl->name);
 
 	if (ksize <= sizeof(static_data)) {
 		kdata = static_data;

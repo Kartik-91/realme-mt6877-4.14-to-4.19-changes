@@ -215,7 +215,7 @@ static imgsensor_struct imgsensor = {
          .dummy_line = 0,                    //current dummyline
          .current_fps = 300,  //full size current fps : 24fps for PIP, 30fps for Normal or ZSD
          .autoflicker_en = KAL_FALSE,  //auto flicker enable: KAL_FALSE for disable auto flicker, KAL_TRUE for enable auto flicker
-         .test_pattern = KAL_FALSE,        //test pattern mode or not. KAL_FALSE for in test pattern mode, KAL_TRUE for normal output
+         .test_pattern = 0,        //test pattern mode or not. KAL_FALSE for in test pattern mode, KAL_TRUE for normal output
          .current_scenario_id = MSDK_SCENARIO_ID_CAMERA_PREVIEW,//current scenario id
          .ihdr_en = 0, //sensor need support LE, SE with HDR feature
          .i2c_write_id = 0x6e,//record current sensor's i2c write id
@@ -1105,16 +1105,20 @@ static void custom1_setting(void)
 }    /*    preview_setting  */
 
 
-static kal_uint32 set_test_pattern_mode(kal_bool enable)
+static kal_uint32 set_test_pattern_mode(kal_uint8 enable)
 {
     LOG_INF("enable: %d\n", enable);
 
     if (enable) {
         write_cmos_sensor(0xfe, 0x01);
         write_cmos_sensor(0x8c, 0x11);
+        write_cmos_sensor(0x8d, 0x0c);
+        write_cmos_sensor(0xfe, 0x01);
     } else {
-        write_cmos_sensor(0xfe, 0x10);
+        write_cmos_sensor(0xfe, 0x01);
         write_cmos_sensor(0x8c, 0x10);
+        write_cmos_sensor(0x8d, 0x04);
+        write_cmos_sensor(0xfe, 0x01);
     }
     spin_lock(&imgsensor_drv_lock);
     imgsensor.test_pattern = enable;
@@ -1260,7 +1264,7 @@ static kal_uint32 open(void)
     imgsensor.dummy_pixel = 0;
     imgsensor.dummy_line = 0;
     imgsensor.ihdr_en = 0;
-    imgsensor.test_pattern = KAL_FALSE;
+    imgsensor.test_pattern = 0;
     imgsensor.current_fps = imgsensor_info.pre.max_framerate;
     spin_unlock(&imgsensor_drv_lock);
 
@@ -2031,7 +2035,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
             get_default_framerate_by_scenario((enum MSDK_SCENARIO_ID_ENUM)*(feature_data), (MUINT32 *)(uintptr_t)(*(feature_data+1)));
             break;
         case SENSOR_FEATURE_SET_TEST_PATTERN:
-            set_test_pattern_mode((BOOL)*feature_data);
+            set_test_pattern_mode((kal_uint8)*feature_data);
             break;
         case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE: //for factory mode auto testing
             *feature_return_para_32 = imgsensor_info.checksum_value;

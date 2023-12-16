@@ -5378,8 +5378,13 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
     case SENSOR_FEATURE_GET_MIN_SHUTTER_BY_SCENARIO:
         *(feature_data + 1) = imgsensor_info.min_shutter;
         break;
+    /*its sensor_fusion test Need to use the test box to manually test to obtain the best offset value
+     *offset calculation process：
+     * //Best correlation of 0.000011 at shift of 3.08ms
+     *According to the above log, the shift is 3.08,Test 5-10 times, take the average, use the average * 1000000 and then add to the previous offset
+     *then you can get the latest offset*/
     case SENSOR_FEATURE_GET_OFFSET_TO_START_OF_EXPOSURE:
-        *(MINT32 *)(signed long)(*(feature_data + 1)) = 2274600;
+        *(MINT32 *)(signed long)(*(feature_data + 1)) = 2411600;
         LOG_INF("exporsure");
     break;
     case SENSOR_FEATURE_GET_PIXEL_CLOCK_FREQ_BY_SCENARIO:

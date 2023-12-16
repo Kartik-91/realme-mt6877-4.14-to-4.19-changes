@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef _KD_IMGSENSOR_DATA_H
@@ -24,11 +16,9 @@
 #include <linux/fs.h>
 #include <linux/compat.h>
 #endif
-
 #ifndef OPLUS_FEATURE_CAMERA_COMMON
 #define OPLUS_FEATURE_CAMERA_COMMON
 #endif
-
 /*************************************************
  *
  **************************************************/
@@ -135,7 +125,7 @@ enum ACDK_CAMERA_OPERATION_MODE_ENUM {
  ************************************************************************/
 
 /*  */
-#define MAX_NUM_OF_SUPPORT_SENSOR 32
+#define MAX_NUM_OF_SUPPORT_SENSOR 53
 /*  */
 #define SENSOR_CLOCK_POLARITY_HIGH    0
 #define SENSOR_CLOCK_POLARITY_LOW 1
@@ -321,10 +311,17 @@ enum ACDK_SENSOR_FEATURE_ENUM {
 	SENSOR_FEATURE_GET_EEPROM_STEREODATA,
 	SENSOR_FEATURE_GET_DISTORTIONPARAMS,
 	SENSOR_FEATURE_GET_HS_TRAIL,
+	/*OTP*/
+	SENSOR_FEATURE_GET_SENSOR_OTP_ALL,
+	SENSOR_FEATURE_GET_SERIANO = 0x8500,
+	SENSOR_FEATURE_GET_SERIANO_IC,
 	#endif
 	SENSOR_FEATURE_SET_SEAMLESS_EXTEND_FRAME_LENGTH,
 	SENSOR_FEATURE_SET_HDR_SHUTTER_FRAME_TIME,
 	SENSOR_FEATURE_SET_HDR_TRI_SHUTTER_FRAME_TIME,
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	SENSOR_FEATURE_DISABLE_INIT_INSENSORZOOM_SETTING = 0x9500,
+	#endif
 	SENSOR_FEATURE_MAX
 };
 
@@ -609,6 +606,7 @@ struct ACDK_SENSOR_INFO_STRUCT {
 	MUINT32 Custom13DelayFrame;
 	MUINT32 Custom14DelayFrame;
 	MUINT32 Custom15DelayFrame;
+
 	MUINT16 SensorGrabStartX;
 	MUINT16 SensorGrabStartY;
 	MUINT16 SensorGrabStartX_PRV;
@@ -1012,7 +1010,6 @@ struct SET_SENSOR_AWB_GAIN {
 	MUINT32 ABS_GAIN_B;
 	MUINT32 ABS_GAIN_GB;
 };
-
 struct SET_SENSOR_PATTERN_SOLID_COLOR {
 	MUINT32 COLOR_R;
 	MUINT32 COLOR_Gr;
@@ -1239,9 +1236,14 @@ struct IMAGESENSOR_GET_SUPPORTED_ISP_CLK {
 #define CALI_DATA_MASTER_LENGTH_QCOM          (1557+128)
 #define CALI_DATA_SLAVE_LENGTH                (1545)
 #define CALI_DATA_SLAVE_TELE_LENGTH           (909)
+#define AESYNC_DATA_LENGTH_TOTAL          (65)
+#define AESYNC_DATA_LENGTH_SINGLE         (36)
+#define AESYNC_DATA_LENGTH_MASTER         (35)
+#define AESYNC_DATA_LENGTH_WIDE           (35)
+#define AESYNC_DATA_LENGTH_TELE           (23)
 #define CAMERA_EEPPROM_COMDATA_LENGTH         (64)
 #define CAMERA_DISTORTIONPARAMS_LENGTH        (3441)
-//Stereo info
+
 #define OV64B_STEREO_START_ADDR               (0x2000)
 #define IMX766_STEREO_START_ADDR              (0x2B00)
 #define OV64B_STEREO_START_ADDR_20730         (0x2000)
@@ -1252,7 +1254,7 @@ struct IMAGESENSOR_GET_SUPPORTED_ISP_CLK {
 #define OV48B_STEREO_START_ADDR               (0x2840)
 #define S5KGM1ST_STEREO_START_ADDR            (0x2840)
 #define HI846_STEREO_START_ADDR_20645         (0x1A20)
-#define HI846Q2R_STEREO_START_ADDR            (0x1E80)
+#define HI846Q2R_STEREO_START_ADDR            (0x1EA8)
 #define IMX686Q2R_STEREO_START_ADDR           (0x26D0)
 #define S5KGW3_STEREO_START_ADDR_20630        (0x2D98)
 #define HI846_STEREO_START_ADDR_20630         (0x1A20)
@@ -1279,6 +1281,113 @@ struct IMAGESENSOR_GET_SUPPORTED_ISP_CLK {
 #define S5KGW3P1_STEREO_START_ADDR_ATHENSD    (0x2D98)
 #define HI846_STEREO_START_ADDR_ATHENSD       (0x1A20)
 
+#define OV64B_STEREO_START_ADDR_20730         (0x2000)
+#define OV8856_STEREO_START_ADDR_20730        (0x3A00)
+#define CALI_DATA_MASTER_LENGTH_20730         (1689)
+#define CALI_DATA_SLAVE_LENGTH_20730          (1413)
+
+#define DUALCAM_CALI_DATA_LENGTH_QCOM          (1561 + 128)
+
+#define IMX686_STEREO_START_ADDR          (0x26D0)
+#define HI846_STEREO_START_ADDR           (0x1E80)
+
+#define S5KGW1_STEREO_START_ADDR_WIDE     (0x1900)
+#define S5KGW1_STEREO_START_ADDR_TELE     (0x1F20)
+#define S5KGW1_AESYNC_START_ADDR          (0x2540)
+#define S5KGH1_STEREO_START_ADDR          (0x1360)
+#define GC5035_STEREO_START_ADDR          (0x1600)
+#define S5K3M5_STEREO_START_ADDR          (0x2600)
+#define S5K3M5_AESYNC_START_ADDR          (0x2D00)
+#define GC02M0F_STEREO_START_ADDR         (0x1408)
+#define GM1ST_STEREO_START_ADDR           (0x2840)
+#define OV32A_STEREO_START_ADDR           (0x1000)
+#define OV02B1B_STEREO_START_ADDR         (0x1500)
+#define OV02B10_STEREO_START_ADDR         (0x1500)
+#define HI846_STEREO_START_ADDR_19537     (0x1A20)
+
+#define S5K3M5SX_STEREO_START_ADDR        (0x2600)
+#define S5K3M5SX_AESYNC_START_ADDR        (0x2C60)
+#define IMX319_STEREO_START_ADDR          (0x2600)
+#define IMX319_AESYNC_START_ADDR          (0x2D00)
+
+#define OV48B_STEREO_START_ADDR          (0x2840) //
+#define OV48B_STEREO_START_ADDR_WIDE     (0x2840)
+#define OV48B_STEREO_START_ADDR_TELE     (0x2EA0)
+#define OV48B_AESYNC_START_ADDR          (0x2820) //for later use
+#define S5K3P9SP_STEREO_START_ADDR       (0x0700) //
+#define GC02M0B_STEREO_START_ADDR        (0x1500) //
+
+#define DUALCAM_CALI_DATA_LENGTH_TOTAL_TELE   (2450)
+#define DUALCAM_CALI_DATA_LENGTH_TELE         (909)
+#define CALI_DATA_MASTER_LENGTH               (1557)
+#define CALI_DATA_MASTER_LENGTH_QCOM          (1557+128)
+#define CALI_DATA_SLAVE_LENGTH                (1545)
+#define CALI_DATA_MASTER_LENGTH_8ALIGN        (1560)
+#define CALI_DATA_MASTER_LENGTH_QCOM_8ALIGN   (1560+128)
+#define CALI_DATA_SLAVE_LENGTH_8ALIGN         (1552)
+#define CALI_DATA_SLAVE_TELE_LENGTH_8ALIGN    (896)
+#define CAMERA_EEPROM_MAIN_LENGTH             (3164)
+#define CAMERA_EEPROM_MAIN_LENGTH_QCOM        (3164+128)
+#define CAMERA_EEPROM_NORMAL_LENGTH           (1596)
+#define CAMERA_EEPROM_NORMAL_LENGTH_QCOM      (1596+128)
+#define CAMERA_EEPROM_TELE_LENGTH             (924)
+
+#define CAMERA_MODULE_INFO_LENGTH (8)
+#define CAMERA_MODULE_SN_LENGTH   (20)
+#define EEPROM_WRITE_FUNCTION_NUM (3)
+#define WRITE_DATA_MAX_LENGTH     (16)
+/*Dualcam Cali Mode*/
+#define MAIN_AND_WIDE_CALIMODE            (11)
+#define MAIN_AND_TELE_CALIMODE            (12)
+#define FRONT_PORTRAIT_MODE               (10)
+#define WRITE_EEPROM_AE_SYNC_MASTER       (14)
+#define WRITE_EEPROM_AE_SYNC_WIDE         (15)
+#define WRITE_EEPROM_AE_SYNC_TELE         (16)
+#define SENSOR_DEV_MAIN4_IDX              (0x20)
+#define NORMAL_STEREO_CALIDATA_PATH       "/mnt/vendor/persist/camera/dual_calibration/stereoParams.bin"
+#define NORMAL_STEREO_AFTERSALE_PATH      "/mnt/vendor/persist/camera/stereoParams_aftersale.bin"
+#define TRICAM_MW_STEREO_CALIDATA_PATH    "/mnt/vendor/persist/camera/mwStereoParams.bin"
+#define TRICAM_MW_STEREO_AFTERSALE_PATH   "/mnt/vendor/persist/camera/mwStereoParams_aftersale.bin"
+#define TRICAM_MT_STEREO_CALIDATA_PATH    "/mnt/vendor/persist/camera/mtStereoParams.bin"
+#define TRICAM_MT_STEREO_AFTERSALE_PATH   "/mnt/vendor/persist/camera/mtStereoParams_aftersale.bin"
+#define FRONT_STEREO_CALIDATA_PATH        "/mnt/vendor/persist/camera/front_dual_calibration/stereoParams.bin"
+#define FRONT_STEREO_AFTERSALE_PATH       "/mnt/vendor/persist/camera/frontStereoParams_aftersale.bin"
+#define MAIN_AESYNC_CALIDATA_PATH         "/mnt/vendor/persist/camera/master.bin"
+#define WIDE_AESYNC_CALIDATA_PATH         "/mnt/vendor/persist/camera/wide.bin"
+#define TELE_AESYNC_CALIDATA_PATH         "/mnt/vendor/persist/camera/tele.bin"
+
+enum ACDK_WRITE_EEPROM_RETURN_ENUM{
+  /* Normal Handle enum */
+  ENGMODE_EEPROMINFO_HANDLE_SCUESS       = 0x0,
+  ENGMODE_EEPROMINFO_HANDLE_FAILED,
+  ENGMODE_WRITE_EEPROM_SCUESS,                   /* Write eep scuess */
+  ENGMODE_WRITE_EEPROM_FAILED,                   /* Write eep failed */
+  ENGMODE_WRITE_EEPROM_INVALIDINFO,              /* Invalid Info */
+
+  /* Normal Dualcam enum */
+  ENGMODE_WRITE_EEPROM_DUALCAM_FRONT     = 0x20, /*FrontDualCam*/
+  ENGMODE_WRITE_EEPROM_DUALCAM_REAR,             /*RearDualCam*/
+
+  /* Tricam enum */
+  ENGMODE_WRITE_EEPROM_TRICAM_MW         = 0x40, /*TriCam_MW*/
+  ENGMODE_WRITE_EEPROM_TRICAM_MT,                /*TriCam_MT*/
+
+  /* AESync enum */
+  ENGMODE_WRITE_EEPROM_AESYNC_MASTER     = 0x14, /*Aesync_Master*/
+  ENGMODE_WRITE_EEPROM_AESYNC_WIDE,              /*Aesync_Wide*/
+  ENGMODE_WRITE_EEPROM_AESYNC_TELE,              /*Aesync_Tele*/
+
+  ENGMODE_WRITE_EEPROM_ENUM_MAX
+};
+
+#define DUALCAM_CALI_DATA_LENGTH     (1561)
+#define DUALCAM_CALI_HEADER_DATA_LENGTH       (40)
+#define DUALCAM_CALI_EXTERNALCOEF_DATA_LENGTH (24)
+#define DUALCAM_CALI_INTERNALCOEF_DATA_LENGTH (1517)
+#define DUALCAM_CALI_TAIL_DATA_LENGTH         (4)
+#define DUALCAM_CALI_DATA_DACCODE_OFFSET      (43)
+#define DUALCAM_CALI_EEPROM_DATA_LENGTH     (1589)  //1561+20+8
+
 typedef struct {
   MUINT32 uSensorId;
   MUINT32 uDeviceId;
@@ -1286,6 +1395,17 @@ typedef struct {
   MUINT16 dataLength;
   MUINT8  uData[OPPO_STEREO_CALI_DATA_LENGTH_QCOM];
   } ACDK_SENSOR_ENGMODE_STEREO_STRUCT, *PACDK_SENSOR_ENGMODE_STEREO_STRUCT;
+
+
+typedef struct {
+    MINT32 i4SensorIdx[2];
+    MINT32 i4SensorDev[2];
+    MINT32 i4SensorID[2];
+    MINT32 i4WriteOtp_Addr[2];
+    MINT32 i4WriteOtp_DataLens[2];
+    MUINT8  uData[DUALCAM_CALI_DATA_LENGTH_TOTAL_QCOM];
+    MUINT8  uDataAesync[DUALCAM_CALI_DATA_LENGTH_TOTAL_QCOM];
+}DUALCAMCALI_WRITEEEPROM_STRUCT, *PDUALCAMCALI_WRITEEEPROM_STRUCT;
 #endif
 
 #ifdef CONFIG_COMPAT

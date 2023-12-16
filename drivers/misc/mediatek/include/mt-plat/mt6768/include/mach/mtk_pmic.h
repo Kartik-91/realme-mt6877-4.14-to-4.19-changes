@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef _CUST_PMIC_H_
 #define _CUST_PMIC_H_
@@ -38,11 +30,7 @@
 //#endif /* defined(CONFIG_FPGA_EARLY_PORTING) || PT_DLPT_BRINGUP */
 //#endif /* OPLUS_FEATURE_CHG_BASIC */
 
-#ifndef OPLUS_FEATURE_CHG_BASIC
 #define POWER_UVLO_VOLT_LEVEL 2600
-#else /*OPLUS_FEATURE_CHG_BASIC*/
-#define POWER_UVLO_VOLT_LEVEL 2800
-#endif /*OPLUS_FEATURE_CHG_BASIC*/
 #define IMAX_MAX_VALUE 5500
 
 #define POWER_INT0_VOLT 3400

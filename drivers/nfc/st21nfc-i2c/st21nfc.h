@@ -46,9 +46,10 @@
 void st21nfc_register_st54spi_cb(void (*cb)(int, void *), void *data);
 void st21nfc_unregister_st54spi_cb(void);
 
-struct st21nfc_i2c_platform_data {
-    unsigned int irq_gpio;
-    unsigned int rst_gpio;
-    unsigned int pidle_gpio;
-    unsigned int clkreq_gpio;
-};
+/*
+ * Define WITH_SPI_CLK_MNGT for integrations
+ * where the SPI clock needs to be enabled on request
+ */
+//void mt_spi_enable_master_clk(struct spi_device *spidev);
+//void mt_spi_disable_master_clk(struct spi_device *spidev);
+

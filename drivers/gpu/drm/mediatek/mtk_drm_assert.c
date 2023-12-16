@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2019 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <drm/drmP.h>
 #include <drm/drm_gem.h>
@@ -359,6 +351,8 @@ int drm_show_dal(struct drm_crtc *crtc, bool enable)
 		mtk_ddp_comp_layer_config(ovl_comp, layer_id, plane_state, cmdq_handle);
 	}
 
+	plane_state->base.crtc = NULL;
+
 #ifdef MTK_DRM_FB_LEAK
 	mtk_crtc_gce_flush(crtc, NULL, cmdq_handle, cmdq_handle);
 	cmdq_pkt_wait_complete(cmdq_handle);
@@ -400,6 +394,8 @@ void drm_set_dal(struct drm_crtc *crtc, struct cmdq_pkt *cmdq_handle)
 	} else {
 		mtk_ddp_comp_layer_config(ovl_comp, layer_id, plane_state, cmdq_handle);
 	}
+
+	plane_state->base.crtc = NULL;
 }
 
 int DAL_Clean(void)

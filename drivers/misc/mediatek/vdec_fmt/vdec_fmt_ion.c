@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2021 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (C) 2016 MediaTek Inc.
  */
 
 #include "vdec_fmt_ion.h"
@@ -153,7 +145,7 @@ u64 fmt_translate_fd(u64 fd, u32 offset, struct ionmap map[])
 
 	for (i = 0; i < FMT_FD_RESERVE; i++) {
 		if (fd == map[i].fd) {
-			fmt_debug(1, "quick search iova 0x%llx",
+			fmt_debug(1, "quick search iova 0x%x",
 				map[i].iova + offset);
 			return map[i].iova + offset;
 		}
@@ -175,7 +167,7 @@ u64 fmt_translate_fd(u64 fd, u32 offset, struct ionmap map[])
 
 	iova += offset;
 
-	fmt_debug(1, "iova 0x%llx", iova);
+	fmt_debug(1, "iova 0x%x", iova);
 
 	return iova;
 }

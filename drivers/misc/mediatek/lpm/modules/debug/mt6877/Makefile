@@ -1,3 +1,4 @@
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/lpm/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/include/power_gs_v1
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/lpm/inc/
@@ -6,6 +7,10 @@ ccflags-y += -I$(srctree)/drivers/misc/mediatek/lpm/inc/
 
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/lpm/modules/include/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/lpm/modules/include/mt6877/
+
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+ccflags-y += -DOPLUS_FEATURE_CONN_POWER_MONITOR
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 
 obj-y += mt6877_dbg_fs.o
 obj-y += mt6877_dbg_lpm_fs.o

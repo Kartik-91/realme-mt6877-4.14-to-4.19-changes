@@ -785,6 +785,12 @@ static int mtk_panel_ext_param_set(struct drm_panel *panel,
 		return ret;
 	}
 
+
+	if (!ext) {
+		pr_err("%s, find_panel_ext failed\n", __func__);
+		return 1;
+	}
+
 	if (mode == 0)
 		ext->params = &ext_params;
 	else if (mode == 1)

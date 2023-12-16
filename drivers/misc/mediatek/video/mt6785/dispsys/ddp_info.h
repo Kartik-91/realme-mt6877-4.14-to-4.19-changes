@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef __H_DDP_INFO__
 #define __H_DDP_INFO__
@@ -430,9 +422,6 @@ enum DDP_IOCTL_NAME {
 	DDP_DSI_ENABLE_TE,
 	DDP_DSI_ENTER_IDLE,
 	DDP_DSI_EXIT_IDLE,
-	//#ifdef OPLUS_FEATURE_RAMLESS_AOD
-	DDP_SWITCH_AOD_MODE,
-	//#endif /* OPLUS_FEATURE_RAMLESS_AOD */
 };
 
 struct ddp_io_golden_setting_arg {

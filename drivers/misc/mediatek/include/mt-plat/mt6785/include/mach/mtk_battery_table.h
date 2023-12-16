@@ -1,20 +1,13 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
  */
+
 
 #ifndef _MTK_BATTERY_TABLE_H
 #define _MTK_BATTERY_TABLE_H
 
-#include "mtk_battery.h"
+#include "v1/mtk_battery.h"
 
 #ifndef _DEA_MODIFY_
 #else
@@ -235,88 +228,6 @@ struct FUELGAUGE_TEMPERATURE Fg_Temperature_Table[21] = {
 		{55, 3535},
 		{60, 3014}
 };
-
-#if defined(CONFIG_MACH_MT6781)
-struct FUELGAUGE_TEMPERATURE Fg_Temperature_Table_18w_temp[21] = {
-		{-40, 200752},
-		{-35, 153271},
-		{-30, 118447},
-		{-25, 92658},
-		{-20, 73336},
-		{-15, 58749},
-		{-10, 47606},
-		{-5, 38992},
-		{0, 32318},
-		{5, 27121},
-		{10, 23025},
-		{15, 19773},
-		{20, 17185},
-		{25, 15100},
-		{30, 13414},
-		{35, 12047},
-		{40, 10933},
-		{45, 10016},
-		{50, 9260},
-		{55, 8635},
-		{60, 8114}
-};
-
-struct FUELGAUGE_TEMPERATURE Fg_Temperature_Table_33w_temp[21] = {
-		{-40, 21437},
-		{-35, 20750},
-		{-30, 19956},
-		{-25, 19062},
-		{-20, 18082},
-		{-15, 17039},
-		{-10, 15956},
-		{-5, 14856},
-		{0, 13772},
-		{5, 12732},
-		{10, 11751},
-		{15, 10841},
-		{20, 10012},
-		{25, 9268},
-		{30, 8604},
-		{35, 8021},
-		{40, 7511},
-		{45, 7067},
-		{50, 6682},
-		{55, 6350},
-		{60, 6064}
-};
-
-struct FUELGAUGE_TEMPERATURE Fg_Temperature_Table_new_temp[28] = {
-		{-40, 21437},
-		{-35, 20750},
-		{-30, 19956},
-		{-25, 19062},
-		{-20, 18082},
-		{-15, 17039},
-		{-10, 15956},
-		{-5, 14856},
-		{0, 13772},
-		{5, 12732},
-		{10, 11751},
-		{15, 10841},
-		{20, 10012},
-		{25, 9268},
-		{30, 8604},
-		{35, 8021},
-		{40, 7511},
-		{45, 7067},
-		{50, 6682},
-		{55, 6350},
-		{60, 6064},
-		{65, 5821},
-		{70, 5613},
-		{75, 5434},
-		{80, 5275},
-		{85, 5146},
-		{90, 5032},
-		{95, 4933}
-};
-#endif
-
 #endif
 
 #if (BAT_NTC_47 == 1)

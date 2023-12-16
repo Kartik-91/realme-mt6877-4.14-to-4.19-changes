@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2018 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2020 MediaTek Inc.
  */
 
 #include <linux/slab.h>
@@ -279,7 +271,7 @@ void ppm_cobra_update_limit(void *user_req)
 		cpumask_and(&online_cpu, &cluster_cpu, cpu_online_mask);
 
 		cl_status[i].core_num = cpumask_weight(&online_cpu);
-		cl_status[i].volt = 0;	/* don't care */
+		cl_status[i].volt = 0; /* don't care */
 		if (!cl_status[i].core_num)
 			cl_status[i].freq_idx = -1;
 		else
@@ -563,9 +555,9 @@ prepare_next_round:
 			if (ChoosenCl == -1) {
 				ppm_err("No lower OPP!(bgt/delta/cur)= ");
 				ppm_err("(%d/%d/%d),(opp/act)=(%d,%d/%d%d)\n",
-				power_budget, delta_power, curr_power,
-				opp[PPM_CLUSTER_L], opp[PPM_CLUSTER_B],
-				ACT_CORE(L), ACT_CORE(B));
+					power_budget, delta_power, curr_power,
+					opp[PPM_CLUSTER_L], opp[PPM_CLUSTER_B],
+					ACT_CORE(L), ACT_CORE(B));
 				break;
 			}
 
@@ -703,7 +695,7 @@ void ppm_cobra_init(void)
 
 void ppm_cobra_dump_tbl(struct seq_file *m)
 {
-#if 1
+#ifndef FIX_ME
 	struct ppm_cluster_status cl_status[NR_PPM_CLUSTERS];
 	int i, j;
 	int power;
@@ -770,25 +762,34 @@ void ppm_cobra_dump_tbl(struct seq_file *m)
 static unsigned int get_limit_opp_and_budget(void)
 {
 	unsigned int power = 0;
-	int i, j, k, idx;
+	unsigned int i, j, k, idx;
 
 	for (i = 0; i <= get_cluster_min_cpufreq_idx(PPM_CLUSTER_L); i++) {
 		cobra_lookup_data.limit[PPM_CLUSTER_L].opp = i;
-		for (j = 0;
-			j <= get_cluster_min_cpufreq_idx(PPM_CLUSTER_B);
+		for (j = 0; j <= get_cluster_min_cpufreq_idx(PPM_CLUSTER_B);
 			j++) {
 			cobra_lookup_data.limit[PPM_CLUSTER_B].opp = j;
 
 			for_each_ppm_clusters(k) {
+				if (k >= NR_PPM_CLUSTERS)
+					break;
+
 				if (!cobra_lookup_data.limit[k].core)
 					continue;
 
-				idx =
-					get_idx_in_pwr_tbl(k) +
+				idx = get_idx_in_pwr_tbl(k) +
 					cobra_lookup_data.limit[k].core - 1;
-				power += (k == PPM_CLUSTER_B)
-				? cobra_tbl->basic_pwr_tbl[idx][j].power_idx
-				: cobra_tbl->basic_pwr_tbl[idx][i].power_idx;
+
+				if (idx >= TOTAL_CORE_NUM ||
+					i >= DVFS_OPP_NUM ||
+					j >= DVFS_OPP_NUM) {
+					ppm_info("idx: %u, i: %u, j: %u\n",
+						idx, i, j);
+					return 0;
+				}
+				power += (k == PPM_CLUSTER_B) ?
+				cobra_tbl->basic_pwr_tbl[idx][j].power_idx :
+				cobra_tbl->basic_pwr_tbl[idx][i].power_idx;
 			}
 
 			if (power <= cobra_lookup_data.budget)

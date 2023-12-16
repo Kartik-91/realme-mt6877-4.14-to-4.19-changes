@@ -39,7 +39,7 @@
 #define OPLUS_FEATURE_CAMERA_COMMON
 #endif
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #include "imgsensor_eeprom.h"
 #endif
 

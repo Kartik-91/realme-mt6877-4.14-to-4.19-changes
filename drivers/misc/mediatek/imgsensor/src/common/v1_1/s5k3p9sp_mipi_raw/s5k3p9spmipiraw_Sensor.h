@@ -2,6 +2,7 @@
 /*
  * Copyright (c) 2019 MediaTek Inc.
  */
+
 /*****************************************************************************
  *
  * Filename:
@@ -85,7 +86,9 @@ struct imgsensor_struct {
 /* SENSOR PRIVATE STRUCT FOR CONSTANT*/
 struct imgsensor_info_struct {
 	kal_uint16 sensor_id;//record sensor id defined in Kd_imgsensor.h
+	#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	kal_uint16 module_id;
+	#endif
 	kal_uint32 checksum_value;
 	//checksum value for Camera Auto Test
 	struct imgsensor_mode_struct pre;
@@ -164,5 +167,8 @@ extern int iReadReg(
 	u16 a_u2Addr, u8 *a_puBuff, u16 i2cId);
 extern int iWriteReg(
 	u16 a_u2Addr, u32 a_u4Data, u32 a_u4Bytes, u16 i2cId);
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+extern unsigned int brcb032gwz_read_4cell_from_eeprom_s5k3p9sp(char *data);
+#endif
 
 #endif

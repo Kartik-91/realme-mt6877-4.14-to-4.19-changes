@@ -20,7 +20,7 @@
 #include "imx355mipiraw_Sensor.h"
 #include "imgsensor_common.h"
 #include "imgsensor_eeprom.h"
-#include <soc/oplus/system/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 
 #define PFX "IMX355_camera_sensor"
 #define LOG_INF(format, args...) pr_debug(PFX "[%s] " format, __func__, ##args)

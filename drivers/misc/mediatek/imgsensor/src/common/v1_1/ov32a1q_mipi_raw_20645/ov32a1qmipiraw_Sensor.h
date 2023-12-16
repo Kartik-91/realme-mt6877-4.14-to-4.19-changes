@@ -114,6 +114,11 @@ struct imgsensor_info_struct {
 
 	/* capture scenario relative information */
 	struct imgsensor_mode_struct cap;
+	#ifndef OPLUS_FEATURE_CAMERA_COMMON
+	struct imgsensor_mode_struct cap1;
+
+	struct imgsensor_mode_struct cap2;
+	#endif
 	/* normal video  scenario relative information */
 	struct imgsensor_mode_struct normal_video;
 

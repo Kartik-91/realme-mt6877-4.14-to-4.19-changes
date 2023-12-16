@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2021 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include <linux/init.h>
@@ -66,40 +58,50 @@ static int fs_callback_fl_result(void *p_ctx,
 	return 0;
 }
 
+/**
+ * Should be protected by n3d_mutex before call this function
+ */
 static int n3d_power_on(void)
 {
 	struct SENINF_N3D *pn3d = &gn3d;
+	int need_power_on = 0;
 
-	LOG_D("E\n");
+	if (!pn3d->is_powered) {
+		pn3d->is_powered = 1;
+		need_power_on = 1;
+	}
 
-	//mutex_lock(&pn3d->n3d_mutex);
-	if (atomic_inc_return(&pn3d->n3d_open_cnt) == 1)
+	if (need_power_on) {
+
 		n3d_clk_open(&pn3d->clk);
+		enable_irq(pn3d->irq_id);
+	}
 
-	LOG_D("%d\n", atomic_read(&pn3d->n3d_open_cnt));
-
-	//mutex_unlock(&pn3d->n3d_mutex);
+	LOG_D("%s need_power_on: %d\n", __func__, need_power_on);
 
 	return 0;
 }
 
+/**
+ * Should be protected by n3d_mutex before call this function
+ */
 static int n3d_power_off(void)
 {
 	struct SENINF_N3D *pn3d = &gn3d;
-	//int i;
+	int need_power_off = 0;
 
-	//mutex_lock(&pn3d->n3d_mutex);
-	if (atomic_dec_and_test(&pn3d->n3d_open_cnt)) {
-		n3d_clk_release(&pn3d->clk);
-		//for (i = 0; i < ARRAY_SIZE(pn3d->sync_sensors); i++) {
-		//	if (pn3d->sync_sensors[i])
-		//		kfree(pn3d->sync_sensors[i]);
-		//	pn3d->sync_sensors[i] = NULL;
-		//}
+	if (pn3d->is_powered) {
+		pn3d->is_powered = 0;
+		need_power_off = 1;
 	}
 
-	LOG_D("%d\n", atomic_read(&pn3d->n3d_open_cnt));
-	//mutex_unlock(&pn3d->n3d_mutex);
+	if (need_power_off) {
+		disable_irq(pn3d->irq_id);
+		disable_n3d(&pn3d->regs);
+		n3d_clk_release(&pn3d->clk);
+	}
+
+	LOG_D("%s need_power_off: %d\n", __func__, need_power_off);
 
 	return 0;
 }
@@ -174,14 +176,15 @@ static int unregister_sensor(struct sensor_info *psensor)
 	return 0;
 }
 
+/**
+ * Should be protected by n3d_mutex before call this function
+ */
 static int start_sync(void)
 {
 #define SYNC_NUM 2
 	struct SENINF_N3D *pn3d = &gn3d;
 	unsigned int i, sync_num;
 	unsigned int sync_idx[SYNC_NUM];
-
-	LOG_D("start sync\n");
 
 	for (i = 0, sync_num = 0;
 	     (i < ARRAY_SIZE(pn3d->sync_sensors)) && (sync_num < SYNC_NUM);
@@ -193,7 +196,6 @@ static int start_sync(void)
 	}
 
 	if (sync_num == SYNC_NUM) {
-		//enable_irq(pn3d->irq_id);
 		n3d_power_on();
 		reset_recorder(pn3d->sync_sensors[sync_idx[0]]->cammux_id,
 			       pn3d->sync_sensors[sync_idx[1]]->cammux_id);
@@ -204,12 +206,17 @@ static int start_sync(void)
 			pn3d->fsync_mgr->fs_set_sync(sync_idx[0], 1);
 			pn3d->fsync_mgr->fs_set_sync(sync_idx[1], 1);
 		}
-	} else
-		LOG_W("fail to start sync due to sync_num is %d\n", sync_num);
+	} else {
+		LOG_D("skip to start sync due to sync_num is %d\n",
+		      sync_num);
+	}
 
 	return 0;
 }
 
+/**
+ * Should be protected by n3d_mutex before call this function
+ */
 static int stop_sync(void)
 {
 	struct SENINF_N3D *pn3d = &gn3d;
@@ -222,9 +229,7 @@ static int stop_sync(void)
 			pn3d->fsync_mgr->fs_set_sync(i, 0);
 	}
 
-	//disable_irq(pn3d->irq_id);
 	n3d_power_off();
-	disable_n3d(&pn3d->regs);
 
 	return 0;
 }
@@ -442,22 +447,24 @@ void set_sensor_streaming_state(int sensor_idx, int state)
 {
 	struct SENINF_N3D *pn3d = &gn3d;
 
-	mutex_lock(&pn3d->n3d_mutex);
+	if (pn3d->pchar_dev) {
+		mutex_lock(&pn3d->n3d_mutex);
 
-	LOG_D("sidx = %d, state = %d\n", sensor_idx, state);
+		LOG_D("sidx = %d, state = %d\n", sensor_idx, state);
 
-	if (sensor_idx < MAX_NUM_OF_SUPPORT_SENSOR)
-		pn3d->sensor_streaming[sensor_idx] = state;
+		if (sensor_idx < MAX_NUM_OF_SUPPORT_SENSOR)
+			pn3d->sensor_streaming[sensor_idx] = state;
 
-	if (pn3d->sync_state) {
-		if (state) {
-			LOG_D("start sync by stream on\n");
-			start_sync();
-		} else
-			stop_sync();
+		if (pn3d->sync_state) {
+			if (state) {
+				LOG_D("start sync by stream on\n");
+				start_sync();
+			} else
+				stop_sync();
+		}
+
+		mutex_unlock(&pn3d->n3d_mutex);
 	}
-
-	mutex_unlock(&pn3d->n3d_mutex);
 }
 
 #ifdef CONFIG_COMPAT
@@ -516,7 +523,7 @@ static inline int n3d_reg_char_dev(struct SENINF_N3D *pn3d)
 		ret = -ENOMEM;
 		goto EXIT;
 	}
-	/* Attatch file operation. */
+	/* Attach file operation. */
 	cdev_init(pn3d->pchar_dev, &gn3d_file_operations);
 
 	pn3d->pchar_dev->owner = THIS_MODULE;
@@ -565,8 +572,9 @@ static int n3d_probe(struct platform_device *pDev)
 	n3d_reg_char_dev(pn3d);
 
 	mutex_init(&pn3d->n3d_mutex);
-	atomic_set(&pn3d->n3d_open_cnt, 0);
+	pn3d->is_powered = 0;
 
+	pn3d->dev = &pDev->dev;
 	pn3d->clk.pplatform_device = pDev;
 	n3d_clk_init(&pn3d->clk);
 
@@ -625,6 +633,7 @@ static int n3d_probe(struct platform_device *pDev)
 		}
 
 		pn3d->irq_id = irq;
+		disable_irq(pn3d->irq_id);
 		LOG_D("devnode(%s), irq=%d\n", pDev->dev.of_node->name, irq);
 	} else {
 		LOG_D("No IRQ!!\n");
@@ -638,6 +647,9 @@ static int n3d_remove(struct platform_device *pDev)
 	struct SENINF_N3D *pn3d = &gn3d;
 
 	LOG_D("- E.");
+
+	n3d_clk_exit(&pn3d->clk);
+
 	/* unregister char driver. */
 	n3d_unreg_char_dev(pn3d);
 

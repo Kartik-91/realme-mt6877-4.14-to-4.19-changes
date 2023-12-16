@@ -1,18 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
  */
 
-#include <mt-plat/sync_write.h>
-#include <mt-plat/mtk_ccci_common.h>
+//#include <mt-plat/sync_write.h>
+#include "mt-plat/mtk_ccci_common.h"
 #include <linux/slab.h>
 #include <linux/kobject.h>
 #include "ccci_util_log.h"
@@ -125,10 +117,10 @@ static int trigger_md_boot(int md_id)
 
 static ssize_t boot_status_show(char *buf)
 {
-	char md1_sta_str[32];
-	char md2_sta_str[32];
-	char md3_sta_str[32];
-	char md5_sta_str[32];
+	char md1_sta_str[32] = {0};
+	char md2_sta_str[32] = {0};
+	char md3_sta_str[32] = {0};
+	char md5_sta_str[32] = {0};
 
 	/* MD1 --- */
 	get_md_status(MD_SYS1, md1_sta_str, 32);
@@ -227,7 +219,7 @@ static ssize_t debug_enable_show(char *buf)
 {
 	int curr = 0;
 
-	curr = snprintf(buf, 16, "%d\n", ccci_debug_enable);
+	curr = snprintf(buf, 16, "%d\n", 2);/* ccci_debug_enable); */
 	if (curr < 0 || curr >= 16) {
 		CCCI_UTIL_INF_MSG(
 			"%s-%d:snprintf fail,curr=%d\n", __func__, __LINE__, curr);
@@ -238,7 +230,7 @@ static ssize_t debug_enable_show(char *buf)
 
 static ssize_t debug_enable_store(const char *buf, size_t count)
 {
-	ccci_debug_enable = buf[0] - '0';
+	/* ccci_debug_enable = buf[0] - '0'; */
 	return count;
 }
 
@@ -275,11 +267,11 @@ CCCI_ATTR(ft_info, 0444, &ccci_ft_inf_show, NULL);
 static ssize_t kcfg_setting_show(char *buf)
 {
 	unsigned int curr = 0;
-	unsigned int actual_write;
-	char md_en[MAX_MD_NUM];
+	int actual_write = 0;
+	char md_en[MAX_MD_NUM] = {0};
 	unsigned int md_num = 0;
-	int i;
-	char c_en;
+	int i = 0;
+	char c_en = 0;
 
 	for (i = 0; i < MAX_MD_NUM; i++) {
 		if (get_modem_is_enabled(MD_SYS1 + i)) {
@@ -414,9 +406,13 @@ static struct kobj_type ccci_ktype = {
 int ccci_sysfs_add_modem(int md_id, void *kobj, void *ktype,
 	get_status_func_t get_sta_func, boot_md_func_t boot_func)
 {
-	int ret;
+	int ret = 0;
 	static int md_add_flag;
 
+	if (md_id < 0 || md_id >= MAX_MD_NUM) {
+		CCCI_UTIL_ERR_MSG("invalid md_id = %d\n", md_id);
+		return -CCCI_ERR_SYSFS_NOT_READY;
+	}
 	md_add_flag = 0;
 	if (!ccci_sys_info) {
 		CCCI_UTIL_ERR_MSG("common sys not ready\n");
@@ -443,6 +439,7 @@ int ccci_sysfs_add_modem(int md_id, void *kobj, void *ktype,
 
 	return ret;
 }
+EXPORT_SYMBOL(ccci_sysfs_add_modem);
 
 int ccci_common_sysfs_init(void)
 {

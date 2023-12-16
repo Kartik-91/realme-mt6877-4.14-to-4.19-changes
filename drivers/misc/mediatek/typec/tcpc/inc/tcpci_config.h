@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef __LINUX_TCPC_CONFIG_H
@@ -27,11 +19,9 @@
 /* #define CONFIG_TYPEC_CAP_DBGACC_SNK */
 #define CONFIG_TYPEC_CAP_CUSTOM_SRC
 #define CONFIG_TYPEC_CAP_NORP_SRC
-#ifdef OPLUS_FEATURE_CHG_BASIC
-#define CONFIG_COMPATIBLE_APPLE_TA
-#endif
-
-#define CONFIG_RECV_BAT_ABSENT_NOTIFY
+/* #define CONFIG_COMPATIBLE_APPLE_TA */
+/* FIXME : skip build error */
+/* #define CONFIG_RECV_BAT_ABSENT_NOTIFY */
 
 /* #define CONFIG_TYPEC_ATTACHED_SRC_SAFE0V_DELAY */
 #define CONFIG_TYPEC_ATTACHED_SRC_SAFE0V_TIMEOUT
@@ -145,8 +135,9 @@
 #define CONFIG_USB_PD_ALT_MODE_DFP
 
 #define CONFIG_USB_PD_ALT_MODE_RTDC
-#endif	/* CONFIG_USB_PD_ALT_MODE */
 #endif
+#endif
+
 /* #define CONFIG_USB_PD_DP_CHECK_CABLE */
 /* #define CONFIG_USB_PD_RTDC_CHECK_CABLE */
 
@@ -272,10 +263,8 @@
 #define CONFIG_USB_PD_DFP_FLOW_DELAY_DRSWAP
 #define CONFIG_USB_PD_DFP_FLOW_DELAY_RESET
 
-#define CONFIG_USB_PD_DISCARD_AND_UNEXPECT_MSG
-
 /* Only in startup */
-#define CONFIG_USB_PD_UFP_FLOW_DELAY
+#undef CONFIG_USB_PD_UFP_FLOW_DELAY
 #define CONFIG_USB_PD_VCONN_STABLE_DELAY
 #define CONFIG_USB_PD_VCONN_SAFE5V_ONLY
 
@@ -437,7 +426,7 @@
 #define CONFIG_WD_SBU_PH_RETRY		2
 #define CONFIG_WD_SBU_PH_AUDDEV		200 /* mV */
 #ifndef OPLUS_FEATURE_CHG_BASIC
-#define CONFIG_WD_SBU_PH_LBOUND		1200 /* mV */
+#define CONFIG_WD_SBU_PH_LBOUND		1180 /* mV */
 #else
 #define CONFIG_WD_SBU_PH_LBOUND		982 /* mV */
 #endif
@@ -452,7 +441,8 @@
 #define CONFIG_WD_POLLING_ONLY
 #endif /* CONFIG_WD_SBU_POLLING */
 
-#define CONFIG_CABLE_TYPE_DETECTION
+ /* FIXME : skip build error */
+/* #define CONFIG_CABLE_TYPE_DETECTION */
 
 #endif /* CONFIG_TCPC_CLASS */
 #endif /* __LINUX_TCPC_CONFIG_H */

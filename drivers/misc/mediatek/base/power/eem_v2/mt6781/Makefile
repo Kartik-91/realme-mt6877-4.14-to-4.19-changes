@@ -32,13 +32,14 @@ ccflags-y += \
 	-I$(srctree)/drivers/misc/mediatek/vpu/mt6781	\
 	-I$(EEM_ROOT_DIR)/mt6781/inc	\
 	-I$(srctree)/drivers/misc/mediatek/base/power/mcdi/include/	\
+	-I$(srctree)/drivers/gpu/mediatek/gpufreq/
 
 ifeq ($(CONFIG_MTK_TINYSYS_SSPM_SUPPORT), y)
-ccflags-y += -I$(srctree)/drivers/misc/mediatek/sspm/
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/sspm/v2/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/sspm/mt6781
 endif
 
-ifeq ($(PROJECT_DTB_NAMES),mediatek/k6781v1_64_mcl)
+ifeq ($(PROJECT_DTB_NAMES),mediatek/k6781v1_64_mcl_k419)
 subdir-ccflags-y += -DMC50_LOAD
 endif
 

@@ -1,15 +1,8 @@
+
+ /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #ifndef _MTK_BATTERY_TABLE_H
 #define _MTK_BATTERY_TABLE_H
@@ -201,7 +194,7 @@ int g_temperature[MAX_TABLE] = {
 
 #if (BAT_NTC_10 == 1)
 #ifndef OPLUS_FEATURE_CHG_BASIC
-/* Jizhou.Xue  PSW.BSP.CHG  2021-09-03  for NTC pull up R */
+/* for NTC pull up R */
 #define RBAT_PULL_UP_R             24000
 #else
 #define RBAT_PULL_UP_R             12000
@@ -218,6 +211,7 @@ int g_temperature[MAX_TABLE] = {
 
 #if (BAT_NTC_10 == 1)
 #ifdef OPLUS_FEATURE_CHG_BASIC
+/* add for 0.1 precision battery temp*/
 struct FUELGAUGE_TEMPERATURE Fg_Temperature_01_Precision_Table[166] = {
 		{-400, 195652},
 		{-390, 184917},

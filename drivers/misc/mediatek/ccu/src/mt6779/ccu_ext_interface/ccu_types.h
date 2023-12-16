@@ -1,20 +1,12 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2016 MediaTek Inc.
  */
 
 #ifndef CCU_TYPES_H
 #define CCU_TYPES_H
 
-/*****************************************************************************/
+/*******************************************************************************/
 /* typedef unsigned char   BOOLEAN;    // uint8_t*/
 #define MUINT8 unsigned char
 #define MUINT16 unsigned short
@@ -45,8 +37,8 @@
 #endif
 
 /******************************************************************************
- *Sensor Types
- *****************************************************************************/
+*Sensor Types
+******************************************************************************/
 /* #define CCU_CODE_SLIM*/
 /* typedef unsigned char   BOOLEAN;    // uint8_t*/
 #define U8 unsigned char	/* uint8_t*/
@@ -63,8 +55,8 @@
 #endif				/* NULL*/
 
 /******************************************************************************
- * Error code
- *****************************************************************************/
+* Error code
+******************************************************************************/
 #define ERR_NONE                    (0)
 #define ERR_INVALID                 (-1)
 #define ERR_TIMEOUT                 (-2)

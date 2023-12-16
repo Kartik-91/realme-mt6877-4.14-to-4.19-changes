@@ -1,21 +1,8 @@
- /*
-  * Goodix Touchscreen Driver
-  * Core layer of touchdriver architecture.
-  *
-  * Copyright (C) 2019 - 2020 Goodix, Inc.
-  *
-  * This program is free software; you can redistribute it and/or modify
-  * it under the terms of the GNU General Public License as published by
-  * the Free Software Foundation; either version 2 of the License, or
-  * (at your option) any later version.
-  *
-  * This program is distributed in the hope that it will be a reference
-  * to you, when you are integrating the GOODiX's CTP IC into your system,
-  * but WITHOUT ANY WARRANTY; without even the implied warranty of
-  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  * General Public License for more details.
-  *
-  */
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (C) 2016 MediaTek Inc.
+ */
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -1458,6 +1445,11 @@ static int gt9896s_ts_input_dev_config(struct gt9896s_ts_core *core_data)
 	struct input_dev *input_dev = NULL;
 	int r;
 
+	if (!ts_bdata) {
+		ts_err("ts_bdata is NULL");
+		return -ENOMEM;
+	}
+
 	input_dev = input_allocate_device();
 	if (!input_dev) {
 		ts_err("Failed to allocated input device");
@@ -1520,6 +1512,11 @@ static int gt9896s_ts_pen_dev_config(struct gt9896s_ts_core *core_data)
 	struct gt9896s_ts_board_data *ts_bdata = board_data(core_data);
 	struct input_dev *pen_dev = NULL;
 	int r;
+
+	if (!ts_bdata) {
+		ts_err("ts_bdata is NULL");
+		return -ENOMEM;
+	}
 
 	pen_dev = input_allocate_device();
 	if (!pen_dev) {

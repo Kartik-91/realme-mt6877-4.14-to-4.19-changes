@@ -27,6 +27,7 @@
 #include <linux/fs.h>
 #include <linux/atomic.h>
 #include <linux/types.h>
+#include <soc/oplus/system/oplus_project.h>
 
 #include "kd_camera_typedef.h"
 #include "kd_imgsensor.h"
@@ -691,23 +692,25 @@ static void slim_video_setting(void)
 		sizeof(kal_uint16));
 }
 
-static kal_uint32 set_test_pattern_mode(kal_bool enable)
+static kal_uint32 set_test_pattern_mode(kal_uint8 modes, struct SET_SENSOR_PATTERN_SOLID_COLOR *pTestpatterndata)
 {
-	LOG_INF("enable: %d\n", enable);
+    pr_info("set_test_pattern_mode: %d\n", modes);
 
-	if (enable) {
-		write_cmos_sensor(0xfe, 0x01);
-		write_cmos_sensor(0x8c, 0x11);
-		write_cmos_sensor(0xfe, 0x00);
-	} else {
-		write_cmos_sensor(0xfe, 0x01);
-		write_cmos_sensor(0x8c, 0x10);
-		write_cmos_sensor(0xfe, 0x00);
-	}
-	spin_lock(&imgsensor_drv_lock);
-	imgsensor.test_pattern = enable;
-	spin_unlock(&imgsensor_drv_lock);
-	return ERROR_NONE;
+    if (modes) {
+        write_cmos_sensor(0xfe, 0x01);
+        write_cmos_sensor(0x8c, 0x11);
+        write_cmos_sensor(0x8d, 0x0c);
+        write_cmos_sensor(0xfe, 0x00);
+    } else {
+        write_cmos_sensor(0xfe, 0x01);
+        write_cmos_sensor(0x8c, 0x10);
+        write_cmos_sensor(0x8d, 0x04);
+        write_cmos_sensor(0xfe, 0x00);
+    }
+    spin_lock(&imgsensor_drv_lock);
+    imgsensor.test_pattern = modes;
+    spin_unlock(&imgsensor_drv_lock);
+    return ERROR_NONE;
 }
 
 static kal_uint16 read_module_id(void)
@@ -721,6 +724,7 @@ static kal_uint16 read_module_id(void)
 	return get_byte;
 }
 
+
 static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 {
 	kal_uint8 i = 0;
@@ -730,20 +734,27 @@ static kal_uint32 get_imgsensor_id(UINT32 *sensor_id)
 		imgsensor.i2c_write_id = imgsensor_info.i2c_addr_table[i];
 		spin_unlock(&imgsensor_drv_lock);
 		do {
-			imgsensor_info.module_id = read_module_id();
-			printk("gc02m1hlt module_id: 0x%x\n", imgsensor_info.module_id);
-			*sensor_id = (return_sensor_id());
-			if (*sensor_id == GC02M1B_SENSOR_ID) {
-				*sensor_id = imgsensor_info.sensor_id;
-				if (deviceInfo_register_value == 0x00) {
-					register_imgsensor_deviceinfo("Cam_r1", DEVICE_VERSION_GC02M1HLT, imgsensor_info.module_id);
-					deviceInfo_register_value=0x01;
+			*sensor_id = return_sensor_id();
+			LOG_INF("gc02m1hlt module_id: 0x%x  0x%x  0x%x  0x%x\n", imgsensor_info.module_id,GC02M1_SENSOR_ID,*sensor_id,imgsensor_info.sensor_id);
+			if (*sensor_id == GC02M1_SENSOR_ID) {
+				imgsensor_info.module_id = read_module_id();
+				if(imgsensor_info.module_id == MODULE_ID_HLT) {
+					*sensor_id = imgsensor_info.sensor_id;
+					#ifdef OPLUS_FEATURE_CAMERA_COMMON
+					if (deviceInfo_register_value == 0x00) {
+						register_imgsensor_deviceinfo("Cam_r1", DEVICE_VERSION_GC02M1HLT, imgsensor_info.module_id);
+						deviceInfo_register_value = 0x01;
+					}
+					#endif
+					printk("gc02m1hlt get_imgsensor_id success: 0x%x\n", *sensor_id);
+					return ERROR_NONE;
+				} else {
+					*sensor_id = 0xFFFFFFFF;
+					printk("gc02m1hlt check borard fail\n");
+					return ERROR_SENSOR_CONNECT_FAIL;
 				}
-
-				printk("gc02m1hlt i2c write id: 0x%x, sensor id: 0x%x\n", imgsensor.i2c_write_id, *sensor_id);
-				return ERROR_NONE;
 			}
-			printk("gc02m1hlt Read sensor id fail, write id: 0x%x, id: 0x%x\n", imgsensor.i2c_write_id, *sensor_id);
+			LOG_INF("gc02m1hlt Read sensor id fail, write id: 0x%x, id: 0x%x\n", imgsensor.i2c_write_id, *sensor_id);
 			retry--;
 		} while (retry > 0);
 		i++;
@@ -771,9 +782,10 @@ static kal_uint32 open(void)
 		spin_unlock(&imgsensor_drv_lock);
 		do {
 			sensor_id = (return_sensor_id());
-			if (sensor_id == GC02M1B_SENSOR_ID) {
+			if (sensor_id == GC02M1_SENSOR_ID) {
 				sensor_id = imgsensor_info.sensor_id;
-				LOG_INF("i2c write id: 0x%x, sensor id: 0x%x\n", imgsensor.i2c_write_id, sensor_id);
+				imgsensor_info.module_id = read_module_id();
+				LOG_INF("i2c write id: 0x%x, sensor id: 0x%x, module_id:0x%x\n", imgsensor.i2c_write_id, sensor_id,imgsensor_info.module_id);
 				break;
 			}
 			LOG_INF("Read sensor id fail, write id: 0x%x, id: 0x%x\n", imgsensor.i2c_write_id, sensor_id);
@@ -1414,7 +1426,7 @@ static kal_uint32 feature_control(MSDK_SENSOR_FEATURE_ENUM feature_id,
 			(MUINT32 *)(uintptr_t)(*(feature_data + 1)));
 		break;
 	case SENSOR_FEATURE_SET_TEST_PATTERN:
-		set_test_pattern_mode((BOOL)*feature_data);
+		set_test_pattern_mode((UINT8)*feature_data, (struct SET_SENSOR_PATTERN_SOLID_COLOR *)(feature_data+1));
 		break;
 	case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE:
 		*feature_return_para_32 = imgsensor_info.checksum_value;

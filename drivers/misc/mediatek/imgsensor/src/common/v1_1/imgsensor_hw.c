@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (C) 2016 MediaTek Inc.
  */
 
 #include <linux/delay.h>
@@ -23,6 +15,7 @@
 #define OPLUS_FEATURE_CAMERA_COMMON
 #endif
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
+#include <soc/oplus/system/oplus_project.h>
 #include "imgsensor_eeprom.h"
 #include "imgsensor_hwcfg_custom.h"
 #endif
@@ -35,6 +28,9 @@ char * const imgsensor_hw_pin_names[] = {
 	"vcama",
 #ifdef CONFIG_REGULATOR_RT5133
 	"vcama1",
+#endif
+#if defined(IMGSENSOR_MT6781) || defined(IMGSENSOR_MT6877)
+	"vcamaf",
 #endif
 	"vcamd",
 	"vcamio",
@@ -211,7 +207,9 @@ static enum IMGSENSOR_RETURN imgsensor_hw_power_sequence(
 	ppwr_info = ppwr_seq->pwr_info;
 
 	while (ppwr_info->pin != IMGSENSOR_HW_PIN_NONE &&
-		ppwr_info < ppwr_seq->pwr_info + IMGSENSOR_HW_POWER_INFO_MAX) {
+	       ppwr_info->pin < IMGSENSOR_HW_PIN_MAX_NUM &&
+	       ppwr_info < ppwr_seq->pwr_info + IMGSENSOR_HW_POWER_INFO_MAX) {
+
 		if (pwr_status == IMGSENSOR_HW_POWER_STATUS_ON) {
 			if (ppwr_info->pin != IMGSENSOR_HW_PIN_UNDEF) {
 				#ifdef OPLUS_FEATURE_CAMERA_COMMON
@@ -220,7 +218,6 @@ static enum IMGSENSOR_RETURN imgsensor_hw_power_sequence(
 				#endif
 					pdev =
 					phw->pdev[psensor_pwr->id[ppwr_info->pin]];
-
 				if (__ratelimit(&ratelimit))
 					pr_info(
 					"sensor_idx %d, ppwr_info->pin %d, ppwr_info->pin_state_on %d, delay %u",
@@ -294,7 +291,7 @@ enum IMGSENSOR_RETURN imgsensor_hw_power(
 	#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	struct IMGSENSOR_HW_POWER_SEQ *ppwr_seq = NULL;
 	#endif
-	pr_info("sensor_idx %d, power %d curr_sensor_name %s, enable list %s\n",
+	printk("sensor_idx %d, power %d curr_sensor_name %s, enable list %s\n",
 		sensor_idx,
 		pwr_status,
 		curr_sensor_name,
@@ -302,7 +299,7 @@ enum IMGSENSOR_RETURN imgsensor_hw_power(
 		? "NULL"
 		: phw->enable_sensor_by_index[(uint32_t)sensor_idx]);
 
-	if (!phw->enable_sensor_by_index[(uint32_t)sensor_idx] ||
+	if (phw->enable_sensor_by_index[(uint32_t)sensor_idx] &&
 	!strstr(phw->enable_sensor_by_index[(uint32_t)sensor_idx], curr_sensor_name))
 		return IMGSENSOR_RETURN_ERROR;
 
@@ -313,8 +310,9 @@ enum IMGSENSOR_RETURN imgsensor_hw_power(
 		return ret;
 	}
 	#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	#if !defined(CONFIG_MACH_MT6779)
 	Oplusimgsensor_ldoenable_power(phw, sensor_idx, pwr_status);
-//	Oplusimgsensor_gpioenable_power(phw, sensor_idx, pwr_status);
+	#endif
 	ppwr_seq = Oplusimgsensor_matchhwcfg_power(IMGSENSOR_POWER_MATCHMIPI_HWCFG_INDEX);
 	if (ppwr_seq != NULL) {
 		imgsensor_hw_power_sequence(
@@ -324,7 +322,6 @@ enum IMGSENSOR_RETURN imgsensor_hw_power(
 			ppwr_seq,
 			str_index);
 	}
-
 	ppwr_seq = Oplusimgsensor_matchhwcfg_power(IMGSENSOR_POWER_MATCHSENSOR_HWCFG_INDEX);
 	if (ppwr_seq != NULL) {
 		imgsensor_hw_power_sequence(

@@ -1,14 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include "regulator.h"
@@ -85,6 +77,13 @@ struct regulator *regulator_get_regVCAMAF_20609(void)
 	return regulator_get(&((pimgsensor->hw.common.pplatform_device)->dev), "vcammainaf");
 }
 EXPORT_SYMBOL(regulator_get_regVCAMAF_20609);
+
+struct regulator *regulator_get_regVCAMAF_bladeb(void)
+{
+	struct IMGSENSOR *pimgsensor = &gimgsensor;
+	return regulator_get(&((pimgsensor->hw.common.pplatform_device)->dev), "vtp");
+}
+EXPORT_SYMBOL(regulator_get_regVCAMAF_bladeb);
 #endif
 
 
@@ -194,7 +193,8 @@ static enum IMGSENSOR_RETURN regulator_set(
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
 	if (is_project(21101) || is_project(21102) || is_project(21235) || is_project(21236) || is_project(21041) || is_project(21042)
 	|| is_project(0x216A0) || is_project(21831) || is_project(0x2163B) || is_project(0x2163C) || is_project(0x2163D)
-	|| is_project(21639) || is_project(0x216CD) || is_project(0x216CE) ) {
+	|| is_project(21639) || is_project(0x216CD) || is_project(0x216CE) || is_project(22603) || is_project(22604) || is_project(22609)
+	|| is_project(0x2260A) || is_project(0x2260B) || is_project(22669) || is_project(0x2266A) || is_project(0x2266B) || is_project(0x2266C)) {
 		PK_DBG("to set current regulator pin:%d", pin);
 		regVCAMAF = regulator_get_regVCAMAF_ALICE();
 		if (IS_ERR(regVCAMAF)) {
@@ -230,7 +230,7 @@ static enum IMGSENSOR_RETURN regulator_set(
 			return IMGSENSOR_RETURN_SUCCESS;
 		}
 	}
-	if (is_project(20609) || is_project(0x2060A) || is_project(0x2060B) || is_project(0x2070C) || is_project(0x206FF) || is_project(20795) || is_project(20796) || is_project(0x2070C) || is_project(0x2070B) || is_project(0x2070E) || is_project(0x210A0))
+	if (is_project(20609) || is_project(0x2060A) || is_project(0x2060B) || is_project(0x2070C) || is_project(0x206FF) || is_project(20795) || is_project(20796) || is_project(0x2070C) || is_project(0x2070B) || is_project(0x2070E) || is_project(0x210A0) || is_project(21747) || is_project(21748))
 	{
 		regVCAMAF = regulator_get_regVCAMAF_20609();
 		if (IS_ERR(regVCAMAF)) {
@@ -279,11 +279,11 @@ static enum IMGSENSOR_RETURN regulator_set(
 			{
 				if (regulator_set_voltage(regVCAMAF,regulator_voltage[IMGSENSOR_HW_PIN_STATE_LEVEL_0],regulator_voltage[IMGSENSOR_HW_PIN_STATE_LEVEL_0]))
 				{
-					PK_PR_ERR("[regulator]fail to regulator_set_voltage, powerId:%d\n", regulator_voltage[IMGSENSOR_HW_PIN_STATE_LEVEL_0]);
+					PK_PR_ERR("[regulator] fail to regulator_set_voltage, powerId:%d\n", regulator_voltage[IMGSENSOR_HW_PIN_STATE_LEVEL_0]);
 				}
 				if (regulator_disable(regVCAMAF))
 				{
-					PK_PR_ERR("[regulator]fail to regulator_disable gVCamIO\n");
+					PK_PR_ERR("[regulator] fail to regulator_disable gVCamIO\n");
 					return IMGSENSOR_RETURN_ERROR;
 				}
 			}
@@ -291,11 +291,46 @@ static enum IMGSENSOR_RETURN regulator_set(
 			{
 				if (regulator_set_voltage(regVCAMAF, regulator_voltage[pin_state - IMGSENSOR_HW_PIN_STATE_LEVEL_0],regulator_voltage[pin_state - IMGSENSOR_HW_PIN_STATE_LEVEL_0]))
 				{
-					PK_PR_ERR("[regulator]fail to regulator_set_voltage, powerId:%d\n",regulator_voltage[pin_state - IMGSENSOR_HW_PIN_STATE_LEVEL_0]);
+					PK_PR_ERR("[regulator] fail to regulator_set_voltage, powerId:%d\n",regulator_voltage[pin_state - IMGSENSOR_HW_PIN_STATE_LEVEL_0]);
 				}
 				if (regulator_enable(regVCAMAF))
 				{
-					PK_PR_ERR("[regulator]fail to regulator_enable\n");
+					PK_PR_ERR("[regulator] fail to regulator_enable\n");
+					return IMGSENSOR_RETURN_ERROR;
+				}
+			}
+			return IMGSENSOR_RETURN_SUCCESS;
+		}
+	}
+	if (is_project(22609) || is_project(0x2266B) || is_project(0x2266C) || is_project(22669) || is_project(0x2266A) || is_project(0x2260B)) {
+		regVCAMAF = regulator_get_regVCAMAF_bladeb();
+		if (IS_ERR(regVCAMAF)) {
+			PK_PR_ERR("get bladeb main af regulator fail");
+			regVCAMAF = NULL;
+		}
+		if (pin == IMGSENSOR_HW_PIN_AFVDD)
+		{
+			if (pin_state == IMGSENSOR_HW_PIN_STATE_LEVEL_0)
+			{
+				if (regulator_set_voltage(regVCAMAF,regulator_voltage[IMGSENSOR_HW_PIN_STATE_LEVEL_0],regulator_voltage[IMGSENSOR_HW_PIN_STATE_LEVEL_0]))
+				{
+					PK_PR_ERR("[regulator] fail to regulator_set_voltage, powerId:%d\n", regulator_voltage[IMGSENSOR_HW_PIN_STATE_LEVEL_0]);
+				}
+				if (regulator_disable(regVCAMAF))
+				{
+					PK_PR_ERR("[regulator] fail to regulator_disable gVCamIO\n");
+					return IMGSENSOR_RETURN_ERROR;
+				}
+			}
+			else
+			{
+				if (regulator_set_voltage(regVCAMAF, regulator_voltage[pin_state - IMGSENSOR_HW_PIN_STATE_LEVEL_0],regulator_voltage[pin_state - IMGSENSOR_HW_PIN_STATE_LEVEL_0]))
+				{
+					PK_PR_ERR("[regulator] fail to regulator_set_voltage, powerId:%d\n",regulator_voltage[pin_state - IMGSENSOR_HW_PIN_STATE_LEVEL_0]);
+				}
+				if (regulator_enable(regVCAMAF))
+				{
+					PK_PR_ERR("[regulator] fail to regulator_enable\n");
 					return IMGSENSOR_RETURN_ERROR;
 				}
 			}
@@ -310,8 +345,7 @@ static enum IMGSENSOR_RETURN regulator_set(
 	#endif
 	    pin < IMGSENSOR_HW_PIN_AVDD    ||
 	    pin_state < IMGSENSOR_HW_PIN_STATE_LEVEL_0 ||
-	    pin_state >= IMGSENSOR_HW_PIN_STATE_LEVEL_HIGH ||
-	    sensor_idx < 0)
+	    pin_state >= IMGSENSOR_HW_PIN_STATE_LEVEL_HIGH)
 		return IMGSENSOR_RETURN_ERROR;
 
 	reg_type_offset = REGULATOR_TYPE_VCAMA;

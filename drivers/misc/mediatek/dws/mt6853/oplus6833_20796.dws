@@ -937,10 +937,10 @@
                 <ies>true</ies>
             </gpio79>
             <gpio80>
-                <eint_mode>false</eint_mode>
+                <eint_mode>true</eint_mode>
                 <def_mode>0</def_mode>
                 <inpull_en>true</inpull_en>
-                <inpull_selhigh>false</inpull_selhigh>
+                <inpull_selhigh>true</inpull_selhigh>
                 <def_dir>IN</def_dir>
                 <out_high>false</out_high>
                 <smt>true</smt>
@@ -2258,6 +2258,11 @@
                 <channel>I2C_CHANNEL_4</channel>
                 <address>0x78</address>
             </device6>
+            <device10>
+                <varName>NFC</varName>
+                <channel>I2C_CHANNEL_3</channel>
+                <address>0x8</address>
+            </device10>
             <device11>
                 <varName>CAMERA_SUB</varName>
                 <channel>I2C_CHANNEL_4</channel>

@@ -66,6 +66,7 @@ static int aod_finger_unlock_flag = 0;
 extern unsigned long oplus_display_brightness;
 extern unsigned long oplus_max_normal_brightness;
 extern unsigned long seed_mode;
+extern unsigned int aod_light_mode;
 
 /*#ifdef OPLUS_FEATURE_TP_BASIC*/
 __attribute__((weak)) void lcd_tp_refresh_switch(int fps)
@@ -270,6 +271,105 @@ static struct LCM_setting_table lcm_normal_to_aod_sam[] = {
 	//{REGFLAG_CMD,1,{0x13}},
 	{REGFLAG_END_OF_TABLE, 0x00, {}}
 };
+
+static struct LCM_setting_table lcm_normal_to_aod_low_light_sam[] = {
+	/* DSC Setting */
+	{REGFLAG_CMD, 129, {0x9E, 0x11, 0x00, 0x00, 0x89, 0x30, 0x80, 0x09, 0x60, 0x04, 0x38,\
+					 0x00, 0x1E, 0x02, 0x1C, 0x02, 0x1C, 0x02, 0x00, 0x02, 0x0E,\
+					 0x00, 0x20, 0x02, 0xE3, 0x00, 0x07, 0x00, 0x0C, 0x03, 0x50,\
+					 0x03, 0x64, 0x18, 0x00, 0x10, 0xF0, 0x03, 0x0C, 0x20, 0x00,\
+					 0x06, 0x0B, 0x0B, 0x33, 0x0E, 0x1C, 0x2A, 0x38, 0x46, 0x54,\
+					 0x62, 0x69, 0x70, 0x77, 0x79, 0x7B, 0x7D, 0x7E, 0x01, 0x02,\
+					 0x01, 0x00, 0x09, 0x40, 0x09, 0xBE, 0x19, 0xFC, 0x19, 0xFA,\
+					 0x19, 0xF8, 0x1A, 0x38, 0x1A, 0x78, 0x1A, 0xB6, 0x2A, 0xF6,\
+					 0x2B, 0x34, 0x2B, 0x74, 0x3B, 0x74, 0x6B, 0xF4, 0x00, 0x00,\
+					 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,\
+					 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,\
+					 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,\
+					 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+	{REGFLAG_CMD,2,{0xC2,0x14}},
+	{REGFLAG_CMD,2,{0x9D,0x01}},
+
+	{REGFLAG_CMD,1,{0x11}},
+	{REGFLAG_DELAY,10,{}},
+	/* dcdc sm3010 power ctrl */
+	{REGFLAG_CMD,3,{0xF0,0x5A,0x5A}},
+	{REGFLAG_CMD,3,{0xB0,0x01,0x63}},
+	{REGFLAG_CMD,2,{0x63,0x13}},
+	{REGFLAG_CMD,3,{0xF0,0xA5,0xA5}},
+	{REGFLAG_DELAY,125,{}},
+
+
+	/* TE vsync ON */
+	{REGFLAG_CMD, 2, {0x35, 0x00}},
+
+	/* CASET/PASET Setting */
+	{REGFLAG_CMD, 5, {0x2A, 0x00,0x00,0x04,0x37}},
+	{REGFLAG_CMD, 5, {0x2B, 0x00,0x00,0x09,0x5F}},
+
+	/*FQ CON Setting */
+	{REGFLAG_CMD,3,{0xF0,0x5A,0x5A}},
+	{REGFLAG_CMD,3,{0xB0,0x27,0xF2}},
+	{REGFLAG_CMD,2,{0xF2,0x00}},
+	{REGFLAG_CMD,3,{0xF0,0xA5,0xA5}},
+
+	/*seed seeting*/
+/*	{REGFLAG_CMD,3,{0xF0,0x5A,0x5A}},
+	{REGFLAG_CMD,2,{0x5D,0x46}},
+	{REGFLAG_CMD,2,{0x62,0x00}},
+	{REGFLAG_CMD,3,{0xB0,0x16,0x62}},
+	{REGFLAG_CMD,22,{0x62, 0xE0, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF}},
+	{REGFLAG_CMD,3,{0xF0,0xA5,0xA5}},
+*/
+	/*Frequency Change*/
+	{REGFLAG_CMD,3,{0xF0,0x5A,0x5A}},
+	{REGFLAG_CMD,3,{0x60,0x00,0x00}},
+	{REGFLAG_CMD,2,{0xF7,0x0F}},
+	{REGFLAG_CMD,3,{0xF0,0xA5,0xA5}},
+
+	/* Backlight Dimming Setting */
+	{REGFLAG_CMD, 2, {0x55, 0x00}},
+
+	/* acl setting */
+	{REGFLAG_CMD, 2, {0x53, 0x20}},
+
+	/* Display On*/
+	//{REGFLAG_CMD, 1, {0x29}},
+
+	/* Display off*/
+	{REGFLAG_CMD, 1, {0x28}},
+	{REGFLAG_DELAY,17,{}},
+
+	/* hbm elvss update */
+	{REGFLAG_CMD,3,{0xF0,0x5A,0x5A}},
+	{REGFLAG_CMD,3,{0xB0, 0xB4, 0x63}},
+	{REGFLAG_CMD,12,{0x63, 0xD1, 0x0D, 0x7D, 0xDE, 0x8E, 0x53, 0xE8, 0xEF, 0x29, 0xF9, 0x4F}},
+	{REGFLAG_CMD,3,{0xF0,0xA5,0xA5}},
+	/* aod ctrl setting */
+	{REGFLAG_CMD,3,{0xF0,0x5A,0x5A}},
+	{REGFLAG_CMD,3,{0xBB, 0x3D, 0x0C}},
+	{REGFLAG_CMD,3,{0xF0,0xA5,0xA5}},
+	/*AOD On*/
+	{REGFLAG_CMD,3,{0xF0, 0x5A,0x5A}},
+	{REGFLAG_CMD,2,{0x91, 0X01}},
+	{REGFLAG_CMD,2,{0x53, 0x25}},
+	{REGFLAG_CMD,2,{0xBB, 0x3D}},//0x1D
+	{REGFLAG_CMD,3,{0xF0, 0xA5,0xA5}},
+
+	/*seed Setting*/
+	/*{REGFLAG_CMD,3,{0xF0,0x5A,0x5A}},
+	{REGFLAG_CMD,2,{0x5D,0x46}},
+	{REGFLAG_CMD,2,{0x62,0x00}},
+	{REGFLAG_CMD,3,{0xB0,0x16,0x62}},
+	{REGFLAG_CMD,22,{0x62, 0xE0, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF}},
+	{REGFLAG_CMD,3,{0xF0,0xA5,0xA5}},*/
+	/* Image Data Write for AOD Mode */
+	/* Display on */
+	//{REGFLAG_CMD,1,{0x29}},
+	//{REGFLAG_CMD,1,{0x13}},
+	{REGFLAG_END_OF_TABLE, 0x00, {}}
+};
+
 
 static struct LCM_setting_table lcm_aod_high_mode[] = {
 	/* aod 50nit*/
@@ -823,11 +923,18 @@ static struct mtk_panel_params ext_params = {
 		.rc_tgt_offset_lo = 3,
 	},
 	.data_rate = 600,
+#ifdef CONFIG_OPLUS_OFP_V2
+	.oplus_ofp_need_keep_apart_backlight = true,
+	.oplus_ofp_hbm_on_delay = 16,
+	.oplus_ofp_pre_hbm_off_delay = 2,
+	.oplus_ofp_hbm_off_delay = 9,
+#else
 	.hbm_en_time = 1,
 	.hbm_dis_time = 0,
 	.oplus_need_hbm_wait = 0,
 	.oplus_hbm_on_sync_with_flush = 0,
 	.oplus_hbm_off_sync_with_flush = 0,
+	.oplus_wait_te_num = 3,
 	.oplus_samsung_panel =0,
 	//before hbm need wait
 	.oplus_need_before_hbm_wait= 1,
@@ -836,6 +943,7 @@ static struct mtk_panel_params ext_params = {
 	.before_hbm_dis_time = 0,
 	//delay time: us
 	.before_hbm_en_delay_time =11000,
+#endif
 	#ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -907,11 +1015,18 @@ static struct mtk_panel_params ext_params_90hz = {
        .rc_tgt_offset_lo = 3,
        },
 	.data_rate = 600,
+#ifdef CONFIG_OPLUS_OFP_V2
+	.oplus_ofp_need_keep_apart_backlight = true,
+	.oplus_ofp_hbm_on_delay = 11,
+	.oplus_ofp_pre_hbm_off_delay = 2,
+	.oplus_ofp_hbm_off_delay = 11,
+#else
 	.hbm_en_time = 1,
 	.hbm_dis_time = 0,
 	.oplus_need_hbm_wait = 0,
 	.oplus_hbm_on_sync_with_flush = 0,
 	.oplus_hbm_off_sync_with_flush = 0,
+	.oplus_wait_te_num = 3,
 	.oplus_samsung_panel =0,
 	//before hbm need wait
 	.oplus_need_before_hbm_wait=1,
@@ -920,6 +1035,7 @@ static struct mtk_panel_params ext_params_90hz = {
 	.before_hbm_dis_time = 0,
 	//delay time: us
 	.before_hbm_en_delay_time =8000,
+#endif
 #ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 1,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -945,9 +1061,9 @@ static int mtk_panel_ext_param_set(struct drm_panel *panel,
 {
 	struct mtk_panel_ext *ext = find_panel_ext(panel);
 	int ret = 0;
-	if (mode == 0)
+	if (ext && mode == 0)
 		ext->params = &ext_params;
-	else if (mode == 1)
+	else if (ext && mode == 1)
 		ext->params = &ext_params_90hz;
 	else
 		ret = 1;
@@ -1115,25 +1231,52 @@ static int panel_doze_enable(struct drm_panel *panel, void *dsi, dcs_write_gce c
 	pr_err("debug for lcm %s\n", __func__);
 	aod_state = true;
 
-	for (i = 0; i < (sizeof(lcm_normal_to_aod_sam) / sizeof(struct LCM_setting_table)); i++) {
-		unsigned cmd;
-		cmd = lcm_normal_to_aod_sam[i].cmd;
+	/* normal aod light mode */
+	if (aod_light_mode == 0) {
+		pr_info("debug for %s normal aod light mode\n", __func__);
+		for (i = 0; i < (sizeof(lcm_normal_to_aod_sam) / sizeof(struct LCM_setting_table)); i++) {
+			unsigned cmd;
+			cmd = lcm_normal_to_aod_sam[i].cmd;
 
-		switch (cmd) {
+			switch (cmd) {
 
-			case REGFLAG_DELAY:
-				msleep(lcm_normal_to_aod_sam[i].count);
-				break;
+				case REGFLAG_DELAY:
+					msleep(lcm_normal_to_aod_sam[i].count);
+					break;
 
-			case REGFLAG_UDELAY:
-				udelay(lcm_normal_to_aod_sam[i].count);
-				break;
+				case REGFLAG_UDELAY:
+					udelay(lcm_normal_to_aod_sam[i].count);
+					break;
 
-			case REGFLAG_END_OF_TABLE:
-				break;
+				case REGFLAG_END_OF_TABLE:
+					break;
 
-			default:
-				cb(dsi, handle, lcm_normal_to_aod_sam[i].para_list, lcm_normal_to_aod_sam[i].count);
+				default:
+					cb(dsi, handle, lcm_normal_to_aod_sam[i].para_list, lcm_normal_to_aod_sam[i].count);
+			}
+		}
+	} else {
+		pr_info("debug for %s low aod light mode\n", __func__);
+		for (i = 0; i < (sizeof(lcm_normal_to_aod_low_light_sam) / sizeof(struct LCM_setting_table)); i++) {
+			unsigned cmd;
+			cmd = lcm_normal_to_aod_low_light_sam[i].cmd;
+
+			switch (cmd) {
+
+				case REGFLAG_DELAY:
+					msleep(lcm_normal_to_aod_low_light_sam[i].count);
+					break;
+
+				case REGFLAG_UDELAY:
+					udelay(lcm_normal_to_aod_low_light_sam[i].count);
+					break;
+
+				case REGFLAG_END_OF_TABLE:
+					break;
+
+				default:
+					cb(dsi, handle, lcm_normal_to_aod_low_light_sam[i].para_list, lcm_normal_to_aod_low_light_sam[i].count);
+			}
 		}
 	}
 
@@ -1626,10 +1769,12 @@ static struct mtk_panel_funcs ext_funcs = {
 	.panel_poweroff = lcm_panel_poweroff,
 	//.panel_disp_off = lcm_panel_disp_off,
 	.hbm_set_cmdq = panel_hbm_set_cmdq,
+	#ifndef CONFIG_OPLUS_OFP_V2
 	.hbm_get_state = panel_hbm_get_state,
 	.hbm_set_state = panel_hbm_set_state,
 	.hbm_get_wait_state = panel_hbm_get_wait_state,
 	.hbm_set_wait_state = panel_hbm_set_wait_state,
+	#endif
 	//.panel_no_cv_switch = panel_no_video_cmd_switch_state,
 	.ext_param_set = mtk_panel_ext_param_set,
 	.mode_switch = mode_switch,

@@ -1,25 +1,42 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2017 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 #include <linux/types.h>
-#include <mt-plat/mtk_battery.h>
-#include <mt-plat/mtk_charger.h>
+#include <mt-plat/v1/mtk_battery.h>
+#include <mt-plat/v1/mtk_charger.h>
 #include <mt-plat/mtk_boot.h>
 #include <mtk_gauge_class.h>
 #include <mtk_battery_internal.h>
+#include <linux/of.h>
+
+struct tag_bootmode {
+	u32 size;
+	u32 tag;
+	u32 bootmode;
+	u32 boottype;
+};
 
 int __attribute__((weak)) charger_get_vbus(void)
 {
 	return 4500;
+}
+signed int battery_get_uisoc(void)
+{
+	struct mtk_battery *gm = get_mtk_battery();
+	if (gm != NULL) {
+		int boot_mode = gm->boot_mode;
+
+		if ((boot_mode == META_BOOT) ||
+			(boot_mode == ADVMETA_BOOT) ||
+			(boot_mode == FACTORY_BOOT) ||
+			(boot_mode == ATE_FACTORY_BOOT))
+			return 75;
+		else if (boot_mode == 0)
+			return gm->ui_soc;
+	}
+
+	return 50;
 }
 
 #if (CONFIG_MTK_GAUGE_VERSION != 30)
@@ -43,18 +60,29 @@ signed int battery_get_soc(void)
 	return 50;
 }
 
+/*
 signed int battery_get_uisoc(void)
 {
-	int boot_mode = get_boot_mode();
-
-	if ((boot_mode == META_BOOT) ||
-		(boot_mode == ADVMETA_BOOT) ||
-		(boot_mode == FACTORY_BOOT) ||
-		(boot_mode == ATE_FACTORY_BOOT))
+# workaround for mt6768
+	struct tag_bootmode *tag = NULL;
+	unsigned long node;
+	
+	tag = (struct tag_bootmode *)of_get_flat_dt_prop(node,
+		"atag,boot", NULL);
+	//int boot_mode = get_boot_mode();
+	
+	//NORMAL_BOOT = 0,META_BOOT = 1,
+	//FACTORY_BOOT = 4,ADVMETA_BOOT = 5,ATE_FACTORY_BOOT = 6,
+	
+	if ((tag->bootmode == 1) ||
+		(tag->bootmode == 5) ||
+		(tag->bootmode == 4) ||
+		(tag->bootmode == 6))
 		return 75;
 
 	return 50;
-}
+}*/
+
 
 signed int battery_get_bat_temperature(void)
 {
@@ -107,23 +135,35 @@ signed int battery_get_soc(void)
 	else
 		return 50;
 }
-
+/*
 signed int battery_get_uisoc(void)
 {
-	int boot_mode = get_boot_mode();
 	struct mtk_battery *gm = get_mtk_battery();
+	struct device_node *boot_node = NULL;
+	struct tag_bootmode *tag = NULL;
 
-	if ((boot_mode == META_BOOT) ||
-		(boot_mode == ADVMETA_BOOT) ||
-		(boot_mode == FACTORY_BOOT) ||
-		(boot_mode == ATE_FACTORY_BOOT))
-		return 75;
-
-	if (gm != NULL)
-		return gm->ui_soc;
+	if (gm != NULL){
+		boot_node = gm->pdev_node;
+		if (boot_node != NULL){
+			tag = (struct tag_bootmode *)of_get_property(boot_node,
+							"atag,boot", NULL);
+			if (tag != NULL){
+				//NORMAL_BOOT = 0,META_BOOT = 1,
+				//FACTORY_BOOT = 4,ADVMETA_BOOT = 5,ATE_FACTORY_BOOT = 6,
+				if ((tag->bootmode == 1) ||
+					(tag->bootmode == 5) ||
+					(tag->bootmode == 4) ||
+					(tag->bootmode == 6))
+					return 75;
+				else if (tag->bootmode == 0)
+					return gm->ui_soc;
+			}
+		}
+		return 50;
+	}
 	else
 		return 50;
-}
+}*/
 
 signed int battery_get_bat_temperature(void)
 {

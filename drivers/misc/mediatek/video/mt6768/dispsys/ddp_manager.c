@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #define LOG_TAG "ddp_manager"
 
@@ -1705,8 +1697,6 @@ int dpmgr_enable_event(disp_path_handle dp_handle, enum DISP_PATH_EVENT event)
 
 	if (!wq_handle->init) {
 		init_waitqueue_head(&(wq_handle->wq));
-		/* Yuwei.Zhang.MULTIMEDIA.DISPLAY.LCD. MTK's patch(ALPS06709953) for fixing 3090029 */
-		smp_wmb();
 		wq_handle->init = 1;
 		wq_handle->data = 0;
 		wq_handle->event = event;
@@ -1794,6 +1784,13 @@ int dpmgr_check_status_by_scenario(enum DDP_SCENARIO_ENUM scenario)
 		ddp_dump_reg(modules[i]);
 
 	return 0;
+}
+
+bool dpmgr_is_power_on(void)
+{
+	struct DDP_MANAGER_CONTEXT *context = _get_context();
+
+	return context->power_state;
 }
 
 int dpmgr_check_status(disp_path_handle dp_handle)

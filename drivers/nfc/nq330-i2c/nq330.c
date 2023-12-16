@@ -1151,7 +1151,7 @@ static void secure_timer_workqueue(struct work_struct *Wq)
   return;
 }
 
-static void secure_timer_callback( unsigned long data )
+static void secure_timer_callback( struct timer_list *t )
 {
     /* Flush and push the timer callback event to the bottom half(work queue)
     to be executed later, at a safer time */
@@ -1174,8 +1174,10 @@ static long start_seccure_timer(unsigned long timer_value)
     /* Start the timer if timer value is non-zero */
     if(timer_value)
     {
-        init_timer(&secure_timer);
-        setup_timer( &secure_timer, secure_timer_callback, 0 );
+        //init_timer(&secure_timer);
+        //setup_timer( &secure_timer, secure_timer_callback, 0 );
+        timer_setup(&secure_timer, secure_timer_callback, 0);
+
 
         pr_err("start_seccure_timer: timeout %lums (%lu)\n",timer_value, jiffies );
         ret = mod_timer( &secure_timer, jiffies + msecs_to_jiffies(timer_value));
@@ -1899,7 +1901,7 @@ static const struct i2c_device_id pn544_id[] = {
 #if DRAGON_NFC
 static struct of_device_id pn544_i2c_dt_match[] = {
     {
-        .compatible = "nxp,pn544",
+        .compatible = "nxp,pn553",
     },
     {}
 };

@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #ifndef __LINUX_RT_TCPC_H
@@ -156,11 +148,6 @@ int tcpci_sink_vbus(struct tcpc_device *tcpc, uint8_t type, int mv, int ma);
 int tcpci_disable_vbus_control(struct tcpc_device *tcpc);
 int tcpci_notify_attachwait_state(struct tcpc_device *tcpc, bool as_sink);
 int tcpci_enable_auto_discharge(struct tcpc_device *tcpc, bool en);
-
-#ifdef OPLUS_FEATURE_CHG_BASIC
-int tcpci_enable_bleed_discharge(struct tcpc_device *tcpc, bool en);
-#endif /* OPLUS_FEATURE_CHG_BASIC */
-
 int tcpci_enable_force_discharge(struct tcpc_device *tcpc, bool en, int mv);
 
 #ifdef CONFIG_USB_POWER_DELIVERY

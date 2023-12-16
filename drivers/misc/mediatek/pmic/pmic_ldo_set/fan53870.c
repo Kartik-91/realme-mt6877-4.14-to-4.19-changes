@@ -71,6 +71,7 @@ struct fan53870_pw_chip {
 static struct fan53870_pw_chip *fan53870_pchip;
 int is_fan53870_1p1 = -1;
 int ldo5_power_on = 0;
+int ldo7_power_on = 0;
 void enable_fan53870_gpio(int pwr_status)
 {
     if(fan53870_pchip->en_gpio)
@@ -80,7 +81,10 @@ EXPORT_SYMBOL(enable_fan53870_gpio);
 
 static int is_fan53870_always_enable_on_probe(void)
 {
-	return is_project(0x212A1);
+	if (is_project(0x212A1) || is_project(21851) || is_project(21876)){
+		return 1;
+	}
+	return 0;
 }
 
 static int fan53870_mask_write_reg(struct regmap *regmap, uint reg, uint mask, uint value)
@@ -358,6 +362,8 @@ int fan53870_cam_ldo_set_voltage(unsigned int LDO_NUM, int set_mv)
                 reg_value = 0x89;
             } else if(set_mv == 800){
                 reg_value =0x69;    /*0.848V*/
+			} else if (set_mv == 1050) {
+                reg_value = 0x83;    /*1.056V*/
             } else if (set_mv == 1250) {
                 reg_value = 0x9B;
             } else if (set_mv == 1400) {
@@ -502,6 +508,8 @@ int fan53870_cam_ldo_set_voltage(unsigned int LDO_NUM, int set_mv)
             } else if (set_mv == 2850) {
                 reg_value = 0xB9;
 #endif
+            } else if (set_mv == 3300) {
+                reg_value = 0xF1; /*3.3V*/
             } else {
                 reg_value =0x10; /*1.5V*/
             }
@@ -585,6 +593,11 @@ static int fan53870_dt(struct device *dev, struct fan53870_platform_data *pdata)
         pr_err("failed to request fan53870,ldo5-always-on rc=%d\n", rc);
         ldo5_power_on = 0;
     }
+    rc = of_property_read_u32(np, "fan53870,ldo7-always-on", &ldo7_power_on);
+    if (rc < 0) {
+        pr_err("failed to request fan53870,ldo7-always-on rc=%d\n", rc);
+        ldo7_power_on = 0;
+    }
     /*get reset resource*/
     reset_gpio = of_get_named_gpio(np, "fan53870,gpio_rst", 0);
     if (!gpio_is_valid(reset_gpio)) {
@@ -612,6 +625,9 @@ static int fan53870_pmic_probe(struct i2c_client *client,
     struct fan53870_platform_data *pdata = client->dev.platform_data;
     struct fan53870_pw_chip *pchip;
 #if defined(CONFIG_MACH_MT6877)
+    struct device *dev;
+    struct device_node *np;
+#else
     struct device *dev;
     struct device_node *np;
 #endif
@@ -665,6 +681,19 @@ static int fan53870_pmic_probe(struct i2c_client *client,
         pr_err("fan53870_pchip en gpio\n");
         return -EINVAL;
     }
+#else
+    if (is_project(21127) || is_project(21305)) {
+        dev = &client->dev;
+        np = dev->of_node;
+        pchip->en_gpio = of_get_named_gpio(np, "en-gpios", 0);
+        if (pchip->en_gpio < 0) {
+            pr_err("fan53870_pchip->en_gpio not specified\n");
+        }
+        if (!gpio_is_valid(pchip->en_gpio) ) {
+            pr_err("fan53870_pchip en gpio\n");
+            return -EINVAL;
+        }
+    }
 #endif
     pchip->regmap = devm_regmap_init_i2c(client, &fan53870_regmap);
     if (IS_ERR(pchip->regmap)) {
@@ -690,6 +719,10 @@ static int fan53870_pmic_probe(struct i2c_client *client,
     if (ldo5_power_on == 1) { //for fingerprint 3.3v
     pr_info("%s set fan53870 ldo5 alway on 3.3v\n", __func__);
     fan53870_cam_ldo_set_voltage(5, 3300);
+    }
+    if (ldo7_power_on == 1) { //for fingerprint 3.3v
+    pr_info("%s set fan53870 ldo7 alway on 3.3v\n", __func__);
+    fan53870_cam_ldo_set_voltage(7, 3300);
     }
     pr_err("%s : ret:%d product_id:%d probe done\n", __func__, ret, product_id);
     if (!is_fan53870_always_enable_on_probe()) {

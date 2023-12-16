@@ -116,9 +116,10 @@ config ARM_RK3399_DMC_DEVFREQ
 
 config MTK_QOS_SUPPORT
 	bool "MTK QOS SUPPORT"
-	default y
-	---help---
+	help
 	  This kernel config can be used to enable MTK QOS support.
+	  MTK QOS can support adjust vcore voltage and dram
+	  frequency
 	  If unsure, say N.
 
 config MTK_DVFSRC_MT6833_PRETEST
@@ -144,7 +145,6 @@ config MTK_DVFSRC_MT6781_PRETEST
 	  It just for test, and it will remove after mt6781 chip
 	  is ready.
 	  If unsure, say N
-
 source "drivers/devfreq/event/Kconfig"
 
 endif # PM_DEVFREQ

@@ -57,7 +57,7 @@ struct mddp_dev_rb_head_t {
 			_buf[_len-1] = '\0'; \
 	} while (0)
 
-#define MDDP_DSTATE_IS_VALID_ID(_id) (_id >= 0 && _id < MDDP_DSTATE_ID_NUM)
+#define MDDP_DSTATE_IS_VALID_ID(_id) (_id < MDDP_DSTATE_ID_NUM)
 #define MDDP_DSTATE_IS_ACTIVATED() (mddp_dstate_activated_s)
 
 //------------------------------------------------------------------------------
@@ -697,8 +697,6 @@ void mddp_enqueue_dstate(enum mddp_dstate_id_e id, ...)
 	entry->rb_len = sizeof(struct mddp_dstate_t);
 	entry->rb_data = dstat;
 	mddp_dev_rb_enqueue_tail(list, entry);
-
-	return;
 }
 
 //------------------------------------------------------------------------------
@@ -812,6 +810,7 @@ static long mddp_dev_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 	uint32_t                                buf_len = MDDP_MAX_GET_BUF_SZ;
 	struct mddp_dev_req_set_ct_value_t     *ct_req;
 
+	memset(&dev_req, 0, sizeof(dev_req));
 	/*
 	 * NG. copy_from_user fail!
 	 */

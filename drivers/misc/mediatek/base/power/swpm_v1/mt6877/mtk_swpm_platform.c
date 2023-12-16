@@ -1,22 +1,13 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2020 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 #include <linux/cpu.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/notifier.h>
 #include <linux/perf_event.h>
-#include <linux/spinlock.h>
 #include <trace/events/mtk_events.h>
 #ifdef CONFIG_MTK_QOS_FRAMEWORK
 #include <mtk_qos_ipi.h>
@@ -41,7 +32,6 @@
 #include <mtk_swpm_platform.h>
 #include <mtk_swpm_sp_platform.h>
 #include <mtk_swpm_interface.h>
-
 #undef swpm_pmu_enable
 
 /****************************************************************************
@@ -57,9 +47,9 @@
  *  Local Variables
  ****************************************************************************/
 static unsigned int swpm_init_state;
-
+extern unsigned int mt_gpufreq_get_leakage_no_lock(void);
 /* index snapshot */
-static DEFINE_SPINLOCK(swpm_snap_spinlock);
+static struct mutex swpm_snap_lock;
 static struct mem_swpm_index mem_idx_snap;
 
 #ifdef CONFIG_MTK_TINYSYS_SSPM_SUPPORT
@@ -79,6 +69,7 @@ static unsigned long long rec_size;
 #define swpm_pmu_get_sta(u)  ((swpm_pmu_sta & (1 << u)) >> u)
 #define swpm_pmu_set_sta(u)  (swpm_pmu_sta |= (1 << u))
 #define swpm_pmu_clr_sta(u)  (swpm_pmu_sta &= ~(1 << u))
+static struct mutex swpm_pmu_mutex;
 static unsigned int swpm_pmu_sta;
 
 __weak int mt_spower_get_leakage_uW(int dev, int voltage, int deg)
@@ -601,16 +592,16 @@ static void swpm_pmu_set_enable(int cpu, int enable)
 		swpm_pmu_stop(cpu);
 
 		if (l3_event) {
-			perf_event_release_kernel(l3_event);
 			per_cpu(l3dc_events, cpu) = NULL;
+			perf_event_release_kernel(l3_event);
 		}
 		if (i_event) {
-			perf_event_release_kernel(i_event);
 			per_cpu(inst_spec_events, cpu) = NULL;
+			perf_event_release_kernel(i_event);
 		}
 		if (c_event) {
-			perf_event_release_kernel(c_event);
 			per_cpu(cycle_events, cpu) = NULL;
+			perf_event_release_kernel(c_event);
 		}
 	}
 }
@@ -629,6 +620,8 @@ static void swpm_pmu_set_enable_all(unsigned int enable)
 		return;
 	}
 
+	swpm_lock(&swpm_pmu_mutex);
+	get_online_cpus();
 	if (swpm_pmu_en) {
 		if (!swpm_pmu_sta) {
 #ifdef CONFIG_MTK_CACHE_CONTROL
@@ -652,6 +645,8 @@ static void swpm_pmu_set_enable_all(unsigned int enable)
 #endif
 		}
 	}
+	put_online_cpus();
+	swpm_unlock(&swpm_pmu_mutex);
 
 	swpm_err("pmu_enable: %d, user_sta: %d\n",
 		 swpm_pmu_en, swpm_pmu_sta);
@@ -674,10 +669,18 @@ static void swpm_send_init_ipi(unsigned int addr, unsigned int size,
 
 	if (offset == -1) {
 		swpm_err("qos ipi not ready init fail\n");
-		goto error;
+		swpm_init_state = 0;
+		share_idx_ref = NULL;
+		share_idx_ctrl = NULL;
+		idx_ref_uint_ptr = NULL;
+		idx_output_size = 0;
 	} else if (offset == 0) {
 		swpm_err("swpm share sram init fail\n");
-		goto error;
+		swpm_init_state = 0;
+		share_idx_ref = NULL;
+		share_idx_ctrl = NULL;
+		idx_ref_uint_ptr = NULL;
+		idx_output_size = 0;
 	}
 
 	/* get wrapped sram address */
@@ -687,7 +690,11 @@ static void swpm_send_init_ipi(unsigned int addr, unsigned int size,
 	/* exception control for illegal sbuf request */
 	if (!wrap_d) {
 		swpm_err("swpm share sram offset fail\n");
-		goto error;
+		swpm_init_state = 0;
+		share_idx_ref = NULL;
+		share_idx_ctrl = NULL;
+		idx_ref_uint_ptr = NULL;
+		idx_output_size = 0;
 	}
 
 	/* get sram power index and control address from wrap data */
@@ -717,13 +724,8 @@ static void swpm_send_init_ipi(unsigned int addr, unsigned int size,
 #endif
 	swpm_init_state = 1;
 	return;
+	
 
-error:
-	swpm_init_state = 0;
-	share_idx_ref = NULL;
-	share_idx_ctrl = NULL;
-	idx_ref_uint_ptr = NULL;
-	idx_output_size = 0;
 }
 
 static inline void swpm_pass_to_sspm(void)
@@ -859,22 +861,20 @@ static void swpm_update_lkg_table(void)
 
 static void swpm_idx_snap(void)
 {
-	unsigned long flags;
-
 	if (share_idx_ref) {
-		spin_lock_irqsave(&swpm_snap_spinlock, flags);
+		swpm_lock(&swpm_snap_lock);
 		/* directly copy due to 8 bytes alignment problem */
 		mem_idx_snap.read_bw[0] = share_idx_ref->mem_idx.read_bw[0];
 		mem_idx_snap.write_bw[0] = share_idx_ref->mem_idx.write_bw[0];
-		spin_unlock_irqrestore(&swpm_snap_spinlock, flags);
+		swpm_unlock(&swpm_snap_lock);
 	}
 }
 
 static char idx_buf[POWER_INDEX_CHAR_SIZE] = { 0 };
-static char buf[POWER_CHAR_SIZE] = { 0 };
 
-static void swpm_log_loop(unsigned long data)
+static void swpm_log_loop(struct timer_list *data)
 {
+	char buf[256] = {0};
 	char *ptr = buf;
 	char *idx_ptr = idx_buf;
 	int i;
@@ -932,7 +932,7 @@ static void swpm_log_loop(unsigned long data)
 		trace_swpm_power_idx(idx_buf);
 	}
 	/* put power data to ftrace */
-	trace_swpm_power(buf);
+	//trace_swpm_power(buf);
 
 #ifdef LOG_LOOP_TIME_PROFILE
 	t2 = ktime_get();
@@ -1134,13 +1134,11 @@ static char *_copy_from_user_for_proc(const char __user *buffer, size_t count)
 
 static int dram_bw_proc_show(struct seq_file *m, void *v)
 {
-	unsigned long flags;
-
-	spin_lock_irqsave(&swpm_snap_spinlock, flags);
+	swpm_lock(&swpm_snap_lock);
 	seq_printf(m, "DRAM BW R/W=%d/%d\n",
 		   mem_idx_snap.read_bw[0],
 		   mem_idx_snap.write_bw[0]);
-	spin_unlock_irqrestore(&swpm_snap_spinlock, flags);
+	swpm_unlock(&swpm_snap_lock);
 
 	return 0;
 }

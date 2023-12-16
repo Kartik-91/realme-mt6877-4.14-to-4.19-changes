@@ -1,15 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
+
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include <linux/time.h>
@@ -27,6 +20,11 @@
 #include <linux/kthread.h>
 #include <linux/sched.h>
 #include <uapi/linux/sched/types.h>
+
+/***** NFC SRCLKENAI0 Interrupt Handler +++ *****/
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
+/***** NFC SRCLKENAI0 Interrupt Handler --- *****/
 
 #define SPI_EN
 struct BDG_SYSREG_CTRL_REGS *SYS_REG;		/* 0x00000000 */
@@ -56,6 +54,14 @@ unsigned int need_6382_init;
 unsigned int bdg_tx_mode;
 static int bdg_eint_irq;
 static bool irq_already_requested;
+
+/***** NFC SRCLKENAI0 Interrupt Handler +++ *****/
+static int nfc_eint_irq;
+static int mt6382_nfc_srclk;
+static bool nfc_irq_already_requested;
+static bool nfc_clk_already_enabled;
+static int mt6382_nfc_gpio_value;
+/***** NFC SRCLKENAI0 Interrupt Handler --- *****/
 
 #define T_DCO		5  // nominal: 200MHz
 int hsrx_clk_div;
@@ -227,6 +233,7 @@ void bdg_tx_pull_6382_reset_pin(struct mtk_dsi *dsi)
 	struct gpio_desc *bdg_reset_gpio;
 	struct device *dev = dsi->host.dev;
 
+	DDPMSG("%s----\n", __func__);
 	bdg_reset_gpio = devm_gpiod_get(dev, "bdg", GPIOD_OUT_HIGH);
 	if (IS_ERR(bdg_reset_gpio))
 		DDPMSG("[error] cannot get bdg reset-gpios %ld\n",
@@ -242,7 +249,7 @@ void bdg_tx_pull_6382_reset_pin(struct mtk_dsi *dsi)
 
 }
 
-#if 0
+#ifdef BDG_PORTING_DBG
 void bdg_tx_set_6382_reset_pin(unsigned int value)
 {
 	if (value)
@@ -652,7 +659,7 @@ void set_ana_mipi_dsi_off(void *cmdq)
 	BDG_OUTREGBIT(cmdq, struct DSI_TX_PHY_LCCON_REG,
 		TX_REG[0]->DSI_TX_PHY_LCCON, LC_ULPM_EN, 0); //[1]: lc_ulpm_en
 
-#if 0
+#ifdef BDG_PORTING_DBG
     //Enable SLEEPIN_ULPS_INT_EN
 	BDG_OUTREGBIT(cmdq, struct DSI_TX_INTEN_REG,
 		TX_REG[0]->DSI_TX_INTEN, SLEEPIN_ULPS_INT_EN, 1); //[15]: sleepin_ulps_int_en
@@ -678,7 +685,7 @@ void set_ana_mipi_dsi_off(void *cmdq)
 		}
 	}
 
-#if 0
+#ifdef BDG_PORTING_DBG
     //disable SLEEPIN_ULPS_INT_EN
 	BDG_OUTREGBIT(cmdq, struct DSI_TX_INTEN_REG,
 		TX_REG[0]->DSI_TX_INTEN, SLEEPIN_ULPS_INT_EN, 0); //[15]: sleepin_ulps_int_en
@@ -1479,7 +1486,7 @@ int bdg_tx_enable_hs_clk(enum DISP_BDG_ENUM module,
 	return 0;
 }
 
-#if 0
+#ifdef BDG_PORTING_DBG
 int dsi_set_fps(lcm_dsi_params *dsi_params, enum dsi_fps_enum fps)
 {
 	int i;
@@ -5124,7 +5131,7 @@ void startup_seq_dphy_specific(unsigned int data_rate)
 /* for debug use */
 void output_debug_signal(void)
 {
-#if 0
+#ifdef BDG_PORTING_DBG
 	//Mutex thread 0 remove mod_sof[1]
 	mtk_spi_write(0x00025030, 0x0000001D);
 
@@ -5157,6 +5164,10 @@ void bdg_first_init(void)
 
 	// request eint irq
 	bdg_request_eint_irq();
+
+	/***** NFC SRCLKENAI0 Interrupt Handler +++ *****/
+	nfc_request_eint_irq();
+	/***** NFC SRCLKENAI0 Interrupt Handler --- *****/
 
 	/* open 6382 dsi eint */
 	BDG_OUTREGBIT(NULL, struct IRQ_MSK_CLR_SET_REG, SYS_REG->IRQ_MSK_CLR, REG_04, 1);
@@ -5201,6 +5212,11 @@ int bdg_common_init(enum DISP_BDG_ENUM module,
 	/* spi init & set low speed */
 	spislv_init();
 	spislv_switch_speed_hz(SPI_TX_LOW_SPEED_HZ, SPI_RX_LOW_SPEED_HZ);
+
+	if (nfc_clk_already_enabled)
+		bdg_clk_buf_nfc(1);
+	else
+		bdg_clk_buf_nfc(0);
 
 	set_LDO_on(cmdq);
 	set_mtcmos_on(cmdq);
@@ -5341,6 +5357,7 @@ int bdg_common_init_for_rx_pat(enum DISP_BDG_ENUM module,
 	GPIO = (struct BDG_GPIO_REGS *)DISPSYS_BDG_GPIO_BASE;
 	TX_CMDQ_REG[0] = (struct DSI_TX_CMDQ_REGS *)(DISPSYS_BDG_TX_DSI0_BASE + 0xd00);
 
+	clk_buf_disp_ctrl(true);//?/
 	bdg_tx_pull_6382_reset_pin(dsi);
 	set_LDO_on(cmdq);
 	set_mtcmos_on(cmdq);
@@ -5522,7 +5539,7 @@ void bdg_request_eint_irq(void)
 	}
 
 	// get compatible node
-	node = of_find_compatible_node(NULL, NULL, "mediatek, mt6382_eint");
+	node = of_find_compatible_node(NULL, NULL, "mediatek,mt6382_eint");
 	if (!node) {
 		DDPMSG("[error]%s, mt6382 can't find mt6382_eint compatible node\n", __func__);
 		return;
@@ -5713,4 +5730,102 @@ void bdg_mipi_clk_change(enum DISP_BDG_ENUM module,
 	bdg_dsi_porch_setting(DISP_BDG_DSI0, cmdq, dsi);
 }
 
+void bdg_clk_buf_nfc(bool onoff)
+{
+//	DISPFUNCSTART();
 
+	if (onoff) {
+		mtk_spi_write(0x000000a0, 0x00000022);
+//		DSI_OUTREGBIT(cmdq, struct CKBUF_CTRL_REG,
+//				SYS_REG->CKBUF_CTRL, NFC_CK_OUT_EN, 1);
+	} else {
+		mtk_spi_write(0x000000a0, 0x00000002);
+//		DSI_OUTREGBIT(cmdq, struct CKBUF_CTRL_REG,
+//				SYS_REG->CKBUF_CTRL, NFC_CK_OUT_EN, 0);
+	}
+//	DISPFUNCEND();
+}
+
+/***** NFC SRCLKENAI0 Interrupt Handler +++ *****/
+void nfc_work_func(void)
+{
+	int nfc_srclk;
+
+	nfc_srclk = gpio_get_value(mt6382_nfc_srclk);
+	//DDPMSG("%s, NFC SRCLK GPIO Value = %d\n", __func__, nfc_srclk);
+
+	//suspend need to disable MT6382 first and enable SRCLK first
+	if (nfc_srclk != mt6382_nfc_gpio_value) { //the state of gpio has been updated
+		mt6382_nfc_gpio_value = nfc_srclk;
+
+		if (nfc_srclk == 1) {
+			//switch the mt6382 clock
+			//DDPMSG("%s, NFC SRCLK switch the display clock = %d\n",
+			//	__func__, nfc_srclk);
+			nfc_clk_already_enabled = true;
+			bdg_clk_buf_nfc(nfc_srclk);
+		} else {
+			//switch the mt6382 clock
+			//DDPMSG("%s, NFC SRCLK switch the display clock = %d\n",
+			//	__func__, nfc_srclk);
+			nfc_clk_already_enabled = false;
+			bdg_clk_buf_nfc(nfc_srclk);
+		}
+	}
+}
+
+irqreturn_t nfc_eint_thread_handler(int irq, void *data)
+{
+	nfc_work_func();
+
+	return IRQ_HANDLED;
+}
+
+void nfc_request_eint_irq(void)
+{
+	struct device_node *node;
+
+	if (nfc_irq_already_requested) {
+		enable_irq(nfc_eint_irq);
+		return;
+	}
+
+	// get compatible node
+	node = of_find_compatible_node(NULL, NULL, "mediatek, mt6382_nfc-eint");
+	if (!node) {
+		DDPMSG("%s, mt6382 can't find mt6382_nfc_eint compatible node\n", __func__);
+		return;
+	}
+
+	//get gpio
+	mt6382_nfc_srclk = of_get_named_gpio(node, "mt6382_nfc_srclk", 0);
+	if (mt6382_nfc_srclk < 0)
+		DDPMSG("%s: get NFC SRCLK GPIO failed (%d)", __func__, mt6382_nfc_srclk);
+	else
+		DDPMSG("%s: get NFC SRCLK GPIO Success (%d)", __func__, mt6382_nfc_srclk);
+
+	// get irq number
+	nfc_eint_irq = irq_of_parse_and_map(node, 0);
+	DDPMSG("%s, mt6382 NFC EINT irq number: (%d)\n", __func__, nfc_eint_irq);
+
+	// register irq thread handler
+	if (request_threaded_irq(nfc_eint_irq, NULL/*dbg_eint_irq_handler*/,
+				nfc_eint_thread_handler,
+				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+				"MT6382_NFC_EINT", NULL)) {
+		DDPMSG("%s, mt6382 request NFC EINT irq failed!\n", __func__);
+		return;
+	}
+
+	nfc_irq_already_requested = true;
+	mt6382_nfc_gpio_value = 0;
+
+	//get SRCLK status
+	nfc_work_func();
+
+	// enable irq
+	enable_irq(nfc_eint_irq);
+	// enable irq wake
+	irq_set_irq_wake(nfc_eint_irq, 1);
+}
+/***** NFC SRCLKENAI0 Interrupt Handler --- *****/

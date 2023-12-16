@@ -1,15 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2016 MediaTek Inc.
- * Author: Tiffany Lin <tiffany.lin@mediatek.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 
 #include <linux/errno.h>
@@ -17,7 +8,7 @@
 
 #include "mtk_vcodec_intr.h"
 #include "mtk_vcodec_util.h"
-#include "smi_public.h"
+//#include "smi_public.h"
 
 int mtk_vcodec_wait_for_done_ctx(struct mtk_vcodec_ctx  *ctx,
 	int core_id, int command, unsigned int timeout_ms)
@@ -32,23 +23,23 @@ int mtk_vcodec_wait_for_done_ctx(struct mtk_vcodec_ctx  *ctx,
 	timeout_jiff = msecs_to_jiffies(timeout_ms);
 
 	ret = wait_event_interruptible_timeout(*waitqueue,
-		ctx->int_cond,
+		ctx->int_cond[core_id],
 		timeout_jiff);
 
 	if (!ret) {
 		status = -1;    /* timeout */
 		mtk_v4l2_err("[%d] cmd=%d, ctx->type=%d, wait_event_interruptible_timeout time=%ums out %d %d!",
 			ctx->id, ctx->type, command, timeout_ms,
-			ctx->int_cond, ctx->int_type);
-		// smi_debug_bus_hang_detect(0, "VCODEC");
+			ctx->int_cond[core_id], ctx->int_type);
+		//smi_debug_bus_hang_detect(0, "VCODEC");
 	} else if (-ERESTARTSYS == ret) {
 		mtk_v4l2_err("[%d] cmd=%d, ctx->type=%d, wait_event_interruptible_timeout interrupted by a signal %d %d",
-			ctx->id, ctx->type, command, ctx->int_cond,
+			ctx->id, ctx->type, command, ctx->int_cond[core_id],
 			ctx->int_type);
 		status = -1;
 	}
 
-	ctx->int_cond = 0;
+	ctx->int_cond[core_id] = 0;
 	ctx->int_type = 0;
 #endif
 	return status;
@@ -58,7 +49,7 @@ EXPORT_SYMBOL(mtk_vcodec_wait_for_done_ctx);
 /* Wake up context wait_queue */
 void wake_up_dec_ctx(struct mtk_vcodec_ctx *ctx)
 {
-	ctx->int_cond = 1;
+	ctx->int_cond[0] = 1;
 	wake_up_interruptible(&ctx->queue[0]);
 }
 
@@ -132,9 +123,9 @@ void clean_irq_status(unsigned int irq_status, void __iomem *addr)
 /* Wake up context wait_queue */
 void wake_up_enc_ctx(struct mtk_vcodec_ctx *ctx, unsigned int reason)
 {
-	ctx->int_cond = 1;
+	ctx->int_cond[0] = 1;
 	ctx->int_type = reason;
-	wake_up_interruptible(&ctx->queue);
+	wake_up_interruptible(&ctx->queue[0]);
 }
 
 irqreturn_t mtk_vcodec_enc_irq_handler(int irq, void *priv)

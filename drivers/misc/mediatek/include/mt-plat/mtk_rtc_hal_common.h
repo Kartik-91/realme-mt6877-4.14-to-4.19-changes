@@ -1,15 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- */
+* Copyright (C) 2021 MediaTek Inc.
+*/
+
 
 #ifndef MTK_RTC_HAL_COMMON_H
 #define MTK_RTC_HAL_COMMON_H
@@ -34,25 +27,6 @@ enum rtc_spare_enum {
 	RTC_32K_LESS,
 	RTC_LP_DET,
 	RTC_FG_INIT,
-	#ifdef OPLUS_BUG_STABILITY
-	RTC_REBOOT_KERNEL, // 15
-	RTC_SILENCE_BOOT,//16
-	RTC_META_BOOT,//17
-	RTC_SAU_BOOT,//18
-	#endif /* OPLUS_BUG_STABILITY */
-	#ifdef OPLUS_BUG_STABILITY
-	RTC_OPPO_BATTERY,//19
-	#endif /* OPLUS_BUG_STABILITY */
-#ifdef OPLUS_BUG_STABILITY
-	RTC_FACTORY_BOOT,
-#endif /* OPLUS_BUG_STABILITY */
-#ifdef OPLUS_BUG_STABILITY
-	RTC_SENSOR_CAUSE_PANIC,
-#endif /* OPLUS_BUG_STABILITY */
-	RTC_SAFE_BOOT,
-#ifdef OPLUS_FEATURE_AGINGTEST
-	RTC_AGINGTEST_BOOT,
-#endif /*OPLUS_FEATURE_AGINGTEST */
 	RTC_SPAR_NUM
 };
 

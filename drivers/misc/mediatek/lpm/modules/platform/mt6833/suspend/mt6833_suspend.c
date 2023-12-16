@@ -27,9 +27,7 @@
 #include <linux/kthread.h>
 #include <linux/hrtimer.h>
 #include <linux/ktime.h>
-#include <linux/sched/signal.h>
-#include <linux/spinlock.h>
-#include <uapi/linux/sched/types.h>
+#include <mt6833_spm_comm.h>
 
 #include <mtk_lpm.h>
 #include <mtk_lpm_module.h>
@@ -38,17 +36,17 @@
 #include <mtk_lpm_call_type.h>
 #include <mtk_dbg_common_v1.h>
 #include <mt-plat/mtk_ccci_common.h>
-#include <mtk_cpuidle_status.h>
 #include <uapi/linux/sched/types.h>
+#include <mtk_cpuidle_status.h>
 #include "mt6833.h"
 #include "mt6833_suspend.h"
 
 unsigned int mt6833_suspend_status;
-static struct cpumask abort_cpumask;
-static DEFINE_SPINLOCK(lpm_abort_locker);
 struct md_sleep_status before_md_sleep_status;
 struct md_sleep_status after_md_sleep_status;
 struct cpumask s2idle_cpumask;
+static struct cpumask abort_cpumask;
+static DEFINE_SPINLOCK(lpm_abort_locker);
 struct mtk_lpm_model mt6833_model_suspend;
 
 void __attribute__((weak)) subsys_if_on(void)

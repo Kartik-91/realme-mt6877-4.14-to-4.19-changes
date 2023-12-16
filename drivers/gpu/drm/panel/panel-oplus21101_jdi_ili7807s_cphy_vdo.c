@@ -451,6 +451,8 @@ static struct mtk_panel_params ext_params = {
 	.phy_timcon = {
 		.hs_prpr = 0x0B,
 	},
+	.vendor = "ILI7807s_JDI_OdinA",
+	.manufacture = "OdinA_ili_jdi3276",
 /*#ifdef CONFIG_MTK_ROUND_CORNER_SUPPORT
 	.round_corner_en = 0,
 	.corner_pattern_height = ROUND_CORNER_H_TOP,
@@ -581,7 +583,7 @@ static int mtk_panel_ext_param_set(struct drm_panel *panel,
 	struct mtk_panel_ext *ext = find_panel_ext(panel);
 	int ret = 0;
 
-	if (mode == 0)
+	if (ext && mode == 0)
 		ext->params = &ext_params;
 	//else if (mode == 1)
 	//	ext->params = &ext_params_90hz;

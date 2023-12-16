@@ -48,13 +48,12 @@
 #include "kd_camera_typedef.h"
 #include "imgsensor_common.h"
 #include "s5kgm1spmipiraw_Sensor.h"
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #ifndef OPLUS_FEATURE_CAMERA_COMMON
 /* Houbing.Peng@ODM_HQ Cam.Drv, Add for hal can't detect when read sensor ID fail 20191104*/
 #define OPLUS_FEATURE_CAMERA_COMMON
 #endif
 #ifdef OPLUS_FEATURE_CAMERA_COMMON
-//#include <soc/oppo/oppo_project.h>  //compiler not found 20190812
 //#include <mmdvfs_mgr.h>  //compiler not found 20190812
 #include <linux/pm_qos.h>
 //#ifdef CONFIG_MTK_QOS_SUPPORT
@@ -8861,7 +8860,12 @@ static kal_uint32 set_test_pattern_mode(kal_bool enable)
 	if (enable) {
 		// 0x5E00[8]: 1 enable,  0 disable
 		// 0x5E00[1:0]; 00 Color bar, 01 Random Data, 10 Square, 11 BLACK
-		write_cmos_sensor(0x0600, 0x0002);
+		write_cmos_sensor(0x6028, 0x4000);
+		write_cmos_sensor(0x0600, 0x0001);
+		write_cmos_sensor(0x0602, 0x0000);
+		write_cmos_sensor(0x0604, 0x0000);
+		write_cmos_sensor(0x0606, 0x0000);
+		write_cmos_sensor(0x0608, 0x0000);
 	} else {
 		// 0x5E00[8]: 1 enable,  0 disable
 		// 0x5E00[1:0]; 00 Color bar, 01 Random Data, 10 Square, 11 BLACK
