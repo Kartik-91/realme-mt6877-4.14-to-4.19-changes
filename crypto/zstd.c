@@ -248,7 +248,6 @@ static int __init zstd_mod_init(void)
 	if (ret)
 		crypto_unregister_alg(&alg);
 
-	pr_warn("ZSTD_DEF_LEVEL val %d\n", ZSTD_DEF_LEVEL);
 	return ret;
 }
 
