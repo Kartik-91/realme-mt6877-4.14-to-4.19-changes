@@ -57,6 +57,8 @@
 			pinmux = <PINMUX_GPIO80__FUNC_GPIO80>;
 			slew-rate = <0>;  /*direction 0:in, 1:out*/
 			input-enable;
+			drive-strength = <7>; //gpio driving 0~7
+			bias-pull-up = <MTK_PUPD_SET_R1R0_11>;
 		};
 	};
 };
@@ -132,13 +134,6 @@
 
 		qcom,slave-chg-en-gpio = <&pio 82 0x00>;
 	};
-};
-
-&phy_tuning {
-	compatible = "mediatek,phy_tuning";
-	u2_vrt_ref = <6>;
-	u2_term_ref = <6>;
-	u2_enhance = <3>;
 };
 
 &lk_charger {
@@ -818,6 +813,8 @@ pinctrl-names = "default", "dischg_enable", "dischg_disable";
 	moisture-internal-r = <47000>;
 	/* moisture of water resister ohm, SW mode by auxadc*/
 	moisture-water-r = <10000>;
+	/* add that disable the error for moisture in the Android 12 version of the error in switch of the voip */
+	moisture_disable_error_switch = <1>;
 	/* moisture SW mode config end */
 	status = "okay";
 };
@@ -1319,8 +1316,8 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 #address-cells = <1>;
 #size-cells = <0>;
 status = "okay";
-oppo_fp: fingerprint@0 {
-		 compatible = "oppo,oppo_fp";
+oplus_fp: fingerprint@0 {
+		 compatible = "oplus,oplus_fp";
 		 reg = <0>;
 		 spi-max-frequency = <8000000>;
 		 spi-id = <5>;
@@ -1338,7 +1335,12 @@ oppo_fp: fingerprint@0 {
 		 };
 	 };
 };
-
+//#ifdef OPLUS_FEATURE_SDCARDFS_SUPPORT
+&mt6360_ldo {
+	sdcard_det_en = <1>;
+	sdcard_hlact = <0>;
+};
+//#endif OPLUS_FEATURE_SDCARDFS_SUPPORT
 /*bts*/
 &tboard_thermistor1{
 		 oplus,ntc_cust_support = <1>;

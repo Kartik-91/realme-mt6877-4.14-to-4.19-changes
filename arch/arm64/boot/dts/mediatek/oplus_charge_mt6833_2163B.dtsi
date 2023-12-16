@@ -366,10 +366,6 @@
 	qcom,qc_not_support = <1>;
 };
 
-&mt6360_pmu_chg {
-	pp_sense_l = <0x0f>;
-};
-
 &pio {
 	charger_pins_default: eint0default {
 	};

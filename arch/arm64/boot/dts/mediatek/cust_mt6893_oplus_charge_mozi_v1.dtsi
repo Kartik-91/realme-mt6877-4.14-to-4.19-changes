@@ -251,7 +251,7 @@
 	qcom,pps_strategy1_low_power2 = <3000>;//3A
 	qcom,pps_strategy1_low_power1 = <4000>;//4A
 	qcom,pps_strategy1_low_power0 = <4000>;//4A
-	
+
 	qcom,vooc_show_ui_soc_decimal;
 	qcom,ui_soc_decimal_speedmin = <20>;//2A
 	qcom,check_batt_full_by_sw;
@@ -275,7 +275,7 @@
 	qcom,ccdetect-gpio = <&pio 5 0x00>;
 	qcom,chgvin = <&pio 30 0x00>;
 	qcom,pmic_chgfunc = <&pio 26 0x00>;
-	
+
 	pps_charge_strategy {
 		strategy_soc_0_to_50 {
 			strategy_temp_0_to_50 =		<10000 4180 2000 0 0
@@ -377,6 +377,29 @@
 	};
 	vooc_ap_data_new_function:vooc_ap_data_new_function {
 		compatible = "mediatek, VOOC_EINT_NEW_FUNCTION";
+	};
+
+/* ifdef OPLUS_FEATURE_CHG_BASIC */
+/* add for usb eye pattern */
+	mediatek_phy_tuning:mediatek_phy_tuning {
+		phy_tuning {
+			compatible = "mediatek,phy_tuning";
+			eye-vrt = <6>;
+			eye-term = <4>;
+			eye-rev6 = <2>;
+			host-eye-vrt = <6>;
+			host-eye-term = <4>;
+			host-eye-rev6 = <2>;
+		};
+	};
+/* endif */
+	oplus,track-charge {
+		compatible = "oplus,track-charge";
+		track,fast_chg_break_t_thd = <1000>;
+		track,general_chg_break_t_thd = <200>;
+		track,voocphy_type = <4>;
+		track,wired_max_power = <65000>;
+		track,wired_fast_chg_scheme = <1>;
 	};
 };
 
@@ -1583,8 +1606,7 @@
 	dischg_enable: dischg_enable {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO51__FUNC_GPIO51>;
-			slew-rate = <1>;
-			bias-pull-up;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 			output-high;
 		};
 	};
@@ -1592,8 +1614,7 @@
 	dischg_disable: dischg_disable {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO51__FUNC_GPIO51>;
-			slew-rate = <1>;
-			bias-pull-down;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_01>;
 			output-low;
 		};
 	};
@@ -1824,17 +1845,6 @@
 	charger_by_buckboost;
 	support_tuv_authentication;
 	max_charger_voltage = <9900000>;
-};
-
-&phy_tuning {
-	compatible = "mediatek,phy_tuning";
-	u2_vrt_ref = <6>;
-	u2_term_ref = <4>;
-	u2_enhance = <2>;
-
-	u2_vrt_ref_host = <6>;
-	u2_term_ref_host = <4>;
-	u2_enhance_host = <2>;
 };
 
 &mt6360_pmu {

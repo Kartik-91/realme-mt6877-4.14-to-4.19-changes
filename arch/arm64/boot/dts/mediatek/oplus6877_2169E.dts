@@ -118,7 +118,8 @@
 
 		/* SW Support Feature Control */
 		black_gesture_support;
-		//black_gesture_indep_support;
+		black_gesture_indep_support;
+		sportify_aod_gesture_support;
 		fw_edge_limit_support;
 		pressure_report_support;
 		charger_pump_support;
@@ -286,7 +287,7 @@
 	status = "okay";
 	#address-cells = <1>;
 	#size-cells = <0>;
-	panel2@0 {
+	panel1@0 {
 		compatible = "oplus2169E_samsung_ams643ag01_1080p_dsi_cmd,lcm";
 		reg = <0>;
 		//pm-enable-gpios = <&pio 39 0>;
@@ -295,15 +296,55 @@
 		ldo3-supply = <&mt_pmic_vmc_ldo_reg>;
 		pinctrl-names = "default";
 		port {
-			panel_in2: endpoint {
+			panel_in1: endpoint {
 				remote-endpoint = <&dsi_out>;
 			};
 		};
 	};
+	panel5@0 {
+		compatible = "oplus22612,tianma,ili7838a,cmd";
+		reg = <1>;
+		vddr-enable-gpios = <&pio 107 0>;
+                //pw-1p8-gpios = <&pio 213 0>;
+                //pw-reset-gpios = <&pio 193 0>;
+		reset-gpios = <&pio 40 0>;
+		vddr-aod-en-gpios = <&pio 117 0>;
+		ldo3-supply = <&mt_pmic_vmc_ldo_reg>;
+                //pw-1p8-gpios = <&pio 213 0>;
+                //pw-reset-gpios = <&pio 193 0>;
+                //vmcldo-supply = <&mt6368_vmc>;
+                //vufsldo-supply = <&mt6363_vufs18>; //VCI
+                //vmchldo-supply = <&mt6368_vmch>;  //VDDI 3.0V
+/* #if defined(CONFIG_PXLW_IRIS) */
+                //irisreset-gpios = <&pio 193 0>;
+                //irisabyp-gpios = <&pio 188 0>;
+                //irisready-gpios = <&pio 189 0>;
+/* #endif */
+		pinctrl-names = "default";
+		port {
+			panel_in5: endpoint {
+				remote-endpoint = <&dsi_out>;
+			};
+		};
+        };
+	panel6@0 {
+                compatible = "oplus22612,tianma,ili7838a,t7_plus,cmd";
+                reg = <2>;
+                vddr-enable-gpios = <&pio 107 0>;
+                reset-gpios = <&pio 40 0>;
+                vddr-aod-en-gpios = <&pio 117 0>;
+                ldo3-supply = <&mt_pmic_vmc_ldo_reg>;
+                pinctrl-names = "default";
+                port {
+                        panel_in6: endpoint {
+                                remote-endpoint = <&dsi_out>;
+                        };
+                };
+        };
 	ports {
 		port {
 			dsi_out: endpoint {
-				remote-endpoint = <&panel_in2>;
+				remote-endpoint = <&panel_in1>;
 			};
 		};
 	};
@@ -377,12 +418,14 @@
 		data = <1>;
 		pwm_config = <0 1 0 0 0>;
 	};
+	/*
 	vibrator0:vibrator@0 {
 		compatible = "mediatek,vibrator";
 		vib_timer = <25>;
 		vib_limit = <9>;
 		vib_vol= <9>;
 	};
+	*/
     oplus_sim_detect {
 	    compatible = "oplus, sim_detect";
 	    Hw,sim_det = <&pio 176 0x00>;
@@ -699,19 +742,6 @@
 			InterfaceProtocol = <0>;
 	};
 };
-	mediatek_phy_tuning:mediatek_phy_tuning {
-		phy_tuning {
-			compatible = "mediatek,phy_tuning";
-			u2_vrt_ref = <7>;
-			u2_term_ref = <7>;
-			u2_enhance = <2>;
-			u2_discth = <0xE>;
-			host_u2_vrt_ref = <5>;
-			host_u2_term_ref = <5>;
-			host_u2_enhance = <3>;
-			host_u2_discth = <0xA>;
-	};
-};
 
 	tboard_thermistor5: thermal-sensor5 {
 		compatible = "mediatek,mtboard-thermistor5";
@@ -734,22 +764,32 @@
             chipset-216C9 = "ST21H";
             chipset-21712 = "ST21H";
     };
+
+    nfc:nfc {
+           compatible = "mediatek,nfc-gpio-v2";
+           reg = <0x8>;
+           gpio-rst = <189>;
+           gpio-rst-std = <&pio 189 0x0>;
+           gpio-irq = <11>;
+           gpio-irq-std = <&pio 11 0x0>;
+    };
 /* nfc end */
 
 };
 
-&i2c8 {
-        status = "okay";
-        st21nfc: st21nfc@08 {
-                compatible = "mediatek,nfc";
-                reg = <0x08>;
-                interrupt-parent = <&pio>;
-                interrupts = <11  0>;
-                gpio-irq-std = <&pio 11 0>;
-                gpio-rst-std = <&pio 189 0>;
-                gpio-clkreq-std = <&pio 115 0>;
-                status = "okay";
-        };
+&u2port0 {
+	mediatek,eye-vrt = <7>; /* 0~7 */
+	mediatek,eye-term = <7>; /* 0~7 */
+	mediatek,eye-rev6 = <2>; /* 0~3 */
+	mediatek,eye-disc = <0xE>; /* 0~8 */
+	mediatek,host-eye-vrt = <5>; /* 0~7 */
+	mediatek,host-eye-term = <5>; /* 0~7 */
+	mediatek,host-eye-rev6 = <3>; /* 0~3 */
+	mediatek,host-eye-disc = <0xA>; /* 0~8 */
+};
+
+&extcon_usb {
+	vbus-current = <1300000>;
 };
 
 &swtp {

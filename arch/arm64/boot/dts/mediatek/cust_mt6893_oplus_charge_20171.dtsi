@@ -292,6 +292,26 @@
 	vooc_ap_data_new_function:vooc_ap_data_new_function {
 		compatible = "mediatek, VOOC_EINT_NEW_FUNCTION";
 	};
+
+	oplus,track-charge {
+		compatible = "oplus,track-charge";
+		track,fast_chg_break_t_thd = <1000>;
+		track,general_chg_break_t_thd = <200>;
+		track,voocphy_type = <4>;
+		track,wired_max_power = <65000>;
+		track,wired_fast_chg_scheme = <1>;
+	};
+};
+
+&u2port0 {
+		mediatek,eye-vrt = <7>; /* 0~7 */
+		mediatek,eye-term = <7>; /* 0~7 */
+		mediatek,eye-rev6 = <3>; /* 0~3 */
+		mediatek,eye-disc = <0xB>; /* 0~8 */
+		mediatek,host-eye-vrt = <7>; /* 0~7 */
+		mediatek,host-eye-term = <7>; /* 0~7 */
+		mediatek,host-eye-rev6 = <3>; /* 0~3 */
+		mediatek,host-eye-disc = <0xB>; /* 0~8 */
 };
 
 &i2c7 {
@@ -1650,17 +1670,6 @@
 	charger_by_buckboost;
 	support_tuv_authentication;
 	max_charger_voltage = <9900000>;
-};
-
-&phy_tuning {
-	compatible = "mediatek,phy_tuning";
-	u2_vrt_ref = <6>;
-	u2_term_ref = <6>;
-	u2_enhance = <2>;
-
-	u2_vrt_ref_host = <6>;
-	u2_term_ref_host = <6>;
-	u2_enhance_host = <2>;
 };
 
 &mt6360_pmu {

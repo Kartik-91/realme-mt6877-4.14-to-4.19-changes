@@ -1,16 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Mediatek's mt6833 SoC device tree source
+ * Copyright (c) 2019 MediaTek Inc.
  *
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
  */
 /dts-v1/;
 /plugin/;
@@ -32,6 +23,53 @@
 		"nt35595_fhd_dsi_cmd_truly_nt50358_drv";
 };
 
+&odm {
+	oplus_boardid:oplus_boardid {
+		compatible = "oplus,oplus_boardid";
+		oplus_boardid,dtsino="0x210A0";//only one u32
+		oplus_boardid,pcbmask="0xffff";//all mask 0xffff
+	};
+	oplus_project:oplus_project {
+		compatible = "oplus,oplus_project";
+	};
+	oplus_devinfo:oplus_devinfo {
+		compatible = "oplus-devinfo";
+		pinctrl-names = "default", "aboard_gpio0_sleep", "aboard_gpio0_active", "aboard_gpio0_idle";
+		pinctrl-0 = <&hw_pins_default>;
+		pinctrl-1 = <&aboard_pin_gpio0_sleep>;
+		pinctrl-2 = <&aboard_pin_gpio0_active>;
+		pinctrl-3 = <&aboard_pin_gpio0_idle>;
+		main-sub {
+			use_tristate_gpio;
+			compatible = "hw-match, main-sub";
+			aboard-gpio0 = <&pio 91 0x00>;
+			aboard-patterns = <0 1>;	/*0[high-resistance] 1[pull-down] 2[pull-up]*/
+			/*main board*/
+			match-projects = <21041 0x210A0>;
+		};
+	};
+};
+
+
+&keypad {
+	/* keypad start*/
+	kpd_volume_up:kpd_volume_up {
+		compatible = "mediatek, VOLUME_UP-eint";
+		interrupt-parent = <&pio>;
+		interrupts = <1 IRQ_TYPE_EDGE_FALLING 1 0>;
+		debounce = <32000>;
+		status = "okay";
+	};
+
+	kpd_volume_down:kpd_volume_down {
+		compatible = "mediatek, VOLUME_DOWN-eint";
+		interrupt-parent = <&pio>;
+		interrupts = <80 IRQ_TYPE_EDGE_FALLING 80 0>;
+		debounce = <32000>;
+		status = "okay";
+	};
+/* keypad end*/
+};
 &keypad {
 	keypad,volume-up	= <&pio 1 0x00>;
 	keypad,volume-down	= <&pio 80 0x00>;
@@ -168,8 +206,27 @@
 		qcom,slave_cp_disable_thr_low = <1400>;		//1500-100mA
 		qcom,voocphy_current_default = <30>;
 
-		qcom,svooc_cool_down_current_limit = <30 10 10 10 15 20 25 30 30 30 30 30 30 30 30>;
+		qcom,svooc_cool_down_current_limit = <60 20 20 20 30 40 50 60 60 60 60 60 60 60 60>;
 		qcom,vooc_cool_down_current_limit = <30 20 20 20 30 30 30 30 30 30 30 30 30 30 30>;
+
+		qcom,vooc_little_cold_full_voltage = <4430>;
+		qcom,vooc_cool_full_voltage = <4430>;
+		qcom,vooc_warm_full_voltage = <4130>;
+		qcom,vooc_1time_full_voltage = <4480>;
+		qcom,vooc_ntime_full_voltage = <4480>;
+		qcom,low_curr_full_t1 = <120>;
+		qcom,low_curr_full_t2 = <350>;
+		qcom,low_curr_full_t3 = <430>;
+		qcom,range1_low_curr_full = <1150 4480
+						1050 4475
+						950 4460
+						850 4450
+						750 4440>;
+		qcom,range2_low_curr_full = <1250 4480
+						1150 4475
+						1050 4460
+						950 4450
+						850 4440>;
 
 		qcom,vooc_multistep_initial_batt_temp = <1000>;
 		qcom,vooc_little_cool_temp = <160>;
@@ -180,6 +237,14 @@
 		qcom,vooc_normal_to_little_cool_current = <100>;
 		qcom,vooc_batt_over_high_temp = <440>;
 		qcom,vooc_batt_over_low_temp = <0>;
+
+		qcom,vooc-low-temp = <0>;
+		qcom,vooc-high-temp = <440>;
+		qcom,vooc-low-soc = <0>;
+		qcom,vooc-high-soc = <90>;
+		qcom,vooc-normal-high-temp = <430>;
+		qcom,vooc-warm-allow-vol = <4000>;
+		qcom,vooc-warm-allow-soc = <50>;
 
 		qcom,vooc_strategy1_batt_high_temp0 = <400>;
 		qcom,vooc_strategy1_batt_high_temp1 = <420>;
@@ -194,6 +259,9 @@
 		qcom,vooc_strategy1_low_current2 = <40>;
 		qcom,vooc_strategy1_low_current1 = <50>;
 		qcom,vooc_strategy1_low_current0 = <60>;
+
+		qcom,voocphy_ibat_over_current = <7500>;
+		qcom,voocphy_cp_max_ibus = <3500>;
 
 		qcom,voocphy_freq_mincore = <925000>;
 		qcom,voocphy_freq_midcore = <1335000>;
@@ -216,88 +284,117 @@
 
 		svooc_charge_strategy {
 			strategy_soc_0_to_50 {
-				strategy_temp_0_to_50 =		<4180 15 0 0 0
-								 4434 10 0 0 0>;
-				strategy_temp_50_to_120 =	<4184 20 0 0 0
-								 4424 15 0 0 0
-								 4434 10 1 0 0>;
-				strategy_temp_120_to_160 = 	<4454 20 0 0 0
-								 4474 15 0 0 0
-								 4484 10 1 0 0>;
-				strategy_temp_160_to_430 =	<4200 30 0 1200 0 //min*60*1000/500
-								 4454 25 0 1200 0 //min*60*1000/500
-								 4454 20 0 0 0
-								 4474 17 0 0 0
-								 4474 15 0 0 0
-								 4484 10 1 0 0>;
+				strategy_temp_little_cold =		<4180 15 0 0 0
+												 4434 10 0 0 0>;
+				strategy_temp_cool =			<4184 20 0 0 0
+												 4424 15 0 0 0
+												 4434 10 1 0 0>;
+				strategy_temp_little_cool = 	<4454 20 0 0 0
+												 4474 15 0 0 0
+												 4484 10 1 0 0>;
+				strategy_temp_normal_low =		<4200 30 0 1200 0 //min*60*1000/500
+												 4454 25 0 1200 0 //min*60*1000/500
+												 4454 20 0 0 0
+												 4474 17 0 0 0
+												 4474 15 0 0 0
+												 4484 10 1 0 0>;
+				strategy_temp_normal_high =		<4200 30 0 1200 0
+												 4454 25 0 1200 0
+												 4454 20 0 0 0
+												 4474 17 0 0 0
+												 4474 15 0 0 0
+												 4484 10 1 0 0>;
+				strategy_temp_warm =			<4130 10 1 0 0>;
 			};
 
 			strategy_soc_50_to_75 {
-				strategy_temp_0_to_50 =		<4200 15 0 0 0
-								 4430 10 0 0 0>;
-				strategy_temp_50_to_120 =	<4240 20 0 0 0
-								 4240 15 0 0 0
-								 4430 10 1 0 0>;
-				strategy_temp_120_to_160 = 	<4454 20 0 0 0
-								 4474 15 0 0 0
-								 4484 10 1 0 0>;
-				strategy_temp_160_to_430 =	<4200 30 0 1200 0 //min*60*1000/500
-								 4454 25 0 1200 0
-								 4454 20 0 0 0
-								 4474 17 0 0 0
-								 4474 15 0 0 0
-								 4484 10 1 0 0>;
+				strategy_temp_little_cold =		<4200 15 0 0 0
+												 4430 10 0 0 0>;
+				strategy_temp_cool =			<4240 20 0 0 0
+												 4240 15 0 0 0
+												 4430 10 1 0 0>;
+				strategy_temp_little_cool = 	<4454 20 0 0 0
+												 4474 15 0 0 0
+												 4484 10 1 0 0>;
+				strategy_temp_normal_low =		<4200 30 0 1200 0 //min*60*1000/500
+												 4454 25 0 1200 0
+												 4454 20 0 0 0
+												 4474 17 0 0 0
+												 4474 15 0 0 0
+												 4484 10 1 0 0>;
+				strategy_temp_normal_high =		<4200 30 0 1200 0
+												 4454 25 0 1200 0
+												 4454 20 0 0 0
+												 4474 17 0 0 0
+												 4474 15 0 0 0
+												 4484 10 1 0 0>;
+				strategy_temp_warm =			<4130 10 1 0 0>;
 			};
 
 			strategy_soc_75_to_85 {
-				strategy_temp_0_to_50 = 	<4430 10 1 0 0>;
-				strategy_temp_50_to_120 =	<4430 10 1 0 0>;
-				strategy_temp_120_to_160 =	<4480 10 1 0 0>;
-				strategy_temp_160_to_430 =	<4480 10 1 0 0>;
+				strategy_temp_little_cold = 	<4430 10 1 0 0>;
+				strategy_temp_cool =			<4430 10 1 0 0>;
+				strategy_temp_little_cool =		<4480 10 1 0 0>;
+				strategy_temp_normal_low =		<4480 10 1 0 0>;
+				strategy_temp_normal_high =		<4480 10 1 0 0>;
+				strategy_temp_warm =			<4130 10 1 0 0>;
 			};
 
 			strategy_soc_85_to_90 {
-				strategy_temp_0_to_50 = 	<4430 10 1 0 0>;
-				strategy_temp_50_to_120 =	<4430 10 1 0 0>;
-				strategy_temp_120_to_160 =	<4480 10 1 0 0>;
-				strategy_temp_160_to_430 =	<4480 10 1 0 0>;
+				strategy_temp_little_cold = 	<4430 10 1 0 0>;
+				strategy_temp_cool =			<4430 10 1 0 0>;
+				strategy_temp_little_cool =		<4480 10 1 0 0>;
+				strategy_temp_normal_low =		<4480 10 1 0 0>;
+				strategy_temp_normal_high =		<4480 10 1 0 0>;
+				strategy_temp_warm =			<4130 10 1 0 0>;
 			};
 		};
 
 		vooc_charge_strategy {
 			strategy_soc_0_to_50 {
-				strategy_temp_0_to_50 = 	<4430 20 1 0 0>;
-				strategy_temp_50_to_120 =	<4420 30 0 0 0
-								 4430 20 1 0 0>;
-				strategy_temp_120_to_160 =	<4475 30 0 0 0
-								 4480 20 1 0 0>;
-				strategy_temp_160_to_430 =	<4475 30 0 0 0
-								 4480 20 1 0 0>;
+				strategy_temp_little_cold = 	<4430 20 1 0 0>;
+				strategy_temp_cool =			<4420 30 0 0 0
+												 4430 20 1 0 0>;
+				strategy_temp_little_cool =		<4475 30 0 0 0
+												 4480 20 1 0 0>;
+				strategy_temp_normal_low =		<4475 30 0 0 0
+												 4480 20 1 0 0>;
+				strategy_temp_normal_high =		<4475 30 0 0 0
+												 4480 20 1 0 0>;
+				strategy_temp_warm =			<4130 20 1 0 0>;
 			};
 
 			strategy_soc_50_to_75 {
-				strategy_temp_0_to_50 =		<4430 20 1 0 0>;
-				strategy_temp_50_to_120 =	<4420 30 0 0 0
-								 4430 20 1 0 0>;
-				strategy_temp_120_to_160 =	<4475 30 0 0 0
-								 4480 20 1 0 0>;
-				strategy_temp_160_to_430 =	<4475 30 0 0 0
-								 4480 20 1 0 0>;
+				strategy_temp_little_cold =		<4430 20 1 0 0>;
+				strategy_temp_cool =			<4420 30 0 0 0
+												 4430 20 1 0 0>;
+				strategy_temp_little_cool =		<4475 30 0 0 0
+												 4480 20 1 0 0>;
+				strategy_temp_normal_low =		<4475 30 0 0 0
+												 4480 20 1 0 0>;
+				strategy_temp_normal_high =		<4475 30 0 0 0
+												 4480 20 1 0 0>;
+				strategy_temp_warm =			<4130 20 1 0 0>;
 			};
 
 			strategy_soc_75_to_85 {
-				strategy_temp_0_to_50 =		<4430 20 1 0 0>;
-				strategy_temp_50_to_120 =	<4430 20 1 0 0>;
-				strategy_temp_120_to_160 =	<4480 20 1 0 0>;
-				strategy_temp_160_to_430 =	<4475 30 0 0 0
-								 4480 20 1 0 0>;
+				strategy_temp_little_cold =		<4430 20 1 0 0>;
+				strategy_temp_cool =			<4430 20 1 0 0>;
+				strategy_temp_little_cool =		<4480 20 1 0 0>;
+				strategy_temp_normal_low =		<4475 30 0 0 0
+												 4480 20 1 0 0>;
+				strategy_temp_normal_high =		<4475 30 0 0 0
+												 4480 20 1 0 0>;
+				strategy_temp_warm =			<4130 20 1 0 0>;
 			};
 
 			strategy_soc_85_to_90 {
-				strategy_temp_0_to_50 =		<4430 20 1 0 0>;
-				strategy_temp_50_to_120 =	<4430 20 1 0 0>;
-				strategy_temp_120_to_160 =	<4480 20 1 0 0>;
-				strategy_temp_160_to_430 =	<4480 20 1 0 0>;
+				strategy_temp_little_cold =		<4430 20 1 0 0>;
+				strategy_temp_cool =			<4430 20 1 0 0>;
+				strategy_temp_little_cool =		<4480 20 1 0 0>;
+				strategy_temp_normal_low =		<4480 20 1 0 0>;
+				strategy_temp_normal_high =		<4480 20 1 0 0>;
+				strategy_temp_warm =			<4130 20 1 0 0>;
 			};
 		};
 
@@ -339,10 +436,12 @@
 };
 
 &i2c7 {
-       pinctrl-names = "i2c-state", "output-low-state";
+       pinctrl-names = "i2c-state", "output-low-state","i2c-state-scl", "output-low-state-scl";
 
-       pinctrl-0 = <&i2c7_sda_state &i2c7_scl_state>;
-       pinctrl-1 = <&i2c7_sda_output_low_state &i2c7_scl_output_low_state>;
+       pinctrl-0 = <&i2c7_sda_state>;
+       pinctrl-1 = <&i2c7_sda_output_low_state >;
+       pinctrl-2 = <&i2c7_i2c_state_scl>;
+       pinctrl-3 = <&i2c7_output_low_state_scl>;
 };
 &pio {
        i2c7_sda_state: i2c7_sda_i2c_state {
@@ -360,31 +459,20 @@
 			};
        };
 
-       i2c7_scl_state: i2c7_scl_i2c_state {
+       i2c7_i2c_state_scl: i2c7_scl_i2c_state {
                 pins_cmd_dat {
                           pinmux = <PINMUX_GPIO111__FUNC_SCL7>;
                           slew-rate = <0>;
                           bias-pull-up;
                 };
        };
-       i2c7_scl_output_low_state: i2c7_scl_output_low_state {
+       i2c7_output_low_state_scl: i2c7_scl_output_low_state {
                 pins_cmd_dat {
                           pinmux = <PINMUX_GPIO111__FUNC_GPIO111>;
                           slew-rate = <1>;
                           output-low;
                 };
        };
-};
-
-&phy_tuning {
-	compatible = "mediatek,phy_tuning";
-	u2_vrt_ref = <7>;
-	u2_term_ref = <7>;
-	u2_enhance = <3>;
-
-	host_u2_vrt_ref = <6>;
-	host_u2_term_ref = <6>;
-	host_u2_enhance = <3>;
 };
 
 &lk_charger {
@@ -407,7 +495,7 @@ pinctrl-names = "default",
 	pinctrl-2 = <&dischg_disable>;
 	pinctrl-3 = <&charger_pins_eint_output0>;
 	pinctrl-4 = <&charger_pins_eint_output1>;
-	//for oppo chg framework:
+	//for oplus chg framework:
 	qcom,smart_charging_screenoff;
 	qcom,pd_input_current_charger_ma = <1700>;
 	qcom,qc_input_current_charger_ma = <1700>;
@@ -630,6 +718,9 @@ pinctrl-names = "default",
 	qcom,ffc_normal_vfloat_over_sw_limit = <4550>;
 	qcom,ffc1_normal_vfloat_over_sw_limit = <4550>;
 	qcom,ffc2_normal_vfloat_over_sw_limit = <4550>;
+
+	qcom,vooc-max-input-volt-support = <10000>;     //10V
+	qcom,vooc-max-input-current-support = <3000>;   //3A
 };
 
 &pio {
@@ -688,6 +779,7 @@ pinctrl-names = "default",
         };*/
 };
 
+//Add for chargerid
 &apuart0 {
 	pinctrl-names = "uart0_rx_gpio",
 			"uart0_tx_gpio";
@@ -933,6 +1025,22 @@ pinctrl-names = "default",
 		<0>; /*MTK_DRM_OPT_SF_PF*/
 };
 
+/* add for dual-mic or singlemic with miso1 */
+&aud_dat_miso1_off {
+	pins_cmd1_dat {
+		pinmux = <PINMUX_GPIO160__FUNC_GPIO160>;
+		input-enable;
+		bias-pull-down;
+	};
+};
+&aud_dat_miso1_on {
+	pins_cmd1_dat {
+		pinmux = <PINMUX_GPIO160__FUNC_AUD_DAT_MISO1>;
+		input-schmitt-enable;
+		bias-disable;
+	};
+};
+
 &pio {
 	sia81xx_gpio_L: sia81xx_gpio_L {
 		pins_cmd_dat {
@@ -942,7 +1050,6 @@ pinctrl-names = "default",
 		};
 	};
 };
-
 &sia81xx_L {
 	compatible = "si,sia81xx";
 	si,sia81xx_type = "sia8109";
@@ -961,7 +1068,6 @@ pinctrl-names = "default",
 	en_dynamic_updata_vdd = <0>;
 	dynamic_updata_vdd_port = <0x8>;
 };
-
 &sound {
 	/* this dtsi config for product's special config, AudioHal read ctl 'OPLUS_AUDIO_EXTEN_CONFIG' get the values*
 	 * 1st value --> PA type: 0:NXP Pa, 1:Awinic Pa 2:sia81xx Pa*/
@@ -970,12 +1076,16 @@ pinctrl-names = "default",
 	si,sia81xx-aux-devs = <&sia81xx_L>;
 	si,sia81xx-aux-devs-prefix = "SpkrLeft";
 };
-
 &i2c6 {
 	sia81xx_i2c_L: sia81xx_i2c@L {
 		compatible = "si,sia81xx-i2c";
 		reg = <0x28>;
 		si,sia81xx-dev = <&sia81xx_L>;
+	};
+	i2c_lcd_bias@3e {
+		compatible = "mediatek,I2C_LCD_BIAS";
+		reg = <0x3e>;
+		status = "okay";
 	};
 };
 
@@ -1059,7 +1169,9 @@ pinctrl-names = "default",
 		lcd_trigger_load_tp_fw_support;
 		smart_gesture_support;
 		pressure_report_support;
+		health_monitor_v2_support;
 		fw_update_app_support;
+		exception_upload_support;
 
 		touchpanel,button-type = <4>;
 	};
@@ -1187,7 +1299,6 @@ pinctrl-names = "default",
 //	moisture_comp_vref2 = <0>;
 //#endif
 	/* moisture HW mode config end */
-
 	/* moisture SW mode config start, use external resister or not.
 	 * DEFAULT NOT NEED
 	 */
@@ -1203,7 +1314,6 @@ pinctrl-names = "default",
 	status = "okay";
 };
 /* accdet end */
-
 &pio {
 	hw_pins_default:default@hw_sub_id {
 	};
@@ -1234,7 +1344,6 @@ pinctrl-names = "default",
 		};
 	};
 };
-/*#endif OPLUS_FEATURE_TP_BASIC*/
 
 &disp_leds {
 	compatible = "mediatek,disp-leds";
@@ -1292,53 +1401,13 @@ pinctrl-names = "default",
 	};
 	vibrator0:vibrator@0 {
 		compatible = "mediatek,vibrator";
-		vib_timer = <30>;
-		vib_limit = <0>;
-		vib_vol= <11>;
+		vib_timer = <25>;
+		vib_limit = <9>;
+		vib_vol= <9>;
 	};
-	oplus_boardid:oplus_boardid {
-		compatible = "oplus,oplus_boardid";
-		oplus_boardid,dtsino="0x210A0";//only one u32
-		oplus_boardid,pcbmask="0xffff";//all mask 0xffff
+	sensor_fb: sensor_fb {
+		compatible = "oplus,sensor-feedback";
 	};
-	oplus_project:oplus_project {
-		compatible = "oplus,oplus_project";
-	};
-	oplus_devinfo:oplus_devinfo {
-		compatible = "oplus-devinfo";
-		pinctrl-names = "default", "aboard_gpio0_sleep", "aboard_gpio0_active", "aboard_gpio0_idle";
-		pinctrl-0 = <&hw_pins_default>;
-		pinctrl-1 = <&aboard_pin_gpio0_sleep>;
-		pinctrl-2 = <&aboard_pin_gpio0_active>;
-		pinctrl-3 = <&aboard_pin_gpio0_idle>;
-		main-sub {
-			use_tristate_gpio;
-			compatible = "hw-match, main-sub";
-			aboard-gpio0 = <&pio 91 0x00>;
-			aboard-patterns = <0 1>;	/*0[high-resistance] 1[pull-down] 2[pull-up]*/
-			/*main board*/
-			match-projects = <21041 0x210A0>;
-		};
-	};
-/*#endif OPLUS_FEATURE_TP_BASIC*/
-
-	/* keypad start*/
-	kpd_volume_up:kpd_volume_up {
-		compatible = "mediatek, VOLUME_UP-eint";
-		interrupt-parent = <&pio>;
-		interrupts = <1 IRQ_TYPE_EDGE_FALLING 1 0>;
-		debounce = <32000>;
-		status = "okay";
-	};
-
-	kpd_volume_down:kpd_volume_down {
-		compatible = "mediatek, VOLUME_DOWN-eint";
-		interrupt-parent = <&pio>;
-		interrupts = <80 IRQ_TYPE_EDGE_FALLING 80 0>;
-		debounce = <32000>;
-		status = "okay";
-	};
-/* keypad end*/
 		/*
 		enum {
 			LIS3DH,
@@ -1559,6 +1628,21 @@ pinctrl-names = "default",
 		status = "okay";
 		new-arch-supported = <1>;
 	};
+
+/* #ifdef OPLUS_FEATURE_CHG_BASIC */
+/* add for usb eye pattern */
+	mediatek_phy_tuning:mediatek_phy_tuning {
+		phy_tuning {
+			compatible = "mediatek,phy_tuning";
+			eye-vrt = <7>;
+			eye-term = <7>;
+			eye-rev6 = <3>;
+			host-eye-vrt = <6>;
+			host-eye-term = <6>;
+			host-eye-rev6 = <3>;
+		};
+	};
+/* #endif */
 };
 /* GPS GPIO standardization start */
 &pio {
@@ -1620,7 +1704,6 @@ pinctrl-names = "default",
 	status = "okay";
 };
 /* GPS GPIO standardization end */
-
 //#ifdef OPLUS_FEATURE_FINGERPRINT
 &oplus_fp_common {
 	compatible = "oplus,fp_common"; //Manufacture, and Model
@@ -1764,17 +1847,6 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		     };
 };
 */
-
-&msdc1 {
-    cd-gpios = <&pio 4 0>;
-    status = "okay";
-    vmmc-supply = <&mt_pmic_vmch_ldo_reg>;
-};
-&mt6360_ldo {
-	sdcard_det_en = <1>;
-	sdcard_hlact = <0>;
-};
-
 &spi5 {
 #address-cells = <1>;
 #size-cells = <0>;
@@ -1798,9 +1870,39 @@ oplus_fp: fingerprint@0 {
 		 };
 	 };
 };
-//#endif /*OPLUS_FEATURE_FINGERPRINT*/
 
+//#ifdef OPLUS_FEATURE_SWTP
+&swtp {
+    compatible = "mediatek, swtp-eint";
+};
+//#endif  /*OPLUS_FEATURE_SWTP*/
+/*bts*/
+&tboard_thermistor1{
+		 oplus,ntc_cust_support = <1>;
+		 oplus,ntc_pull_up_r = <390000>;
+};
+/*btsmdpa*/
+&tboard_thermistor2{
+		 oplus,ntc_cust_support = <1>;
+		 oplus,ntc_pull_up_r = <390000>;
+};
+/*btsnrpa*/
+&tboard_thermistor3{
+		 oplus,ntc_cust_support = <1>;
+		 oplus,ntc_pull_up_r = <390000>;
+};
 #include "mediatek/cust_mt6833_camera_210A0.dtsi"
+
+&mmc1 {
+    cd-gpios = <&pio 4 0>;
+    status = "okay";
+    vmmc-supply = <&mt_pmic_vmch_ldo_reg>;
+};
+&mt6360_ldo {
+	sdcard_det_en = <1>;
+	sdcard_hlact = <0>;
+};
+
 #include <oplus6833_210A0/cust.dtsi>
 
 

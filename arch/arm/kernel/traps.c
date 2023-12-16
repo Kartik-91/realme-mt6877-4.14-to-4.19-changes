@@ -40,7 +40,6 @@
 #include <asm/tls.h>
 #include <asm/system_misc.h>
 #include <asm/opcodes.h>
-#include <mt-plat/aee.h>
 
 
 static const char *handler[]= {
@@ -68,14 +67,16 @@ static void dump_mem(const char *, const char *, unsigned long, unsigned long);
 
 void dump_backtrace_entry(unsigned long where, unsigned long from, unsigned long frame)
 {
+	unsigned long end = frame + 4 + sizeof(struct pt_regs);
+
 #ifdef CONFIG_KALLSYMS
 	printk("[<%08lx>] (%ps) from [<%08lx>] (%pS)\n", where, (void *)where, from, (void *)from);
 #else
 	printk("Function entered at [<%08lx>] from [<%08lx>]\n", where, from);
 #endif
 
-	if (in_exception_text(where))
-		dump_mem("", "Exception stack", frame + 4, frame + 4 + sizeof(struct pt_regs));
+	if (in_entry_text(from) && end <= ALIGN(frame, THREAD_SIZE))
+		dump_mem("", "Exception stack", frame + 4, end);
 }
 
 void dump_backtrace_stm(u32 *stack, u32 instruction)
@@ -436,27 +437,13 @@ int call_undef_hook(struct pt_regs *regs, unsigned int instr)
 	return fn ? fn(regs, instr) : 1;
 }
 
-asmlinkage void __exception do_undefinstr(struct pt_regs *regs)
+asmlinkage void do_undefinstr(struct pt_regs *regs)
 {
-	struct thread_info *thread = current_thread_info();
 	unsigned int instr;
 	siginfo_t info;
 	void __user *pc;
 
-	if (!user_mode(regs)) {
-		thread->cpu_excp++;
-		if (thread->cpu_excp == 1) {
-			thread->regs_on_excp = (void *)regs;
-#ifdef CONFIG_MTK_AEE_IPANIC
-			aee_excp_regs = (void *)regs;
-#endif
-		}
-#ifdef CONFIG_MTK_AEE_IPANIC
-		if (thread->cpu_excp >= 2)
-			aee_stop_nested_panic(regs);
-#endif
-	}
-
+	clear_siginfo(&info);
 	pc = (void __user *)instruction_pointer(regs);
 
 	if (processor_mode(regs) == SVC_MODE) {
@@ -488,11 +475,8 @@ asmlinkage void __exception do_undefinstr(struct pt_regs *regs)
 		instr = __mem_to_opcode_arm(instr);
 	}
 
-	if (call_undef_hook(regs, instr) == 0) {
-		if (!user_mode(regs))
-			thread->cpu_excp--;
+	if (call_undef_hook(regs, instr) == 0)
 		return;
-	}
 
 die_sig:
 #ifdef CONFIG_DEBUG_USER
@@ -559,6 +543,7 @@ static int bad_syscall(int n, struct pt_regs *regs)
 {
 	siginfo_t info;
 
+	clear_siginfo(&info);
 	if ((current->personality & PER_MASK) != PER_LINUX) {
 		send_sig(SIGSEGV, current, 1);
 		return regs->ARM_r0;
@@ -626,6 +611,7 @@ asmlinkage int arm_syscall(int no, struct pt_regs *regs)
 {
 	siginfo_t info;
 
+	clear_siginfo(&info);
 	if ((no >> 16) != (__ARM_NR_BASE>> 16))
 		return bad_syscall(no, regs);
 
@@ -676,6 +662,9 @@ asmlinkage int arm_syscall(int no, struct pt_regs *regs)
 	case NR(set_tls):
 		set_tls(regs->ARM_r0);
 		return 0;
+
+	case NR(get_tls):
+		return current_thread_info()->tp_value[0];
 
 	default:
 		/* Calls 9f00xx..9f07ff are defined to return -ENOSYS
@@ -758,6 +747,8 @@ baddataabort(int code, unsigned long instr, struct pt_regs *regs)
 {
 	unsigned long addr = instruction_pointer(regs);
 	siginfo_t info;
+
+	clear_siginfo(&info);
 
 #ifdef CONFIG_DEBUG_USER
 	if (user_debug & UDBG_BADABORT) {

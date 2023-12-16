@@ -1,16 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Mediatek's mt6893 SoC device tree source
+ * Copyright (c) 2019 MediaTek Inc.
  *
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
  */
 /dts-v1/;
 /plugin/;
@@ -18,24 +9,6 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/spmi/spmi.h>
 #include <dt-bindings/pinctrl/mt6885-pinfunc.h>
-
-&mmc_fixed_3v3 {
-	status = "okay";
-	regulator-name = "mmc_power";
-	regulator-min-microvolt = <3300000>;
-	regulator-max-microvolt = <3300000>;
-	enable-active-high;
-	regulator-always-on;
-};
-
-&mmc_fixed_1v8_io {
-	status = "okay";
-	regulator-name = "mmc_io";
-	regulator-min-microvolt = <1800000>;
-	regulator-max-microvolt = <1800000>;
-	enable-active-high;
-	regulator-always-on;
-};
 
 &reserved_memory {
 };
@@ -53,27 +26,16 @@
 		"nt35595_fhd_dsi_cmd_truly_nt50358_drv";
 };
 
-/* sensor */
-&mt_pmic_vio28_ldo_reg {
-		regulator-name = "vio28";
-		regulator-min-microvolt = <3000000>;
-		regulator-max-microvolt = <3000000>;
-		regulator-enable-ramp-delay = <240>;
-};
+&disp_leds {
+	compatible = "mediatek,disp-leds";
 
-&mmc0 {
-	status = "okay";
-	/* pinctrl-names = "default", "state_uhs"; */
-	/* pinctrl-0 = <&mmc0_pins_default>; */
-	/* pinctrl-1 = <&mmc0_pins_uhs>; */
-	bus-width = <8>;
-	max-frequency = <5000000>;
-	cap-mmc-highspeed;
-	no-sdio;
-	no-sd;
-	vmmc-supply = <&mmc_fixed_3v3>;
-	vqmmc-supply = <&mmc_fixed_1v8_io>;
-	non-removable;
+	backlight {
+		label = "lcd-backlight";
+		max-brightness = <4095>;
+		led-bits = <12>;
+		trans-bits = <12>;
+		default-state = "on";
+	};
 };
 
 &odm {
@@ -115,11 +77,7 @@
 	};
 	led6:led@6 {
 		compatible = "mediatek,lcd-backlight";
-		/*#ifndef OPLUS_FEATURE_BRINGUP*/
-		//led_mode = <5>;
-		//#else
 		led_mode = <4>;
-		//#endif
 		data = <1>;
 		pwm_config = <0 1 0 0 0>;
 	};
@@ -128,7 +86,11 @@
 		vib_timer = <25>;
 		vib_limit = <9>;
 		vib_vol= <9>;
-	};	
+	};
+	vibrator_fb:vibrator_fb {
+		compatible = "oplus,haptic-feedback";
+	};
+
 /* sensor start */
 
 	sensor_fb: sensor_fb {
@@ -367,11 +329,17 @@
 		status = "okay";
 		new-arch-supported = <1>;
 	};
-/* sensor end */	
+
+/* sensor end */
 	usb_c_pinctrl:usb_c_pinctrl {
 		compatible = "mediatek,usb_c_pinctrl";
 	};
-//#ifdef OPLUS_FEATURE_TP_BASIC
+
+	oplus_boardid:oplus_boardid {
+		compatible = "oplus,oplus_boardid";
+		oplus_boardid,dtsino="20171";//only one u32
+		oplus_boardid,pcbmask="0xffff";//all mask 0xffff
+	};
 	oplus_devinfo:oplus_devinfo {
 		compatible = "oplus-devinfo";
 		pinctrl-names = "default", "aboard_gpio0_sleep", "aboard_gpio0_active", "aboard_gpio0_idle";
@@ -388,8 +356,6 @@
 			match-projects = <20171 20172 20353>;
 		};
 	};
-//#endif OPLUS_FEATURE_TP_BASIC
-//#ifdef OPLUS_FEATURE_TP_BASIC
         kpd_volume_down:kpd_volume_down {
                 compatible = "mediatek, VOLUME_DOWN-eint";
                 interrupt-parent = <&pio>;
@@ -397,28 +363,23 @@
                 debounce = <32000>;
                 status = "okay";
         };
-
-//#endif OPLUS_FEATURE_TP_BASIC
 	oplus_project:oplus_project {
 		compatible = "oplus,oplus_project";
 		};
 
+	pmic_history_count:pmic_history_count {
+	};
+	pmic_history0:pmic_history0 {
+	};
+	pmic_history1:pmic_history1 {
+	};
+	pmic_history2:pmic_history2 {
+	};
+	pmic_history3:pmic_history3 {
+	};
 
-    nfc_chipset:nfc_chipset {
-        compatible = "oplus-nfc-chipset";
-        chipset-20171 = "SN100T";
-		chipset-20353 = "SN100T";
-    };
-//#endif /* OPLUS_FEATURE_NFC_CONSOFT */
-
-//#ifdef OPLUS_FEATURE_TP_BASIC
-    oplus_sim_detect {
-        compatible = "oplus, sim_detect";
-        Hw,sim_det = <&pio 43 0x00>;
-    };
-//#endif /* OPLUS_FEATURE_TP_BASIC */
 };
-//#ifdef OPLUS_FEATURE_TP_BASIC
+
 &keypad {
         keypad,volume-up        = <&pio 40 0x00>;
         keypad,volume-down      = <&pio 155 0x00>;
@@ -476,8 +437,6 @@
 		};
 	};
 };
-
-//#endif OPLUS_FEATURE_TP_BASIC
 
 /* DISPSYS GPIO standardization */
 &pio {
@@ -559,6 +518,49 @@
 	pinctrl-1 = <&mtkfb_pins_lcm_rst_out0_gpio>;
 	pinctrl-2 = <&mtkfb_pins_lcm_dsi_te>;
 	status = "okay";
+
+	helper-value = <0>, /*MTK_DRM_OPT_STAGE*/
+		<1>, /*MTK_DRM_OPT_USE_CMDQ*/
+		<1>, /*MTK_DRM_OPT_USE_M4U*/
+		<0>, /*MTK_DRM_OPT_SODI_SUPPORT*/
+		<1>, /*MTK_DRM_OPT_IDLE_MGR*/
+		<0>, /*MTK_DRM_OPT_IDLEMGR_SWTCH_DECOUPLE*/
+		<1>, /*MTK_DRM_OPT_IDLEMGR_BY_REPAINT*/
+		<0>, /*MTK_DRM_OPT_IDLEMGR_ENTER_ULPS*/
+		<0>, /*MTK_DRM_OPT_IDLEMGR_KEEP_LP11*/
+		<0>, /*MTK_DRM_OPT_DYNAMIC_RDMA_GOLDEN_SETTING*/
+		<1>, /*MTK_DRM_OPT_IDLEMGR_DISABLE_ROUTINE_IRQ*/
+		<0>, /*MTK_DRM_OPT_MET_LOG*/
+		<1>, /*MTK_DRM_OPT_USE_PQ*/
+		<1>, /*MTK_DRM_OPT_ESD_CHECK_RECOVERY*/
+		<1>, /*MTK_DRM_OPT_ESD_CHECK_SWITCH*/
+		<1>, /*MTK_DRM_OPT_PRESENT_FENCE*/
+		<0>, /*MTK_DRM_OPT_RDMA_UNDERFLOW_AEE*/
+		<0>, /*MTK_DRM_OPT_DSI_UNDERRUN_AEE*/
+		<1>, /*MTK_DRM_OPT_HRT*/
+		<1>, /*MTK_DRM_OPT_HRT_MODE*/
+		<0>, /*MTK_DRM_OPT_DELAYED_TRIGGER*/
+		<1>, /*MTK_DRM_OPT_OVL_EXT_LAYER*/
+		<0>, /*MTK_DRM_OPT_AOD*/
+		<1>, /*MTK_DRM_OPT_RPO*/
+		<0>, /*MTK_DRM_OPT_DUAL_PIPE*/
+		<0>, /*MTK_DRM_OPT_DC_BY_HRT*/
+		<1>, /*MTK_DRM_OPT_OVL_WCG*/
+		<0>, /*MTK_DRM_OPT_OVL_SBCH*/
+		<1>, /*MTK_DRM_OPT_COMMIT_NO_WAIT_VBLANK*/
+		<0>, /*MTK_DRM_OPT_MET*/
+		<0>, /*MTK_DRM_OPT_REG_PARSER_RAW_DUMP*/
+		<0>, /*MTK_DRM_OPT_VP_PQ*/
+		<0>, /*MTK_DRM_OPT_GAME_PQ*/
+		<0>, /*MTK_DRM_OPT_MMPATH*/
+		<1>, /*MTK_DRM_OPT_HBM*/
+		<0>, /*MTK_DRM_OPT_VDS_PATH_SWITCH*/
+		<0>, /*MTK_DRM_OPT_LAYER_REC*/
+		<1>, /*MTK_DRM_OPT_CLEAR_LAYER*/
+		<1>, /*MTK_DRM_OPT_LFR*/
+		<0>, /*MTK_DRM_OPT_SF_PF*/
+		<1>, /*MTK_DRM_OPT_DYN_MIPI_CHANGE*/
+		<1>; /*MTK_DRM_OPT_PRIM_DUAL_PIPE*/
 };
 /* DISPSYS GPIO standardization end */
 
@@ -582,6 +584,7 @@
 	accdet-mic-mode = <2>;
 	/*0--MD_MAX--UP_MAX--DW_MAX*/
 	//#ifdef OPLUS_ARCH_EXTENDS
+	//2021/02/03, Modify for support headset key
 	headset-three-key-threshold = <0 82 170 306>;
 	//#else /* OPLUS_ARCH_EXTENDS */
 	//headset-three-key-threshold = <0 80 220 400>;
@@ -625,66 +628,13 @@
 	};
 }; /* IRTX GPIO Settings -End */
 
-/* FINGERPRINT start */
-&spi1 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	fingerprint@0 {
-		compatible = "goodix,goodix-fp";
-		reg = <0>;
-		spi-max-frequency = <8000000>;
-		netlink-event = <30>;
-		vfp-supply = <&mt_pmic_vfp_ldo_reg>;
-		power-type = <1>;
-		status = "okay";
-	};
-};
-
-&goodix_fp {
-	pinctrl-names = "default", "reset_high", "reset_low", "eint_init";
-	pinctrl-0 = <&fingerprint_default>;
-	pinctrl-1 = <&fingerprint_reset_high>;
-	pinctrl-2 = <&fingerprint_reset_low>;
-	pinctrl-3 = <&fingerprint_eint_init>;
-	interrupt-parent = <&pio>;
-	interrupts = <15 IRQ_TYPE_EDGE_RISING 15 0>;
-	status = "okay";
-};
-
-&pio {
-	fingerprint_default: state_default {
-	};
-	fingerprint_reset_high: state_reset_high {
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO14__FUNC_GPIO14>;
-			slew-rate = <1>;
-			output-high;
-		};
-	};
-	fingerprint_reset_low: state_reset_low {
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO14__FUNC_GPIO14>;
-			slew-rate = <1>;
-			output-low;
-		};
-	};
-	fingerprint_eint_init: state_eint_init {
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO15__FUNC_GPIO15>;
-			slew-rate = <0>;
-			bias-pull-up = <MTK_PUPD_SET_R1R0_10>;
-			input-schmitt-enable;
-		};
-	};
-};
-/* FINGERPRINT end */
 
 &mt6360_pmu {
-	mt6360,intr_gpio_num = <24>; /* direct defined GPIO num */
+	mt6360,intr_gpio_num = <24>; // direct defined GPIO num //
 	mt6360,intr_gpio = <&pio 24 0x0>;
 };
 
-&mt6360_pmic {
+&mt6360_pmic  {
 	pwr_off_seq = [04 00 02 02];
 };
 
@@ -692,6 +642,141 @@
 	mt6360pd,intr_gpio_num = <25>; /* direct defined GPIO num */
 	mt6360pd,intr_gpio = <&pio 25 0x0>;
 };
+
+/* USB SWITCH GPIO start */
+/*&pio {
+	usb_default: usb_default {
+	};
+
+	gpio_redriver_c1_init: c1_init {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO113__FUNC_GPIO113>;
+			slew-rate = <1>;
+			output-low;
+		};
+	};
+
+	gpio_redriver_c1_low: c1_low {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO113__FUNC_GPIO113>;
+			slew-rate = <1>;
+			output-low;
+		};
+	};
+
+	gpio_redriver_c1_hiz: c1_highz {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO113__FUNC_GPIO113>;
+			slew-rate= <0>;
+			bias-disable;
+		};
+	};
+
+	gpio_redriver_c1_high: c1_high {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO113__FUNC_GPIO113>;
+			slew-rate = <1>;
+			output-high;
+		};
+	};
+
+	gpio_redriver_c2_init: c2_init {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO112__FUNC_GPIO112>;
+			slew-rate = <1>;
+			output-low;
+		};
+	};
+
+	gpio_redriver_c2_low: c2_low {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO112__FUNC_GPIO112>;
+			slew-rate = <1>;
+			output-low;
+		};
+	};
+
+	gpio_redriver_c2_hiz: c2_highz {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO112__FUNC_GPIO112>;
+			slew-rate= <0>;
+			bias-disable;
+		};
+	};
+
+	gpio_redriver_c2_high: c2_high {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO112__FUNC_GPIO112>;
+			slew-rate = <1>;
+			output-high;
+		};
+	};
+
+	gpio_u3_switch_sel1: u3_sw_sel1 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO111__FUNC_GPIO111>;
+			slew-rate = <1>;
+			output-low;
+		};
+	};
+
+	gpio_u3_switch_sel2: u3_sw_sel2 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO111__FUNC_GPIO111>;
+			slew-rate = <1>;
+			output-high;
+		};
+	};
+
+	gpio_u3_switch_enable: u3_sw_en {
+	};
+
+	gpio_u3_switch_disable: u3_sw_dis {
+	};
+};
+
+&usb_c_pinctrl {
+	pinctrl-names = "usb_default",
+		"redrv_c1_init",
+		"redrv_c1_low",
+		"redrv_c1_hiz",
+		"redrv_c1_high",
+		"redrv_c2_init",
+		"redrv_c2_low",
+		"redrv_c2_hiz",
+		"redrv_c2_high",
+		"switch_sel1",
+		"switch_sel2",
+		"switch_enable",
+		"switch_disable";
+
+	pinctrl-0 = <&usb_default>;
+	pinctrl-1 = <&gpio_redriver_c1_init>;
+	pinctrl-2 = <&gpio_redriver_c1_low>;
+	pinctrl-3 = <&gpio_redriver_c1_hiz>;
+	pinctrl-4 = <&gpio_redriver_c1_high>;
+	pinctrl-5 = <&gpio_redriver_c2_init>;
+	pinctrl-6 = <&gpio_redriver_c2_low>;
+	pinctrl-7 = <&gpio_redriver_c2_hiz>;
+	pinctrl-8 = <&gpio_redriver_c2_high>;
+	pinctrl-9 = <&gpio_u3_switch_sel1>;
+	pinctrl-10 = <&gpio_u3_switch_sel2>;
+	pinctrl-11 = <&gpio_u3_switch_enable>;
+	pinctrl-12 = <&gpio_u3_switch_disable>;
+	status = "okay";
+
+	usb_switch-data {
+		en_pin_num = <0>;
+		en_pin_val = <0>;
+		sel_pin_num = <111>;
+		sel_pin_val = <1>;
+		c1_pin_num = <113>;
+		c1_pin_val = <2>;
+		c2_pin_num = <112>;
+		c2_pin_val = <1>;
+	};
+};*/
+/* USB SWITCH GPIO end */
 
 /* GPS GPIO standardization start */
 &pio {
@@ -735,6 +820,12 @@
 	};
 };
 
+//#ifdef OPLUS_VENDOR_SWTP
+&swtp {
+    compatible = "mediatek, swtp-eint";
+};
+//#endif  /*OPLUS_FEATURE_SWTP*/
+
 &gps {
 	pinctrl-names = "default",
 		"gps_l1_lna_disable",
@@ -753,6 +844,27 @@
 	status = "okay";
 };
 /* GPS GPIO standardization end */
+
+/*#ifdef OPLUS_BUG_STABILITY */
+&i2c8 {
+        fan53870@35 {
+                compatible = "fan53870";
+                reg = <0x35>;
+                ldo1_min_vol = <800000>;  /*uV*/
+                ldo1_max_vol = <1504000>;
+                ldo1_step_vol = <8000>;
+        };
+        wl2868c@2f {
+                compatible = "wl2868c-i2c";
+                reg = <0x2f>;
+                id_reg = <0x00>;
+                id_val = <0x82>;
+                vin1_vol = <800000>;
+                vin2_vol = <1504000>;
+                en-gpios = <&pio 29 1>;
+        };
+};
+/*#endif*/
 
 &dsi0 {
 	status = "okay";
@@ -814,76 +926,127 @@
 	};
 };
 
-&disp_leds {
-	compatible = "mediatek,disp-leds";
+/* CAMERA specify sensor */
+/*
+&kd_camera_hw1 {
+	cam2_enable_sensor = "imx586_mipi_raw s5k3m5sx_mipi_raw";
+	cam4_enable_sensor = "imx586_mipi_raw imx481_mipi_raw";
+};
+*/
+/* CAMERA specify sensor end */
 
-	backlight {
-		label = "lcd-backlight";
-		max-brightness = <4095>;
-		led-bits = <12>;
-		trans-bits = <12>;
-		default-state = "on";
+/* usb typec mux */
+&pio {
+	c1_active: c1_high {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO113__FUNC_GPIO113>;
+			output-high;
+		};
+	};
+
+	c2_active: c2_highz {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO112__FUNC_GPIO112>;
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	c1_sleep: c1_low {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO113__FUNC_GPIO113>;
+			output-low;
+		};
+	};
+
+	c2_sleep: c2_low {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO112__FUNC_GPIO112>;
+			output-low;
+		};
+	};
+
+	sel_up: sel_high {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO111__FUNC_GPIO111>;
+			output-high;
+		};
+	};
+
+	sel_down: sel_low {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO111__FUNC_GPIO111>;
+			output-low;
+		};
+	};
+
+	sw_enable: sw_enable {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO110__FUNC_GPIO110>;
+			output-low;
+		};
+	};
+
+	sw_disable: sw_disable {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO110__FUNC_GPIO110>;
+			output-low;
+		};
 	};
 };
 
-/*#ifdef VENDOE_EDIT*/
-&i2c8 {
-        fan53870@35 {
-                compatible = "fan53870";
-                reg = <0x35>;
-                ldo1_min_vol = <800000>;  /*uV*/
-                ldo1_max_vol = <1504000>;
-                ldo1_step_vol = <8000>;
-        };
-        wl2868c@2f {
-                compatible = "wl2868c-i2c";
-                reg = <0x2f>;
-                id_reg = <0x00>;
-                id_val = <0x82>;
-                vin1_vol = <800000>;
-                vin2_vol = <1504000>;
-                en-gpios = <&pio 29 1>;
-        };
-};
-/*#endif*/
 
-//#ifdef OPLUS_FEATURE_NFC_BRINGUP
-&i2c8 {
-       status = "okay";
-       nfc_nxp@28 {
-               compatible = "nxp,pn544";
-               reg = <0x28>;
-               nxp,pn544-irq = <&pio 7 0x0>;
-               nxp,pn544-ven = <&pio 16 0x0>;
-               nxp,pn544-fw-dwnld = <&pio 6 0x0>;
-               nxp,pn544-clkreq = <&pio 17 0x0>;
-               interrupt-parent = <&pio>;
-       };
-};
 
-&spi5 {
-       status = "okay";
-       #address-cells = <1>;
-       #size-cells = <0>;
-       spidev5: p61@5 {
-       compatible = "nxp,p61";
-       reg = <0>;
-       spi-max-frequency = <19200000>;
-       };
-};
-//#endif /* OPLUS_FEATURE_NFC_BRINGUP */
+//&ptn36241g {
+
+//	pinctrl-names = "c1_active", "c1_sleep",
+
+//		"c2_active", "c2_sleep";
+
+//	pinctrl-0 = <&c1_active>;
+
+//	pinctrl-1 = <&c1_sleep>;
+
+//	pinctrl-2 = <&c2_active>;
+
+//	pinctrl-3 = <&c2_sleep>;
+
+//	status = "okay";
+
+//};
+
+
+//&fusb304 {
+
+//	pinctrl-names = "sel_up", "sel_down",
+
+//		"enable", "disable";
+
+//	pinctrl-0 = <&sel_up>;
+
+//	pinctrl-1 = <&sel_down>;
+
+//	pinctrl-2 = <&sw_enable>;
+
+//	pinctrl-3 = <&sw_disable>;
+
+//	status = "okay";
+
+//};
 
 //#ifdef OPLUS_FEATURE_FINGERPRINT
+/*add for fingerprint */
 &oplus_fp_common {
-    oplus,fp_gpio_num = <1>;
-    oplus,fp_gpio_0 = <&pio 190 0x0>;
-    pinctrl-names = "default";
-    pinctrl-0 = <&gpio_id0_default>;
-    goodix_optical {
-        oplus,fp-id = <0>; // fp id mapping table
-        vendor-chip = <11>; // please refer to the struct fp_vendor_t in oplusfp_commmon.n
-        eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on
-        chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu
+	compatible = "oplus,fp_common";
+	oplus,fp_gpio_num = <1>;
+	oplus,fp_gpio_0 = <&pio 190 0x0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&gpio_id0_default>;
+	goodix_optical {
+		oplus,fp-id = <0>; // fp id mapping table
+		vendor-chip = <11>; // please refer to the struct fp_vendor_t in oplusfp_commmon.n
+		eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on
+		chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu
 	};
 };
 
@@ -899,6 +1062,7 @@
 };
 
 &goodix_fp {
+	compatible = "goodix,goodix_fp";
 	goodix,gpio_irq = <&pio 15 0x00>;
 	goodix,gpio_reset = <&pio 14 0x00>;
 	goodix,gpio_cs = <&pio 157 0x00>;
@@ -914,74 +1078,76 @@
 #size-cells = <0>;
 status = "okay";
 oplus_fp: fingerprint@0 {
-		 compatible = "oplus,oplus_fp";
-		 reg = <0>;
-		 spi-max-frequency = <8000000>;
-		 spi-id = <1>;
-		 spi-irq = <15>;
-		 spi-reg = <11010000>;
-		 dvdd-supply = <&mt_pmic_vmch_ldo_reg>;
-		 dvdd-config = <3300000 3300000 150000>;
-		 power-num = <1>;
-		 status = "okay";
-		 power_source_1 {
-			 power-mode = <1>;
-			 power-name = "dvdd";
-			 power-config = "dvdd-config";
-			 delay-time = <0>;
-		 };
-	 };
+		compatible = "oplus,oplus_fp";
+		reg = <0>;
+		spi-max-frequency = <8000000>;
+		spi-id = <1>;
+		spi-irq = <15>;
+		spi-reg = <11010000>;
+		dvdd-supply = <&mt_pmic_vmch_ldo_reg>;
+		dvdd-config = <3300000 3300000 150000>;
+		power-num = <1>;
+		status = "okay";
+		power_source_1 {
+			power-mode = <1>;
+			power-name = "dvdd";
+			power-config = "dvdd-config";
+			delay-time = <0>;
+		};
+	};
 };
 // 1 = ldo power, refer to oplus_fp_common.h
 &pio{
 gpio_goodix_reset_default: gpio_goodix_reset_default {
-				   pins_cmd_dat {
-					   pinmux = <PINMUX_GPIO14__FUNC_GPIO14>;
-					   slew-rate = <1>;
-					   output-low;
-				   };
-			   };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO14__FUNC_GPIO14>;
+					slew-rate = <1>;
+					output-low;
+				};
+			};
 gpio_goodix_irq_default: gpio_goodix_irq_default {
-				 pins_cmd_dat {
-					 pinmux = <PINMUX_GPIO15__FUNC_GPIO15>;
-					 slew-rate = <0>;
-					 bias-pull-down;
-				 };
-			 };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO15__FUNC_GPIO15>;
+					slew-rate = <0>;
+					bias-pull-down;
+				};
+			};
 gpio_goodix_clk_6mA: gpio_goodix_clk_6mA {
-			     pins_cmd_dat {
-				      pinmux = <PINMUX_GPIO156__FUNC_SPI1_A_CLK>;
-				      drive-strength = <2>;
-			     };
-		     };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO156__FUNC_SPI1_A_CLK>;
+					drive-strength = <2>;
+				};
+			};
 gpio_goodix_mosi_6mA: gpio_goodix_mosi_6mA {
-			      pins_cmd_dat {
-				      pinmux = <PINMUX_GPIO159__FUNC_SPI1_A_MO>;
-				      drive-strength = <2>;
-			      };
-		      };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO159__FUNC_SPI1_A_MO>;
+					drive-strength = <2>;
+				};
+			};
 gpio_goodix_miso_6mA: gpio_goodix_miso_6mA {
-			      pins_cmd_dat {
-				      pinmux = <PINMUX_GPIO158__FUNC_SPI1_A_MI>;
-				      drive-strength = <3>;
-			      };
-		      };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO158__FUNC_SPI1_A_MI>;
+					drive-strength = <3>;
+				};
+			};
 gpio_goodix_cs_6mA: gpio_goodix_cs_6mA {
-			    pins_cmd_dat {
-				    pinmux = <PINMUX_GPIO157__FUNC_SPI1_A_CSB>;
-				    drive-strength = <2>;
-			    };
-		    };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO157__FUNC_SPI1_A_CSB>;
+					drive-strength = <2>;
+				};
+			};
 gpio_goodix_cs_func: gpio_goodix_cs_func {
-			     pins_cmd_dat {
-				     pinmux = <PINMUX_GPIO157__FUNC_SPI1_A_CSB>;
-				     drive-strength = <2>;
-			     };
-		     };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO157__FUNC_SPI1_A_CSB>;
+					drive-strength = <2>;
+				};
+			};
 };
 //#endif /*OPLUS_FEATURE_FINGERPRINT*/
 
 &i2c0 {
+	status = "okay";
+
 	synaptics20171@4B {
 		compatible = "synaptics-s3908";
 		reg = <0x4B>;
@@ -1006,7 +1172,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		touchpanel,tx-rx-num = <16 36>;
 		touchpanel,panel-coords = <5400 12000>;
 		touchpanel,display-coords = <1080 2400>;
-  		touchpanel,touchmajor-limit = <160 270>;
+		touchpanel,touchmajor-limit = <160 270>;
 		//touchpanel,elimination-range = <20 200 200>;
 		touchpanel,int-mode = <1>; /*0: interrupt and disable, 1:interrupt and not disable*/
 		touchpanel,smooth-level = <0 1 2 3 8 10>;
@@ -1017,9 +1183,9 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		tp_type = <3>; /*type:8 BOE*/
 		report_rate_limit = <60>;
 		platform_support_project = <20171 20172 20353
-                				20171 20172 20353>;
+								20171 20172 20353>;
 		platform_support_project_dir = <20171 20171 20353
-                				20171 20171 20171>;
+								20171 20171 20171>;
 		platform_support_project_commandline = "20171_boe_nt37701_1080p_dsi_cmd","20171_boe_nt37701_1080p_dsi_cmd","20171_boe_nt37701_1080p_dsi_cmd",
 							"20171_tianma_nt37701","20171_tianma_nt37701","20171_tianma_nt37701";
 
@@ -1061,6 +1227,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		black_gesture_indep_support;
 		auto_test_need_cal_support;
 		thermal_detect_support;
+		exception_upload_support;
 		/*
 		 *Virtual Key Config:
 		 *1:touchpanel,button-type: <virtualkey_type  supportted_button-map>
@@ -1160,6 +1327,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		irq_need_dev_resume_ok;
 		sec_kernel_grip_para = <21000>;
 		auto_test_need_cal_support;
+		exception_upload_support;
 
 		/*
 		 *Virtual Key Config:
@@ -1176,7 +1344,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		 */
 		touchpanel,button-type = <4>;
 		touchpanel.button-TRx = <0 0>;
-	};	
+	};
 };
 &pio {
 
@@ -1195,15 +1363,6 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		};
 	};
 };
-
-/* CAMERA specify sensor */
-/*
-&kd_camera_hw1 {
-	cam2_enable_sensor = "imx586_mipi_raw s5k3m5sx_mipi_raw";
-	cam4_enable_sensor = "imx586_mipi_raw imx481_mipi_raw";
-};
-*/
-/* CAMERA specify sensor end */
 
 &audio_extend {
 	//for nxp speaker
@@ -1244,20 +1403,10 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 	};
 };
 //#endif /*OPLUS_ARCH_EXTENDS*/
-
-//#ifdef OPLUS_FEATURE_SWTP
-&swtp {
-    compatible = "mediatek, swtp-eint";
-    debounce = <512000>;
-};
-//#endif  /*OPLUS_FEATURE_SWTP*
-
+//#include "mediatek/cust_mt6893_touch.dtsi"
 #include "mediatek/cust_mt6893_touch.dtsi"
 #include "mediatek/cust_mt6893_camera.dtsi"
 #include <oplus6893_20171/cust.dtsi>
-
-//#ifdef OPLUS_FEATURE_CHG_BASIC
 #include "mediatek/cust_mt6893_oplus_charge_20171.dtsi"
-//#endif /*OPLUS_FEATURE_CHG_BASIC*/
-
+#include "mediatek/nfc/mt6893_Yasuo_sn100.dtsi"
 /*End of this file, DO NOT ADD ANYTHING HERE*/

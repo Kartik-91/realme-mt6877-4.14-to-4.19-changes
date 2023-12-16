@@ -1,17 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Mediatek's mt6853 SoC device tree source
- *
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2021 MediaTek Inc.
  */
+
 /dts-v1/;
 /plugin/;
 #include <dt-bindings/interrupt-controller/irq.h>
@@ -73,6 +64,7 @@
 	mt6360pd,intr_gpio = <&pio 5 0x0>;
 };
 
+/*touch start*/
 &i2c0 {
 	status = "okay";
 		Focaltech20181@38 {
@@ -132,6 +124,7 @@
 		high_resolution_support;
 		//esd_handle_support;
 		lcd_tp_refresh_support;
+		exception_upload_support;
 		/*
 		 *Virtual Key Config:
 		 *1:touchpanel,button-type: <virtualkey_type  supportted_button-map>
@@ -280,7 +273,6 @@
 	pinctrl-1 = <&mtkfb_pins_lcm_rst_out0_gpio>;
 	pinctrl-2 = <&mtkfb_pins_lcm_dsi_te>;
 	status = "okay";
-
 	helper-value = <0>, /*MTK_DRM_OPT_STAGE*/
 		<1>, /*MTK_DRM_OPT_USE_CMDQ*/
 		<1>, /*MTK_DRM_OPT_USE_M4U*/
@@ -349,7 +341,6 @@
 		};
 	};
 };
-
 &disp_leds {
 	compatible = "mediatek,disp-leds";
 	backlight {
@@ -360,7 +351,6 @@
 		default-state = "on";
 	};
 };
-
 
 &odm {
 	led0:led@0 {
@@ -411,7 +401,9 @@
 		vib_limit = <9>;
 		vib_vol= <9>;
 	};
-
+	vibrator_fb:vibrator_fb {
+		compatible = "oplus,haptic-feedback";
+	};
 /* sensor start */
 	sensor_fb: sensor_fb {
 		compatible = "oplus,sensor-feedback";
@@ -665,14 +657,13 @@
 		new-arch-supported = <1>;
 	};
 /* sensor end */
-
 	oplus_boardid:oplus_boardid {
 		compatible = "oplus,oplus_boardid";
 		oplus_boardid,dtsino="20181";//only one u32
 		oplus_boardid,pcbmask="0xf9f0";//all mask 0xffff
 	};
 
-/* OPLUS_BUG_STABILITY oppo project start */
+/* OPLUS_BUG_STABILITY oplus project start */
 	oplus_project:oplus_project {
 		compatible = "oplus,oplus_project";
 	};
@@ -704,7 +695,7 @@
 			match-projects = <20181 20182 20355>;
 		};
 	};
-/* OPLUS_BUG_STABILITY oppo project end */
+/* OPLUS_BUG_STABILITY oplus project end */
 
 	kpd_volume_down:kpd_volume_down {
 			compatible = "mediatek, VOLUME_DOWN-eint";
@@ -863,18 +854,17 @@
 	sel_up: sel_up {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO6__FUNC_GPIO6>;
-			output-low;
+			output-high;
 		};
 	};
 
 	sel_down: sel_down {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO6__FUNC_GPIO6>;
-			output-high;
+			output-low;
 		};
 	};
 };
-
 //#ifdef OPLUS_TFA98XX
 &i2c6 {
 	tfa98xx: tfa98xx@34 {
@@ -919,23 +909,25 @@
 
 /* FINGERPRINT start */
 //ifdef OPLUS_FEATURE_FINGERPRINT
+// add for fingerprint
 &oplus_fp_common {
-    oplus,fp_gpio_num = <1>;
-    oplus,fp_gpio = <35>;
-    oplus,fp_gpio_0 = <&pio 35 0x0>;
-    pinctrl-names = "default";
-    pinctrl-0 = <&gpio_id0_default>;
-    goodix_optical {
-        oplus,fp-id = <0>; // fp id mapping table
-        vendor-chip = <11>; // please refer to the struct fp_vendor_t in oplus_fp_commmon.n
-        eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on
-        chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu
+	compatible = "oplus,fp_common"; //Manufacture, and Model
+	oplus,fp_gpio_num = <1>;
+	oplus,fp_gpio = <35>;
+	oplus,fp_gpio_0 = <&pio 35 0x0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&gpio_id0_default>;
+	goodix_optical {
+		oplus,fp-id = <0>; // fp id mapping table
+		vendor-chip = <11>; // please refer to the struct fp_vendor_t in oplus_fp_commmon.n
+		eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on
+		chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu
 	};
-    goodix_optical_bak {
-        oplus,fp-id = <1>; // fp id mapping table
-        vendor-chip = <11>; // please refer to the struct fp_vendor_t in oplus_fp_commmon.n
-        eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on
-        chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu
+	goodix_optical_bak {
+		oplus,fp-id = <1>; // fp id mapping table
+		vendor-chip = <11>; // please refer to the struct fp_vendor_t in oplus_fp_commmon.n
+		eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on
+		chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu
 	};
 };
 
@@ -951,6 +943,7 @@
 };
 
 &goodix_fp {
+	compatible = "goodix,goodix_fp";
 	goodix,gpio_irq = <&pio 22 0x00>;
 	goodix,gpio_reset = <&pio 21 0x00>;
 	goodix,gpio_cs = <&pio 99 0x00>;
@@ -966,70 +959,70 @@
 #size-cells = <0>;
 status = "okay";
 oplus_fp: fingerprint@0 {
-		 compatible = "oplus,oplus_fp";
-		 reg = <0>;
-		 spi-max-frequency = <50000000>;
-		 spi-id = <5>;
-		 spi-irq = <22>;
-		 spi-reg = <11019000>;
-		 dvdd-supply = <&mt_pmic_vmch_ldo_reg>;
-		 dvdd-config = <3300000 3300000 150000>;
-		 power-num = <1>;
-		 status = "okay";
-		 power_source_1 {
-			 power-mode = <1>;
-			 power-name = "dvdd";
-			 power-config = "dvdd-config";
-			 delay-time = <0>;
-		 };
-	 };
+		compatible = "oplus,oplus_fp";
+		reg = <0>;
+		spi-max-frequency = <50000000>;
+		spi-id = <5>;
+		spi-irq = <22>;
+		spi-reg = <11019000>;
+		dvdd-supply = <&mt_pmic_vmch_ldo_reg>;
+		dvdd-config = <3300000 3300000 150000>;
+		power-num = <1>;
+		status = "okay";
+		power_source_1 {
+			power-mode = <1>;
+			power-name = "dvdd";
+			power-config = "dvdd-config";
+			delay-time = <0>;
+		};
+	};
 };
 // 1 = ldo power, refer to oplus_fp_common.h
 &pio{
 gpio_goodix_reset_default: gpio_goodix_reset_default {
-				   pins_cmd_dat {
-					   pinmux = <PINMUX_GPIO21__FUNC_GPIO21>;
-					   slew-rate = <1>;
-					   output-low;
-				   };
-			   };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO21__FUNC_GPIO21>;
+					slew-rate = <1>;
+					output-low;
+				};
+			};
 gpio_goodix_irq_default: gpio_goodix_irq_default {
-				 pins_cmd_dat {
-					 pinmux = <PINMUX_GPIO22__FUNC_GPIO22>;
-					 slew-rate = <0>;
-					 bias-pull-down;
-				 };
-			 };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO22__FUNC_GPIO22>;
+					slew-rate = <0>;
+					bias-pull-down;
+				};
+			};
 gpio_goodix_clk_6mA: gpio_goodix_clk_6mA {
-			     pins_cmd_dat {
-				      pinmux = <PINMUX_GPIO98__FUNC_SPI5_CLK>;
-				      drive-strength = <2>;
-			     };
-		     };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO98__FUNC_SPI5_CLK>;
+					drive-strength = <2>;
+				};
+			};
 gpio_goodix_mosi_6mA: gpio_goodix_mosi_6mA {
-			      pins_cmd_dat {
-				      pinmux = <PINMUX_GPIO101__FUNC_SPI5_MO>;
-				      drive-strength = <2>;
-			      };
-		      };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO101__FUNC_SPI5_MO>;
+					drive-strength = <2>;
+				};
+			};
 gpio_goodix_miso_6mA: gpio_goodix_miso_6mA {
-			      pins_cmd_dat {
-				      pinmux = <PINMUX_GPIO100__FUNC_SPI5_MI>;
-				      drive-strength = <3>;
-			      };
-		      };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO100__FUNC_SPI5_MI>;
+					drive-strength = <3>;
+				};
+			};
 gpio_goodix_cs_6mA: gpio_goodix_cs_6mA {
-			    pins_cmd_dat {
-				    pinmux = <PINMUX_GPIO99__FUNC_SPI5_CSB>;
-				    drive-strength = <2>;
-			    };
-		    };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO99__FUNC_SPI5_CSB>;
+					drive-strength = <2>;
+				};
+			};
 gpio_goodix_cs_func: gpio_goodix_cs_func {
-			     pins_cmd_dat {
-				     pinmux = <PINMUX_GPIO99__FUNC_SPI5_CSB>;
-				     drive-strength = <2>;
-			     };
-		     };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO99__FUNC_SPI5_CSB>;
+					drive-strength = <2>;
+				};
+			};
 };
 //#endif
 /* FINGERPRINT end */
@@ -1041,9 +1034,8 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 };
 //#endif  /*OPLUS_VENDOR_SWTP*/
 
-#include <oplus6877_20181_v2/cust.dtsi>
+#include "oplus6877_20181_v2/cust.dtsi"
 #include "mediatek/cust_mt6877_oplus_garen_charge_v2.dtsi"
-#include "mediatek/cust_mt6877_touch_1080x2300.dtsi"
 #include "mediatek/cust_mt6877_camera_v1.dtsi"
 /*End of this file, DO NOT ADD ANYTHING HERE*/
 

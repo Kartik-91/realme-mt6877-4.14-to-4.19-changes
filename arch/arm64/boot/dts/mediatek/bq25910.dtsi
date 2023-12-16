@@ -1,11 +1,11 @@
-&i2c7 {
+&i2c5 {
 	bq25910@4B {
 		compatible = "ti,bq2591x";
 		reg = <0x4B>;
 		charger_name = "secondary_chg";
 
 		interrupt-parent = <&pio>;
-		interrupts = <7 IRQ_TYPE_EDGE_FALLING 7 0>;
+		interrupts = <11 IRQ_TYPE_EDGE_FALLING 11 0>;
 		ti,charging-disabled;
 		ti,bq2591x,enable-term;
 

@@ -1,16 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
- * Mediatek's mt6853 SoC device tree source
- *
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2019 MediaTek Inc.
  */
 /dts-v1/;
 /plugin/;
@@ -33,38 +23,18 @@
 	atag,videolfb-lcmname=
 		"nt35595_fhd_dsi_cmd_truly_nt50358_drv";
 };
-&pio {
-        hw_pins_default:default@hw_sub_id {
-        };
 
-        aboard_pin_gpio0_sleep:sleep@id0 {
-                pins_cmd_dat {
-                        pinmux = <PINMUX_GPIO91__FUNC_GPIO91>;
-                        slew-rate = <0>;
-                        bias-pull-down;
-                        input-enable;
-                };
-        };
+&disp_leds {
+	compatible = "mediatek,disp-leds";
 
-        aboard_pin_gpio0_active:active@id0 {
-                pins_cmd_dat {
-                        pinmux = <PINMUX_GPIO91__FUNC_GPIO91>;
-                        slew-rate = <0>;
-                        bias-pull-up;
-                        input-enable;
-                };
-        };
-
-        aboard_pin_gpio0_idle:idle@id0 {
-                pins_cmd_dat {
-                        pinmux = <PINMUX_GPIO91__FUNC_GPIO91>;
-                        slew-rate = <0>;
-                        bias-disable;
-                        input-enable;
-                };
-        };
+	backlight {
+		label = "lcd-backlight";
+		max-brightness = <4095>;
+		led-bits = <12>;
+		trans-bits = <12>;
+		default-state = "on";
+	};
 };
-
 
 &odm {
 	led0:led@0 {
@@ -317,6 +287,7 @@
 	vibrator0:vibrator@0 {
 		compatible = "mediatek,vibrator";
 		//#ifdef OPLUS_FEATURE_CHG_BASIC
+		/* 2020/12/22, Modify for vibrator time less than 9ms */
 		vib_timer = <30>;
 		vib_limit = <0>;
 		//#endif
@@ -325,7 +296,10 @@
 	usb_c_pinctrl:usb_c_pinctrl {
 		compatible = "mediatek,usb_c_pinctrl";
 	};
-	oplus_boardid:oplus_boardid {
+};
+
+&odm {
+        oplus_boardid:oplus_boardid {
 		compatible = "oplus,oplus_boardid";
 		oplus_boardid,dtsino="20391";//only one u32
 		oplus_boardid,pcbmask="0xffff";//all mask 0xffff
@@ -349,7 +323,7 @@
 			match-projects = <20391 20392>;
 		};
 	};
-/*OPLUS_FEAUTRE_KEYPAD keypad start*/
+
 	kpd_volume_up:kpd_volume_up {
 		compatible = "mediatek, VOLUME_UP-eint";
 		interrupt-parent = <&pio>;
@@ -365,9 +339,40 @@
 		debounce = <32000>;
 		status = "okay";
 	};
-/*OPLUS_FEAUTRE_KEYPAD keypad end*/
 };
-/*OPLUS_FEAUTRE_KEYPAD keypad start*/
+
+&pio {
+        hw_pins_default:default@hw_sub_id {
+        };
+
+        aboard_pin_gpio0_sleep:sleep@id0 {
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO91__FUNC_GPIO91>;
+                        slew-rate = <0>;
+                        bias-pull-down;
+                        input-enable;
+                };
+        };
+
+        aboard_pin_gpio0_active:active@id0 {
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO91__FUNC_GPIO91>;
+                        slew-rate = <0>;
+                        bias-pull-up;
+                        input-enable;
+                };
+        };
+
+        aboard_pin_gpio0_idle:idle@id0 {
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO91__FUNC_GPIO91>;
+                        slew-rate = <0>;
+                        bias-disable;
+                        input-enable;
+                };
+        };
+};
+
 &keypad {
 	keypad,volume-up	= <&pio 1 0x00>;
 	keypad,volume-down	= <&pio 80 0x00>;
@@ -393,9 +398,8 @@
 		};
 	};
 };
-/*OPLUS_FEAUTRE_KEYPAD keypad end*/
-/* Charging Start */
 
+/* Charging Start */
 &mt6360_pmu {
 	mt6360,intr_gpio_num = <10>; /* direct defined GPIO num */
 	mt6360,intr_gpio = <&pio 10 0x0>;
@@ -450,7 +454,8 @@
 	};
 };
 
-/*#ifdef OPLUS_FEATURE_CHG_BASIC*/
+/* #ifdef OPLUS_FEATURE_CHG_BASIC */
+/* 2020/11/3, Add for lk charging */
 &lk_charger{
 	support_tuv_authentication;
 };
@@ -697,7 +702,7 @@
 	pinctrl-4 = <&charger_pins_eint_output1>;
 
 
-	//for oppo chg framework:
+	//for oplus chg framework:
         qcom,input_current_charger_ma = <2000>;
         qcom,input_current_usb_ma = <500>;
         qcom,input_current_cdp_ma = <1500>;
@@ -913,6 +918,7 @@
 
 };
 
+/* 2020/02/12, Add for uart0 */
 &apuart0 {
 	pinctrl-names = "uart0_rx_gpio",
 			"uart0_tx_gpio";
@@ -1114,7 +1120,6 @@
 /* CONSYS end */
 
 /* TOUCH start */
-/*#ifdef OPLUS_FEATURE_TP_BASIC*/
 &i2c0 {
 	clock-frequency = <400000>;
 	status = "okay";
@@ -1165,6 +1170,7 @@
 		esd_handle_support;
 		high_resolution_support;
 		health_monitor_v2_support;
+		exception_upload_support;
 		/*
 		 *Virtual Key Config:
 		 *1:touchpanel,button-type: <virtualkey_type  supportted_button-map>
@@ -1228,7 +1234,6 @@
     };
 };
 /* TOUCH end */
-
 #include "mediatek/cust_mt6853_camera_20391.dtsi"
 #include <oplus6853_20391/cust.dtsi>
 /* DISPSYS GPIO standardization */
@@ -1386,18 +1391,6 @@
 	};
 };
 
-&disp_leds {
-	compatible = "mediatek,disp-leds";
-
-	backlight {
-		label = "lcd-backlight";
-		max-brightness = <4095>;
-		led-bits = <12>;
-		trans-bits = <12>;
-		default-state = "on";
-	};
-};
-
 /* accdet start */
 &accdet {
 	/* accdet micbias voltage: 0x09:2.85v 0x08:2.8v 0x07,
@@ -1411,6 +1404,7 @@
 	 */
 
         //#ifdef OPLUS_ARCH_EXTENDS
+        /*2022/07/12, Modify for bug 2843494*/
         headset-mode-setting = <0x500 0x500 1 0x1f0
                                 0x2000 0x800 0x2000 0x44
                                 0x0 0x7
@@ -1507,8 +1501,98 @@
 
 #endif
 
+/* usb typec mux */
+/*
+&pio {
+	c1_active: c1_high {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO41__FUNC_GPIO41>;
+			output-high;
+		};
+	};
+
+	c2_active: c2_highz {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO40__FUNC_GPIO40>;
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	c1_sleep: c1_low {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO41__FUNC_GPIO41>;
+			output-low;
+		};
+	};
+
+	c2_sleep: c2_low {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO40__FUNC_GPIO40>;
+			output-low;
+		};
+	};
+
+	sel_up: sel_high {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO11__FUNC_GPIO11>;
+			output-high;
+		};
+	};
+
+	sel_down: sel_low {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO11__FUNC_GPIO11>;
+			output-low;
+		};
+	};
+
+	sw_enable: sw_enable {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO132__FUNC_GPIO132>;
+			output-low;
+		};
+	};
+
+	sw_disable: sw_disable {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO132__FUNC_GPIO132>;
+			output-low;
+		};
+	};
+};
+
+&ptn36241g {
+	pinctrl-names = "c1_active", "c1_sleep",
+		"c2_active", "c2_sleep";
+	pinctrl-0 = <&c1_active>;
+	pinctrl-1 = <&c1_sleep>;
+	pinctrl-2 = <&c2_active>;
+	pinctrl-3 = <&c2_sleep>;
+	status = "okay";
+};
+*/
+
+//#ifdef OPLUS_BUG_STABILITY
+//2022/07/12, MonetX audio sia8109 bringup
+#include "mediatek/mt6853-sia81xx-i2c.dtsi"
+//#endif
+
+/*
+&fusb304 {
+	pinctrl-names = "sel_up", "sel_down",
+		"enable", "disable";
+	pinctrl-0 = <&sel_up>;
+	pinctrl-1 = <&sel_down>;
+	pinctrl-2 = <&sw_enable>;
+	pinctrl-3 = <&sw_disable>;
+	status = "okay";
+};
+*/
+
 /* FINGERPRINT start */
 //ifdef OPLUS_FEATURE_FINGERPRINT
+//PSW.BSP.Fingerprint.Basic, 2022/07/12, add for fingerprint
 &oplus_fp_common {
     compatible = "oplus,fp_common"; //Manufacture, and Model
     oplus,fp_gpio_num = <1>;
@@ -1517,7 +1601,7 @@
     pinctrl-0 = <&gpio_id0_default>;
     goodix_optical {
         oplus,fp-id = <1>; /* fp id mapping table */
-        vendor-chip = <11>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.n */
+        vendor-chip = <11>; /* please refer to the struct fp_vendor_t in oplus_fp_commmon.h */
         eng-menu = "-1,-1"; /* represents SNR, inclination test item in engineer menu, and 0/1 means off/on */
         chip-name = "G_OPTICAL_G3S";  /* /proc/fp_id, will be displayed in engineer menu  */
     };
@@ -1535,6 +1619,7 @@
 };
 
 &goodix_fp {
+	compatible = "goodix,goodix_fp";
 	goodix,gpio_irq = <&pio 7 0x00>;
 	goodix,gpio_reset = <&pio 6 0x00>;
 	goodix,gpio_cs = <&pio 29 0x00>;
@@ -1615,19 +1700,15 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 //#endif
 /* FINGERPRINT end */
 
-&msdc1 {
+&mmc1 {
     cd-gpios = <&pio 12 0>;
     status = "okay";
     vmmc-supply = <&mt_pmic_vmch_ldo_reg>;
 };
 &mt6360_ldo {
-	sdcard_det_en = <1>;
-	sdcard_hlact = <0>;
+    sdcard_det_en = <1>;
+    sdcard_hlact = <0>;
 };
-
-//#ifdef OPLUS_BUG_STABILITY
-#include "mediatek/mt6853-sia81xx-i2c.dtsi"
-//#endif
 
 //#ifdef OPLUS_FEATURE_SWTP
 &swtp {

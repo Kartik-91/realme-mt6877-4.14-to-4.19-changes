@@ -301,7 +301,7 @@
 			};
 		};
 
-	};	
+	};
 };
 
 &typec_mux_switch {
@@ -331,7 +331,7 @@
 			output-low;
 		};
 	};
-	
+
 	charging_inter_active: charging_inter_active {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO6__FUNC_GPIO6>;
@@ -379,7 +379,7 @@
 	pinctrl-3 = <&charger_pins_eint_output0>;
 	pinctrl-4 = <&charger_pins_eint_output1>;
 
-	//for oppo chg framework:
+	//for chg framework:
 	qcom,pd_input_current_charger_ma = <2000>;
 	qcom,qc_input_current_charger_ma = <2000>;
 	qcom,input_current_charger_ma = <2000>;
@@ -450,11 +450,11 @@
 
 	qcom,normal_bat_decidegc = <160>;       /* 16C ~ 45C */
 	qcom,temp_normal_vfloat_mv = <4435>;
-	qcom,temp_normal_fastchg_current_ma = <2200>;
+	qcom,temp_normal_fastchg_current_ma = <2000>;
 	qcom,pd_temp_normal_fastchg_current_ma = <3300>;
 	qcom,qc_temp_normal_fastchg_current_ma = <3300>;
 
-	qcom,warm_bat_decidegc = <450>;         /* 45C ~ 53C */ /*8pin Bat Vooc project need add 3 degree C*/
+	qcom,warm_bat_decidegc = <440>;         /* 45C ~ 53C */ /*8pin Bat Vooc project need add 3 degree C*/
 	qcom,temp_warm_vfloat_mv = <4130>;
 	qcom,temp_warm_fastchg_current_ma = <1350>;
 	qcom,pd_temp_warm_fastchg_current_ma = <1350>;
@@ -592,7 +592,7 @@
 &pio {
 	charger_pins_default: eint0default {
 	};
-	
+
 	dischg_enable: dischg_enable {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO169__FUNC_GPIO169>;
@@ -638,7 +638,6 @@
 	};
 };
 
-
 &odm {
 	optiga {
 		compatible = "oplus-optiga";
@@ -649,6 +648,15 @@
 		cpu-id = <7>;
 		key-id = <1>;
 		vusb-supply = <&mt_pmic_vusb_ldo_reg>;
+	};
+
+	oplus,track-charge {
+		compatible = "oplus,track-charge";
+		track,fast_chg_break_t_thd = <1000>;
+		track,general_chg_break_t_thd = <200>;
+		track,voocphy_type = <2>;
+		track,wired_max_power = <600000>;
+		track,wired_fast_chg_scheme = <2>;
 	};
 };
 
@@ -662,4 +670,3 @@
 		};
 	};
 };
-

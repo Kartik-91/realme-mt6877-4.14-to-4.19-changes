@@ -1,16 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Mediatek's mt6885 SoC device tree source
+ * Copyright (c) 2019 MediaTek Inc.
  *
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
  */
 /dts-v1/;
 /plugin/;
@@ -122,11 +113,15 @@
 		data = <1>;
 		pwm_config = <0 1 0 0 0>;
 	};
+	feedback_fb: feedback_fb {
+		compatible = "oplus,haptic-feedback";
+	};
 	/* sensor start */
+
 	/*
-    sensor_fb: sensor_fb {
-        compatible = "oplus,sensor-feedback";
-    };
+	sensor_fb: sensor_fb {
+		compatible = "oplus,sensor-feedback";
+	};
 	enum {
 		LIS3DH,
 		LSM6DS3,
@@ -269,6 +264,7 @@
 		vib_timer = <25>;
 		vib_limit = <9>;
 		vib_vol= <9>;
+		status = "disabled";
 	};
 	usb_c_pinctrl:usb_c_pinctrl {
 		compatible = "mediatek,usb_c_pinctrl";
@@ -311,7 +307,6 @@
                 status = "okay";
         };
 //#endif OPLUS_FEATURE_TP_BASIC
-
     nfc_chipset:nfc_chipset {
         compatible = "oplus-nfc-chipset";
         chipset-20255 = "SN100T";
@@ -534,15 +529,16 @@
 /* FINGERPRINT start */
 //ifdef OPLUS_FEATURE_FINGERPRINT
 &oplus_fp_common {
-    oplus,fp_gpio_num = <1>;
-    oplus,fp_gpio_0 = <&pio 190 0x0>;
-    pinctrl-names = "default";
-    pinctrl-0 = <&gpio_id0_default>;
-    goodix_optical {
-        oplus,fp-id = <0>; // fp id mapping table
-        vendor-chip = <11>; // please refer to the struct fp_vendor_t in oppo_fp_commmon.n
-        eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on 
-        chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu 
+	compatible = "oplus,fp_common";
+	oplus,fp_gpio_num = <1>;
+	oplus,fp_gpio_0 = <&pio 190 0x0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&gpio_id0_default>;
+	goodix_optical {
+		oplus,fp-id = <0>; // fp id mapping table
+		vendor-chip = <11>; // please refer to the struct fp_vendor_t in oplus_fp_commmon.h
+		eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on 
+		chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu 
 	};
 };
 
@@ -558,6 +554,7 @@
 };
 
 &goodix_fp {
+	compatible = "goodix,goodix_fp";
 	goodix,gpio_irq = <&pio 15 0x00>;
 	goodix,gpio_reset = <&pio 14 0x00>;
 	goodix,gpio_cs = <&pio 157 0x00>;
@@ -573,74 +570,75 @@
 #size-cells = <0>;
 status = "okay";
 oplus_fp: fingerprint@0 {
-		 compatible = "oplus,oplus_fp";
-		 reg = <0>;
-		 spi-max-frequency = <8000000>;
-		 spi-id = <1>;
-		 spi-irq = <15>;
-		 spi-reg = <11010000>;
-		 dvdd-supply = <&mt_pmic_vmch_ldo_reg>;
-		 dvdd-config = <3300000 3300000 150000>;
-		 power-num = <1>;
-		 status = "okay";
-		 power_source_1 {
-			 power-mode = <1>;
-			 power-name = "dvdd";
-			 power-config = "dvdd-config";
-			 delay-time = <0>;
-		 };
-	 };
+		compatible = "oplus,oplus_fp";
+		reg = <0>;
+		spi-max-frequency = <8000000>;
+		spi-id = <1>;
+		spi-irq = <15>;
+		spi-reg = <11010000>;
+		dvdd-supply = <&mt_pmic_vmch_ldo_reg>;
+		dvdd-config = <3300000 3300000 150000>;
+		power-num = <1>;
+		status = "okay";
+		power_source_1 {
+			power-mode = <1>;
+			power-name = "dvdd";
+			power-config = "dvdd-config";
+			delay-time = <0>;
+		};
+	};
 };
 // 1 = ldo power, refer to oplus_fp_common.h
 &pio{
 gpio_goodix_reset_default: gpio_goodix_reset_default {
-				 pins_cmd_dat {
-					 pinmux = <PINMUX_GPIO14__FUNC_GPIO14>;
-					 slew-rate = <1>;
-					 output-low;
-				 };
-			 };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO14__FUNC_GPIO14>;
+					slew-rate = <1>;
+					output-low;
+				};
+			};
 gpio_goodix_irq_default: gpio_goodix_irq_default {
-				 pins_cmd_dat {
-					 pinmux = <PINMUX_GPIO15__FUNC_GPIO15>;
-					 slew-rate = <0>;
-					 bias-pull-down;
-				 };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO15__FUNC_GPIO15>;
+					slew-rate = <0>;
+					bias-pull-down;
+				};
 			 };
 gpio_goodix_clk_6mA: gpio_goodix_clk_6mA {
-			     pins_cmd_dat {
-				     pinmux = <PINMUX_GPIO156__FUNC_SPI1_A_CLK>;
-				     drive-strength = <2>;
-			     };
-		     };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO156__FUNC_SPI1_A_CLK>;
+					drive-strength = <2>;
+				};
+			};
 gpio_goodix_mosi_6mA: gpio_goodix_mosi_6mA {
-			     pins_cmd_dat {
-				     pinmux = <PINMUX_GPIO159__FUNC_SPI1_A_MO>;
-				     drive-strength = <2>;
-			     };
-		     };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO159__FUNC_SPI1_A_MO>;
+					drive-strength = <2>;
+				};
+			};
 gpio_goodix_miso_6mA: gpio_goodix_miso_6mA {
-			     pins_cmd_dat {
-				     pinmux = <PINMUX_GPIO158__FUNC_SPI1_A_MI>;
-				     drive-strength = <3>;
-			     };
-		     };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO158__FUNC_SPI1_A_MI>;
+					drive-strength = <3>;
+				};
+			};
 gpio_goodix_cs_6mA: gpio_goodix_cs_6mA {
-			     pins_cmd_dat {
-				     pinmux = <PINMUX_GPIO157__FUNC_SPI1_A_CSB>;
-				     drive-strength = <2>;
-			     };
-		     };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO157__FUNC_SPI1_A_CSB>;
+					drive-strength = <2>;
+				};
+			};
 gpio_goodix_cs_func: gpio_goodix_cs_func {
-			     pins_cmd_dat {
-				     pinmux = <PINMUX_GPIO157__FUNC_SPI1_A_CSB>;
-				     drive-strength = <2>;
-			     };
-		     };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO157__FUNC_SPI1_A_CSB>;
+					drive-strength = <2>;
+			    };
+		    };
 };
+
+
 //#endif
 /* FINGERPRINT end */
-
 &pio {
     hw_pins_default:default@hw_sub_id {
     };
@@ -699,6 +697,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 	};
 };
 
+/* 2020/07/30, zdr Add for oplus charge .*/
 &charger {
 	io-channels = <&auxadc 4>,
 		<&auxadc 5>;
@@ -920,7 +919,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 &i2c9 {
     status = "okay";
 	clock-frequency = <1000000>;
-	
+
 	/* AWINIC AW8697 Haptic */
 	aw8697_haptic@5A {
 		status = "okay";
@@ -1033,7 +1032,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		qcom,vooc-cool-temp = <120>;
 		qcom,vooc-little-cool-to-normal-temp = <180>;
 		qcom,vooc-normal-to-little-cool-current = <0x05>;//5A
-		
+
 		qcom,vooc_multistep_adjust_current_support;
 		qcom,vooc_multistep_initial_batt_temp = <1000>;
 		qcom,vooc_strategy_normal_current = <0x0c>;
@@ -1225,7 +1224,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		};
 	};*/
 
-	//Lukaili Add for camera flash led 
+	//Lukaili Add for camera flash led
 	chgvin_enable: chgvin_enable {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO30__FUNC_GPIO30>;				//check
@@ -1261,7 +1260,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 			output-high;
 		};
 	};
-	//end Add for camera flash led 
+	//end Add for camera flash led
 };
 
 &pio {
@@ -1295,7 +1294,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 			output-low;
 		};
 	};
-	
+
 	charging_clock_active: charging_clock_active {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO95__FUNC_GPIO95>;		//check
@@ -1372,10 +1371,9 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 &mt6360_pmu {
 	mt6360,intr_gpio_num = <24>; /* direct defined GPIO num */
 	mt6360,intr_gpio = <&pio 24 0x0>;
+	/* 2020/06/30, Modify for LPSD */
 	disable_lpsd = <1>;
 };
-
-
 
 &mt6360_pmic {
 	pwr_off_seq = [04 00 02 02];
@@ -1387,6 +1385,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 };
 
 //#ifdef OPLUS_FEATURE_CHG_BASIC
+/* 2020/09/01, add for mp2762 for svooc */
 &lk_charger{
 	charger_by_buckboost;
 	support_tuv_authentication;
@@ -1532,7 +1531,6 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 };
 */
 /* USB SWITCH GPIO end */
-
 //#ifdef OPLUS_FEATURE_NFC_BRINGUP
 &i2c3 {
        status = "okay";
@@ -1694,6 +1692,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 };
 
 //#ifdef OPLUS_ARCH_EXTENDS
+/* 2022/07/09, Chaka audio bringup */
 &audio_extend {
 	//for nxp speaker
 	oplus,speaker-vendor = "nxp";
@@ -1712,6 +1711,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 	};
 };
 
+/* 2022/07/09, add for fsa4480 dts */
 &i2c6 {
 	fsa4480: fsa4480@42 {
 		compatible = "qcom,fsa4480-i2c";
@@ -1843,6 +1843,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		headset_pump_support;
 		pressure_report_support;
 		irq_need_dev_resume_ok;
+		exception_upload_support;
 		touchpanel,single-optimized-time = <8>;
 		/*
 		 *Virtual Key Config:
@@ -1934,6 +1935,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		irq_need_dev_resume_ok;
 		sec_kernel_grip_para = <21000>;
 		auto_test_need_cal_support;
+		exception_upload_support;
 		touchpanel,single-optimized-time = <8>;
 
                 /*
@@ -1988,7 +1990,13 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 };
 //#endif OPLUS_FEATURE_TP_BASIC
 
-//#include "mediatek/cust_mt6885_touch_1080x2280.dtsi"
-#include "mediatek/oppo6889/common/cust_oppo20131_camera.dtsi"
+//#ifdef OPLUS_FEATURE_SWTP
+&swtp {
+	compatible = "mediatek, swtp-eint";
+	debounce = <512000>;
+};
+//#endif
+
+#include "mediatek/cust_mt6889_camera_20131.dtsi"
 #include <oplus6889_20255_v2/cust.dtsi>
 /*End of this file, DO NOT ADD ANYTHING HERE*/

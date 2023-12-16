@@ -1,15 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2021 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Copyright (C) 2016 MediaTek Inc.
  */
+
 /* CAMERA GPIO standardization */
 &pio {
 	camera_pins_cam0_rst_0: cam0@0 {
@@ -417,6 +410,7 @@
 	cam0_vcama1-supply = <&rt5133_ldo5>;
 	cam0_vcamd-supply = <&rt5133_ldo8>;
 	cam0_vcamio-supply = <&rt5133_ldo1>;
+	cam0_vcamaf-supply = <&rt5133_ldo3>;
 
 	/* front */
 	cam1_vcama-supply = <&rt5133_ldo6>;
@@ -427,11 +421,13 @@
 	cam2_vcama-supply = <&rt5133_ldo6>;
 	cam2_vcamd-supply = <&rt5133_ldo7>;
 	cam2_vcamio-supply = <&rt5133_ldo1>;
+	cam2_vcamaf-supply = <&rt5133_ldo2>;
 
 	/* main3 (ultra wide) : gpio2 gpio3 --- AVDD_CAM_F_UW, DVDD_CAM_F_UW */
 	cam4_vcama-supply = <&rt5133_gpio2>;
 	cam4_vcamd-supply = <&rt5133_gpio3>;
 	cam4_vcamio-supply = <&rt5133_ldo1>;
+	cam4_vcamaf-supply = <&rt5133_gpio1>;
 
 	cam0_enable_sensor = "imx586_mipi_raw ov48b_mipi_raw";
 	cam1_enable_sensor = "s5k3p9sp_mipi_raw";
@@ -470,3 +466,12 @@
 	};
 };
 /* CAMERA EEPROM end */
+
+/* CAMERA AF */
+&camera_af_hw_node {
+	camaf_m1_pmic-supply = <&rt5133_ldo3>;
+	camaf_m2_pmic-supply = <&rt5133_ldo2>;
+	camaf_m3_pmic-supply = <&rt5133_gpio1>;
+	status = "okay";
+};
+/* CAMERA AF end */

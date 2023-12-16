@@ -1,30 +1,24 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright (C) 2018 MediaTek Inc.
+ * Copyright (c) 2019 MediaTek Inc.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
  */
 
-/ {
-	mt6360_typec: type_c_port0 {
+&i2c5 {
+	mt6360_typec: usb_type_c@4e {
+		compatible = "mediatek,usb_type_c";
+		reg = <0x4e>;
+		mt-dual,supported_modes = <0>; /* 0: dfp/ufp, 1: dfp, 2: ufp */
 		mt-tcpc,name = "type_c_port0"; /* tcpc_device's name */
-
-		/* 0: Unknown, 1: SNK only, 2: SRC only, 3: DRP, 4: Try.SRC, 5: Try.SNK */
+		/* 0: Unknown, 1: SNK, 2: SRC, 3: DRP, 4: Try.SRC, 5: Try.SNK */
 //#ifndef OPLUS_FEATURE_CHG_BASIC
-//		mt-tcpc,role_def = <5>;
+//Modify for OTG switch
+		//mt-tcpc,role_def = <5>;
 //else
 		mt-tcpc,role_def = <1>;
 //#endif
-
 		mt-tcpc,rp_level = <1>; /* 0: Default, 1: 1.5, 2: 3.0 */
 		/* 0: Never, 1: Always, 2: EMarkOnly, 3: StartOnly */
-
 		mt-tcpc,vconn_supply  = <1>;
 #if (CONFIG_MTK_GAUGE_VERSION == 30)
 		/* the number of notifier supply */
@@ -33,15 +27,22 @@
 		/* the number of notifier supply */
 		mt-tcpc,notifier_supply_num = <2>;
 #endif
-		mt6360pd,intr_gpio = <&pio 24 0x0>;
-		mt6360pd,intr_gpio_num = <24>;
-		mt6360pd,pcb_gpio = <&pio 16 0x0>;
-		mt6360pd,pcb_gpio_num = <16>;
-		/* 0: gpio low as phone, 1: gpio high as phone */
+		//#ifdef OPLUS_FEATURE_CHG_BASIC
+		//mt6360pd,intr_gpio = <&pio 24 0x0>;
+		//mt6360pd,intr_gpio_num = <24>;
+		//#else
+		mt6360pd,intr_gpio = <&pio 9 0x0>;
+		mt6360pd,intr_gpio_num = <9>;
+		//#endif /*OPLUS_FEATURE_CHG_BASIC*/
+		mt6360pd,pcb_gpio = <&pio 5 0x0>;
+		mt6360pd,pcb_gpio_num = <5>;
+/* 0: gpio low as phone, 1: gpio high as phone */
 		mt6360pd,pcb_gpio_polarity = <0>;
-		interrupt-parent = <&mt6360_pmu>;
+		interrupt-parent = <&subpmic_mtk>;
 		interrupts = <64 0>;
 		interrupt-names = "usbid_evt";
+		charger = <&mt6360_chg>;
+		bootmode = <&chosen>;
 		pd-data {
 			pd,vid = <0x29cf>;
 			pd,pid = <0x6360>;
@@ -58,10 +59,8 @@
 
 			pd,source-pdo-size = <1>;
 			pd,source-pdo-data = <0x00019096>; /* 5V, 1500 mA */
-			//pd,sink-pdo-size = <1>;
-			//pd,sink-pdo-data = <0x000190c8>;
-			pd,sink-pdo-size = <2>;
-			pd,sink-pdo-data = <0x000190c8 0x0001912c>;
+			pd,sink-pdo-size = <1>;
+			pd,sink-pdo-data = <0x000190c8>;
 
 			/*
 			 * No DP, host + device
@@ -73,7 +72,7 @@
 			 */
 
 			pd,id-vdo-size = <3>;
-			pd,id-vdo-data = <0xd60029cf 0x0 0x63600000>;
+			pd,id-vdo-data = <0xd10029cf 0x0 0x63600000>;
 
 			bat,nr = <1>;
 			bat-info0 {

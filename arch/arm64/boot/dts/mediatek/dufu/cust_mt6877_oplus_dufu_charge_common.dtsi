@@ -66,6 +66,7 @@
 &mt6360_pmu {
 	mt6360,intr_gpio_num = <4>; /* direct defined GPIO num */
 	mt6360,intr_gpio = <&pio 4 0x0>;
+	/*Modify for LPSD*/
 	disable_lpsd = <1>;
 
 	chg {
@@ -686,14 +687,18 @@
 };
 
 &odm {
-	usbphy_tuning: usbphy_tuning {
-		compatible = "mediatek,phy_tuning";
-		u2_vrt_ref = <5>;
-		u2_term_ref = <7>;
-		u2_enhance = <3>;
-		host_u2_vrt_ref = <5>;
-		host_u2_term_ref = <7>;
-		host_u2_enhance = <3>;
+	mediatek_phy_tuning: mediatek_phy_tuning {
+		phy_tuning {
+			compatible = "mediatek,phy_tuning";
+			eye-vrt = <6>;
+			eye-term = <6>;
+			eye-rev6 = <3>;
+			eye-disc = <0xc>;
+			host-eye-vrt = <6>;
+			host-eye-term = <6>;
+			host-eye-rev6 = <3>;
+			host-eye-disc = <0xc>;
+		};
 	};
 };
 

@@ -1,21 +1,4 @@
 
-&mmc_fixed_3v3 {
-	status = "okay";
-	regulator-name = "mmc_power";
-	regulator-min-microvolt = <3300000>;
-	regulator-max-microvolt = <3300000>;
-	enable-active-high;
-	regulator-always-on;
-};
-
-&mmc_fixed_1v8_io {
-	status = "okay";
-	regulator-name = "mmc_io";
-	regulator-min-microvolt = <1800000>;
-	regulator-max-microvolt = <1800000>;
-	enable-active-high;
-	regulator-always-on;
-};
 
 &reserved_memory {
 };
@@ -33,30 +16,18 @@
 		"nt35595_fhd_dsi_cmd_truly_nt50358_drv";
 };
 
-&mmc0 {
-	status = "okay";
-	/* pinctrl-names = "default", "state_uhs"; */
-	/* pinctrl-0 = <&mmc0_pins_default>; */
-	/* pinctrl-1 = <&mmc0_pins_uhs>; */
-	bus-width = <8>;
-	max-frequency = <5000000>;
-	cap-mmc-highspeed;
-	no-sdio;
-	no-sd;
-	vmmc-supply = <&mmc_fixed_3v3>;
-	vqmmc-supply = <&mmc_fixed_1v8_io>;
-	non-removable;
-};
+
 
 &disp_leds {
 	compatible = "mediatek,disp-leds";
 
 	backlight {
 		label = "lcd-backlight";
-		max-brightness = <4095>;
+		max-brightness = <2784>;
 		led-bits = <12>;
 		trans-bits = <12>;
 		default-state = "on";
+		max_brightness_custom = <1>;
 	};
 };
 
@@ -238,9 +209,9 @@
 	};
 	als_radio_lcd:als_radio_lcd {
 		status = "okay";
-		samsung_als_radio = <200>;
-		boe_als_radio = <150>;
-		tianma_als_radio = <150>;
+		samsung_als_radio = <110>;
+		boe_als_radio = <110>;
+		tianma_als_radio = <110>;
 	};
 	rear_cct_1: rear_cct_1 {
                 status = "okay";
@@ -521,7 +492,7 @@
 		/* Power Config */
 		vdd_2v8-supply  = <&mt_pmic_vtp_ldo_reg>;
                 vdd_2v8_volt = <3000000>;
-               
+
 		/* Interrupt && Irq-gpio */
                 /* Other HW Resource */
 		irq-gpio = <&pio 21 0x2002>;
@@ -546,6 +517,8 @@
                 project_id = <20615>;
 		irq_need_dev_resume_ok;
                 black_gesture_support;
+		black_gesture_indep_support;
+		sportify_aod_gesture_support;
                 fw_edge_limit_support;
                 pressure_report_support;
                 charger_pump_support;
@@ -698,13 +671,56 @@
 };
 
 &dispsys_config {
-	pinctrl-names =
-		"lcm_rst_out1_gpio", "lcm_rst_out0_gpio",
-		"mode_te_te";
-	pinctrl-0 = <&mtkfb_pins_lcm_rst_out1_gpio>;
-	pinctrl-1 = <&mtkfb_pins_lcm_rst_out0_gpio>;
-	pinctrl-2 = <&mtkfb_pins_lcm_dsi_te>;
-	status = "okay";
+    pinctrl-names =
+        "lcm_rst_out1_gpio", "lcm_rst_out0_gpio",
+        "mode_te_te";
+    pinctrl-0 = <&mtkfb_pins_lcm_rst_out1_gpio>;
+    pinctrl-1 = <&mtkfb_pins_lcm_rst_out0_gpio>;
+    pinctrl-2 = <&mtkfb_pins_lcm_dsi_te>;
+    status = "okay";
+
+    helper-value =  <0>, /*MTK_DRM_OPT_STAGE*/
+                    <1>, /*MTK_DRM_OPT_USE_CMDQ*/
+                    <1>, /*MTK_DRM_OPT_USE_M4U*/
+                    <0>, /*MTK_DRM_OPT_SODI_SUPPORT*/
+                    <1>, /*MTK_DRM_OPT_IDLE_MGR*/
+                    <0>, /*MTK_DRM_OPT_IDLEMGR_SWTCH_DECOUPLE*/
+                    <1>, /*MTK_DRM_OPT_IDLEMGR_BY_REPAINT*/
+                    <0>, /*MTK_DRM_OPT_IDLEMGR_ENTER_ULPS*/
+                    <0>, /*MTK_DRM_OPT_IDLEMGR_KEEP_LP11*/
+                    <0>, /*MTK_DRM_OPT_DYNAMIC_RDMA_GOLDEN_SETTING*/
+                    <1>, /*MTK_DRM_OPT_IDLEMGR_DISABLE_ROUTINE_IRQ*/
+                    <0>, /*MTK_DRM_OPT_MET_LOG*/
+                    <1>, /*MTK_DRM_OPT_USE_PQ*/
+                    <1>, /*MTK_DRM_OPT_ESD_CHECK_RECOVERY*/
+                    <1>, /*MTK_DRM_OPT_ESD_CHECK_SWITCH*/
+                    <1>, /*MTK_DRM_OPT_PRESENT_FENCE*/
+                    <0>, /*MTK_DRM_OPT_RDMA_UNDERFLOW_AEE*/
+                    <0>, /*MTK_DRM_OPT_DSI_UNDERRUN_AEE*/
+                    <1>, /*MTK_DRM_OPT_HRT*/
+                    <1>, /*MTK_DRM_OPT_HRT_MODE*/
+                    <0>, /*MTK_DRM_OPT_DELAYED_TRIGGER*/
+                    <1>, /*MTK_DRM_OPT_OVL_EXT_LAYER*/
+                    <0>, /*MTK_DRM_OPT_AOD*/
+                    <1>, /*MTK_DRM_OPT_RPO*/
+                    <0>, /*MTK_DRM_OPT_DUAL_PIPE*/
+                    <0>, /*MTK_DRM_OPT_DC_BY_HRT*/
+                    <1>, /*MTK_DRM_OPT_OVL_WCG*/
+                    <0>, /*MTK_DRM_OPT_OVL_SBCH*/
+                    <1>, /*MTK_DRM_OPT_COMMIT_NO_WAIT_VBLANK*/
+                    <0>, /*MTK_DRM_OPT_MET*/
+                    <0>, /*MTK_DRM_OPT_REG_PARSER_RAW_DUMP*/
+                    <0>, /*MTK_DRM_OPT_VP_PQ*/
+                    <0>, /*MTK_DRM_OPT_GAME_PQ*/
+                    <0>, /*MTK_DRM_OPT_MMPATH*/
+                    <1>, /*MTK_DRM_OPT_HBM*/
+                    <0>, /*MTK_DRM_OPT_VDS_PATH_SWITCH*/
+                    <0>, /*MTK_DRM_OPT_LAYER_REC*/
+                    <1>, /*MTK_DRM_OPT_CLEAR_LAYER*/
+                    <1>, /*MTK_DRM_OPT_LFR*/
+                    <0>, /*MTK_DRM_OPT_SF_PF*/
+                    <1>, /*MTK_DRM_OPT_DYN_MIPI_CHANGE*/
+                    <1>; /*MTK_DRM_OPT_PRIM_DUAL_PIPE*/
 };
 
 &bat_gm30 {
@@ -828,6 +844,7 @@
 /* FINGERPRINT start */
 //ifdef OPLUS_FEATURE_FINGERPRINT
 &oplus_fp_common {
+    compatible = "oplus,fp_common";
     oplus,fp_gpio_num = <1>;
     oplus,fp_gpio_0 = <&pio 190 0x0>;
     pinctrl-names = "default";
@@ -835,15 +852,15 @@
     goodix_optical {
         oplus,fp-id = <0>; // fp id mapping table
         vendor-chip = <11>; // please refer to the struct fp_vendor_t in oplusfp_commmon.n
-        eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on 
-        chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu 
-	};
+        eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on
+        chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu
+    };
     goodix_optical_bak {
         oplus,fp-id = <1>; // fp id mapping table
         vendor-chip = <11>; // please refer to the struct fp_vendor_t in oplusfp_commmon.n
-        eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on 
-        chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu 
-	};
+        eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on
+        chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu
+    };
 
 };
 
@@ -852,13 +869,14 @@
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO190__FUNC_GPIO190>;
 			slew-rate = <0>;
-			bias-pull-up;
+			bias-pull-up = <00>;
 			input-enable;
 		};
 	};
 };
 
 &goodix_fp {
+	compatible = "goodix,goodix_fp";
 	goodix,gpio_irq = <&pio 15 0x00>;
 	goodix,gpio_reset = <&pio 14 0x00>;
 	goodix,gpio_cs = <&pio 157 0x00>;
@@ -957,7 +975,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 	io-channels = <&auxadc 3>,
 		<&auxadc 4>,
 		<&auxadc 5>;
-	io-channel-names = "auxadc3-chargeric_temp",
+	io-channel-names = "auxadc3-bat_id_temp",
 		"auxadc4-usb_temp_v_l",
 		"auxadc5-usb_temp_v_r";
 
@@ -1208,11 +1226,10 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		pinctrl-1 = <&mps_otg_en_sleep>;
 		pinctrl-2 = <&mps_otg_en_default>;
 	};
-	da9313-divider@68 {
+	charge_pump-divider@68 {
 		status = "okay";
-		compatible = "oplus,da9313-divider";
+		compatible = "oplus,charge_pump-divider";
 		reg = <0x68 0>;
-		qcom,ic_en_mode;
 	};
 };
 &i2c7 {
@@ -1237,7 +1254,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		reg = <0x0e>;
 		qcom,vooc_reply_mcu_bits = <7>;
 		qcom,vooc-fw-type = <10>;
-		#include "../../../fastchg_fw/rt5125_fw_data_4450_vooc_ffc_10v6a_7bit_mt6893.dtsi"
+		#include "fastchg_fw/rt5125_fw_data_4450_vooc_ffc_10v6a_7bit_mt6893.dtsi"
 		qcom,vooc-low-temp = <0>;
 		qcom,oplus_batt_4400mv;
 		qcom,support_vooc_by_normal_charger_path;
@@ -1358,10 +1375,6 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 	status = "okay";
 };
 
-&usb_boost_manager {
-	boost_period = <30>;
-};
-
 &pio {
 	uart0_rx_gpio_input:uart0_rx_gpio@gpio92 {
 		pins_cmd_dat {
@@ -1423,10 +1436,14 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 	support_tuv_authentication;
 };
 
+&regulator_vibrator {
+    status = "disabled";
+};
+
 &i2c3 {
     status = "okay";
 	clock-frequency = <1000000>;
-	
+
 	/* AWINIC AW8697 Haptic */
 	aw8697_haptic@5A {
 		status = "okay";
@@ -1446,8 +1463,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO135__FUNC_GPIO135>;
 			input-enable;
-			slew-rate = <0>;
-			bias-pull-up = <11>;
+			bias-pull-up;
 		};
 	};
 
@@ -1506,7 +1522,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		};
 	};
 
-	//Lukaili Add for camera flash led 
+	//Lukaili Add for camera flash led
 	chgvin_enable: chgvin_enable {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO9__FUNC_GPIO9>;				//check
@@ -1543,7 +1559,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		};
 	};
 
-	//end Add for camera flash led 
+	//end Add for camera flash led
 };
 
 &pio {
@@ -1577,7 +1593,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 			output-low;
 		};
 	};
-	
+
 	charging_clock_active: charging_clock_active {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO95__FUNC_GPIO95>;		//check
@@ -1670,6 +1686,7 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 &mt6360_pmu {
 	mt6360,intr_gpio_num = <24>; /* direct defined GPIO num */
 	mt6360,intr_gpio = <&pio 24 0x0>;
+	//#ifdef VENDOR_EDIT
 	disable_lpsd = <1>;
 };
 
@@ -1973,12 +1990,22 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 		match-projects = <21609>;
 	};
 	};
+
+	oplus,track-charge {
+		compatible = "oplus,track-charge";
+		track,fast_chg_break_t_thd = <1000>;
+		track,general_chg_break_t_thd = <200>;
+		track,voocphy_type = <4>;
+		track,wired_max_power = <65000>;
+		track,wired_fast_chg_scheme = <3>;
+	};
 };
 //#ifdef OPLUS_FEATURE_CHG_BASIC
 &lk_charger{
 	charger_by_buckboost;
 };
 //#endif
+//#ifdef VENDOR_EDIT
 &swtp {
     compatible = "mediatek, swtp-eint";
     debounce = <512000>;

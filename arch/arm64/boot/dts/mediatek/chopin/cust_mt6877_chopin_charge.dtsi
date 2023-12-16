@@ -85,6 +85,7 @@
 &mt6360_pmu {
 	mt6360,intr_gpio_num = <4>; /* direct defined GPIO num */
 	mt6360,intr_gpio = <&pio 4 0x0>;
+	/*Modify for LPSD*/
 	disable_lpsd = <1>;
 
 	chg {
@@ -95,7 +96,7 @@
 &mt6360_typec {
 	mt6360pd,intr_gpio_num = <5>; /* direct defined GPIO num */
 	mt6360pd,intr_gpio = <&pio 5 0x0>;
-	mt-tcpc,role_def = <4>; /* 0: SNK Only, 1: SRC Only, 2: DRP, 3: Try.SRC, 4: Try.SNK */
+	mt-tcpc,role_def = <1>; /* 0: SNK Only, 1: SRC Only, 2: DRP, 3: Try.SRC, 4: Try.SNK */
 	mt-tcpc,vconn_supply  = <1>; /* 0: Never, 1: Always, 2: EMarkOnly, 3: StartOnly */
 	pd-data {
 		pd,source-pdo-size = <1>;
@@ -173,7 +174,7 @@
 
 	qcom,vooc_temp_bat_normal_decidegc = <350>;
 	qcom,vooc_temp_bat_warm_decidegc = <370>;
-	qcom,vooc_temp_bat_hot_decidegc = <440>;
+	qcom,vooc_temp_bat_hot_decidegc = <510>;
 	qcom,input_current_vooc_led_ma_high = <1200>;
 	qcom,input_current_vooc_led_ma_warm = <1800>;
 	qcom,input_current_vooc_led_ma_normal = <3600>;
@@ -887,14 +888,16 @@
 };
 
 &odm {
-	usbphy_tuning: usbphy_tuning {
-		compatible = "mediatek,phy_tuning";
-		u2_vrt_ref = <3>;
-		u2_term_ref = <7>;
-		u2_enhance = <3>;
-		host_u2_vrt_ref = <6>;
-		host_u2_term_ref = <6>;
-		host_u2_enhance = <3>;
+	mediatek_phy_tuning: mediatek_phy_tuning {
+		phy_tuning {
+			compatible = "mediatek,phy_tuning";
+			eye-vrt = <3>;
+			eye-term = <7>;
+			eye-rev6 = <3>;
+			host-eye-vrt = <6>;
+			host-eye-term = <6>;
+			host-eye-rev6 = <3>;
+		};
 	};
 };
 

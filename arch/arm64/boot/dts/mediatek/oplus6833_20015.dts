@@ -1,16 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Mediatek's mt6833 SoC device tree source
+ * Copyright (c) 2019 MediaTek Inc.
  *
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
  */
 /dts-v1/;
 /plugin/;
@@ -46,11 +37,16 @@
 
 		main-sub {
 			compatible = "hw-match, main-sub";
-			aboard-patterns = <0 0 0 0 0 0>;
+			aboard-patterns = <0 0 0 0 0>;
 			/*main board*/
-			match-projects = <20015 20016 20108 20109 20307 20013>;
+			match-projects = <20015 20016 20108 20109 20307>;
 		};
 	};
+
+	sensor_fb: sensor_fb {
+		compatible = "oplus,sensor-feedback";
+	};
+
 	/*
 	enum {
 		LIS3DH,
@@ -250,7 +246,6 @@
 		new-arch-supported = <1>;
 	};
 
-/*OPLUS_FEAUTRE_KEYPAD keypad start*/
 	kpd_volume_up:kpd_volume_up {
 		compatible = "mediatek, VOLUME_UP-eint";
 		interrupt-parent = <&pio>;
@@ -266,9 +261,7 @@
 		debounce = <32000>;
 		status = "okay";
 	};
-/*OPLUS_FEAUTRE_KEYPAD keypad end*/
 };
-/*OPLUS_FEATURE_KEYPAD*/
 &keypad {
 	keypad,volume-up	= <&pio 1 0x00>;
 	keypad,volume-down	= <&pio 80 0x00>;
@@ -356,7 +349,7 @@
 /*#endif OPLUS_FEATURE_CHG_BASIC*/
 
 &charger {
-io-channels =  <&auxadc 3>,<&auxadc 4>,
+	io-channels =  <&auxadc 3>,<&auxadc 4>,
 		<&auxadc 5>;
 	io-channel-names = "auxadc3-chargeric_temp","auxadc4-usb_temp_v_l",
 		"auxadc5-usb_temp_v_r";
@@ -367,8 +360,8 @@ io-channels =  <&auxadc 3>,<&auxadc 4>,
 	pinctrl-2 = <&dischg_disable>;
 
 	qcom,usbtemp_batttemp_gap = <18>;
-	
-	//for oppo chg framework:
+
+	//for oplus chg framework:
 	qcom,input_current_charger_ma = <2200>;
 	qcom,input_current_usb_ma = <500>;
 	qcom,input_current_cdp_ma = <1600>;
@@ -769,6 +762,22 @@ io-channels =  <&auxadc 3>,<&auxadc 4>,
 		<0>; /*MTK_DRM_OPT_SF_PF*/
 };
 
+/* add for dual-mic or singlemic with miso1 */
+&aud_dat_miso1_off {
+	pins_cmd1_dat {
+		pinmux = <PINMUX_GPIO160__FUNC_GPIO160>;
+		input-enable;
+		bias-pull-down;
+	};
+};
+&aud_dat_miso1_on {
+	pins_cmd1_dat {
+		pinmux = <PINMUX_GPIO160__FUNC_AUD_DAT_MISO1>;
+		input-schmitt-enable;
+		bias-disable;
+	};
+};
+
 &pio {
 	sia81xx_gpio_L: sia81xx_gpio_L {
 		pins_cmd_dat {
@@ -899,6 +908,24 @@ io-channels =  <&auxadc 3>,<&auxadc 4>,
 };
 #endif
 
+/* delete default keys pinctrl
+&keypad {
+	pinctrl-names = "default";
+	pinctrl-0 = <&kpd_pins_default>;
+};
+
+&pio {
+	kpd_pins_default: kpdgpiodefault {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO79__FUNC_KPCOL0>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_10>;
+			output-low;
+			input-schmitt-enable;
+		};
+	};
+};
+*/
+
 //#include "mediatek/cust_mt6833_touch_1080x2300.dtsi"
 /* accdet start */
 &accdet {
@@ -974,6 +1001,8 @@ io-channels =  <&auxadc 3>,<&auxadc 4>,
 	moisture-internal-r = <47000>;
 	/* moisture of water resister ohm, SW mode by auxadc*/
 	moisture-water-r = <10000>;
+	/* add that disable the error for moisture in the Android 12 version of the error in switch of the voip */
+	moisture_disable_error_switch = <1>;
 	/* moisture SW mode config end */
         //#endif /* OPLUS_ARCH_EXTENDS */
 	status = "okay";
@@ -1101,7 +1130,6 @@ io-channels =  <&auxadc 3>,<&auxadc 4>,
 	status = "okay";
 };
 /* GPS GPIO standardization end */
-
 //#ifdef OPLUS_FEATURE_FINGERPRINT
 &oplus_fp_common {
 	compatible = "oplus,fp_common"; //Manufacture, and Model
@@ -1353,7 +1381,6 @@ oplus_fp: fingerprint@0 {
 	 };
 };
 //#endif /* OPLUS_FEATURE_FINGERPRINT */
-
 #include "mediatek/cust_mt6833_camera_20015.dtsi"
 #include <oplus6833_20015/cust.dtsi>
 
@@ -1374,9 +1401,9 @@ oplus_fp: fingerprint@0 {
 		reset-gpio = <&pio 15 0>;
 		report_rate_limit = <60>;
 
-		platform_support_project = <20015 20013 20016 20108 20109 20651 20652 20653 20654 20307>;
-		platform_support_project_dir = <20015 20013 20016 20108 20109 20651 20652 20653 20654 20307>;
-		platform_support_project_commandline = "default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline";
+		platform_support_project = <20015 20016 20108 20109 20651 20652 20653 20654 20307>;
+		platform_support_project_dir = <20015 20016 20108 20109 20651 20652 20653 20654 20307>;
+		platform_support_project_commandline = "default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline";
 
 		touchpanel,max-num-support = <10>;
 		touchpanel,tx-rx-num = <18 32>;
@@ -1400,6 +1427,7 @@ oplus_fp: fingerprint@0 {
 		smart_gesture_support;
 		pressure_report_support;
 		fw_update_app_support;
+		exception_upload_support;
 		touchpanel,button-type = <4>;
 	};
 };
@@ -1417,7 +1445,7 @@ oplus_fp: fingerprint@0 {
 };
 /* TOUCH end */
 
-&msdc1 {
+&mmc1 {
     cd-gpios = <&pio 4 0>;
     status = "okay";
     vmmc-supply = <&mt_pmic_vmch_ldo_reg>;
@@ -1426,5 +1454,4 @@ oplus_fp: fingerprint@0 {
 	sdcard_det_en = <1>;
 	sdcard_hlact = <0>;
 };
-
 /*End of this file, DO NOT ADD ANYTHING HERE*/

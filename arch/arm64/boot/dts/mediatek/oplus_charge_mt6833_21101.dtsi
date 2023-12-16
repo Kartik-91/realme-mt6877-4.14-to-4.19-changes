@@ -63,14 +63,14 @@
 	status = "okay";
 };
 
-&mt6360_pmu {
+&subpmic_mtk {
 	mt6360,intr_gpio_num = <10>; /* direct defined GPIO num */
 	mt6360,intr_gpio = <&pio 10 0x0>;
 	disable_lpsd = <1>;
 
 	chg {
 		compatible = "mediatek,mt6360_pmu_chg";
-		interrupt-parent = <&mt6360_pmu>;
+		interrupt-parent = <&subpmic_mtk>;
 		interrupts = <4 0>, <6 0>, <7 0>, <9 0>,
 				<12 0>, <13 0>, <14 0>, <15 0>,
 				<27 0>, <29 0>, <30 0>, <32 0>,
@@ -134,6 +134,10 @@
 	dpm_caps {
 		attemp_discover_svid;
 	};
+};
+
+&mt6360_chg {
+	pp_sense_l = <0x0f>;
 };
 
 &lk_charger{
@@ -901,10 +905,6 @@
 	};
 };
 
-&mt6360_pmu_chg {
-	pp_sense_l = <0x0f>;
-};
-
 &pio {
 	charging_inter_active: charging_inter_active {
 		pins_cmd_dat {
@@ -974,14 +974,29 @@
 };
 
 &odm {
-	usbphy_tuning: usbphy_tuning {
-		compatible = "mediatek,phy_tuning";
-		u2_vrt_ref = <5>;
-		u2_term_ref = <7>;
-		u2_enhance = <3>;
-		host_u2_vrt_ref = <7>;
-		host_u2_term_ref = <4>;
-		host_u2_enhance = <2>;
+	mediatek_phy_tuning: mediatek_phy_tuning {
+		phy_tuning {
+			compatible = "mediatek,phy_tuning";
+			eye-vrt = <5>;
+			eye-term = <7>;
+			eye-rev6 = <3>;
+			host-eye-vrt = <7>;
+			host-eye-term = <4>;
+			host-eye-rev6 = <2>;
+		};
+	};
+	oplus,track-charge {
+		compatible = "oplus,track-charge";
+		track,fast_chg_break_t_thd = <1000>;
+		track,general_chg_break_t_thd = <200>;
+		track,voocphy_type = <2>;
+		track,wired_max_power = <33000>;
+		track,wired_fast_chg_scheme = <4>;
 	};
 };
+
+&extcon_usb {
+	vbus-current = <1300000>;
+};
+
 //#endif /*OPLUS_FEATURE_CHG_BASIC*/

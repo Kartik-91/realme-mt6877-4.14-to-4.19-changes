@@ -23,8 +23,6 @@
 
 #include "mediatek/oplus6893/21609/common/21609_common.dtsi"
 
-#include "mediatek/bat_setting/mt6893_battery_cfg_cupid.dtsi"
-
 #include "mediatek/oplus6893/21609/pcbv1/21609_cust.dtsi"
 
 #include <oplus6893_21609/cust.dtsi>

@@ -87,13 +87,6 @@
 	};
 };
 
-&phy_tuning {
-	compatible = "mediatek,phy_tuning";
-	u2_vrt_ref = <6>;
-	u2_term_ref = <6>;
-	u2_enhance = <2>;
-};
-
 &lk_charger {
         support_tuv_authentication;
 };
@@ -1263,10 +1256,8 @@
 	compatible = "oplus,fp_common"; //Manufacture, and Model
 	oplus,fp_gpio_num = <1>;
 	oplus,fp_gpio_0 = <&pio 41 0x00>;
-	pinctrl-names = "gpio_id0_up","gpio_id0_down";
-	pinctrl-0 = <&gpio_id0_up>;
-	pinctrl-1 = <&gpio_id0_down>;
-	oplus,one_gpio_for_three_ic = <1>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&gpio_id0_default>;
 	goodix_3626 {
 		oplus,fp-id = <1>; /* fp id mapping table */
 		vendor-chip = <16>; /* please refer to the struct fp_vendor_t in oplus_fp_commmon.n */
@@ -1279,28 +1270,13 @@
 		eng-menu = "-1,-1"; /* represents SNR, inclination test item in engineer menu, and 0/1 means off/on */
 		chip-name = "F_1541";  /* /proc/fp_id, will be displayed in engineer menu  */
 	};
-        silead_side {
-		oplus,fp-id = <2>; /* fp id mapping table */
-		vendor-chip = <22>; /* please refer to the struct fp_vendor_t in oplus_fp_commmon.n */
-		eng-menu = "-1,-1"; /* represents SNR, inclination test item in engineer menu, and 0/1 means off/on */
-		chip-name = "S_gsl6157";  /* /proc/fp_id, will be displayed in engineer menu  */
-	};
 };
-
-&pio {
-	gpio_id0_up: gpio_id0_up {
+&pio{
+	gpio_id0_default: gpio_id0_default {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO41__FUNC_GPIO41>;
 			slew-rate = <0>;
-			bias-pull-up;
-			input-enable;
-		};
-	};
-	gpio_id0_down: gpio_id0_down {
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO41__FUNC_GPIO41>;
-			slew-rate = <0>;
-			bias-pull-down;
+			bias-pull-up = <00>;
 			input-enable;
 		};
 	};
@@ -1355,76 +1331,6 @@ gpio_fpc_cs_func: gpio_fpc_cs_func {
 						  drive-strength = <3>;
 					  };
 				  };
-};
-
-&silead_fp {
-	sil,silead_irq = <&pio 22 0x00>;
-	pinctrl-names = "default", "rst-low", "rst-high" ,
-	                "irq-init", "spi-default";
-	pinctrl-0 = <&silfp_default>;
-	pinctrl-1 = <&silfp_rst_low>;
-	pinctrl-2 = <&silfp_rst_high>;
-	pinctrl-3 = <&silfp_irq>;
-	pinctrl-4 = <&fingerprint_pins_default>;
-	status = "okay";
-};
-
-&pio {
-	silfp_default: silfp_default {
-	};
-
-	silfp_rst_high: silfp_rst_high {
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO21__FUNC_GPIO21>;
-			slew-rate = <1>;
-			output-high;
-		};
-	};
-
-	silfp_rst_low: silfp_rst_low {
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO21__FUNC_GPIO21>;
-			slew-rate = <1>;
-			output-low;
-		};
-	};
-
-	silfp_irq: silfp_irq {
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO22__FUNC_GPIO22>;
-			slew-rate = <0>;
-			bias-disable;
-		};
-	};
-	fingerprint_pins_default: fingerprint_pins_default {
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO36__FUNC_SPI5_CSB>;
-			slew-rate = <1>;
-			bias-pull-up;
-            drive-strength = <3>; /* 8mA */
-		};
-
-		pins_cmd2_dat {
-			pinmux = <PINMUX_GPIO35__FUNC_SPI5_CLK>;
-			slew-rate = <1>;
-			bias-pull-down;
-            drive-strength = <3>; /* 8mA */
-		};
-
-		pins_cmd3_dat {
-			pinmux = <PINMUX_GPIO38__FUNC_SPI5_MI>;
-			slew-rate = <0>;
-			bias-pull-down;
-            drive-strength = <3>; /* 8mA */
-		};
-
-		pins_cmd4_dat {
-			pinmux = <PINMUX_GPIO37__FUNC_SPI5_MO>;
-			slew-rate = <1>;
-			bias-pull-down;
-            drive-strength = <3>; /* 8mA */
-		};
-	};
 };
 
 &goodix_fp {
@@ -1508,7 +1414,6 @@ oplus_fp: fingerprint@0 {
 		 };
 	 };
 };
-//#endif /* OPLUS_FEATURE_FINGERPRINT */
 //#ifdef OPLUS_FEATURE_SWTP
 &swtp {
     compatible = "mediatek, swtp-eint";

@@ -610,6 +610,17 @@
 	status = "okay";
 };
 
+&odm {
+	oplus,track-charge {
+		compatible = "oplus,track-charge";
+		track,fast_chg_break_t_thd = <1000>;
+		track,general_chg_break_t_thd = <200>;
+		track,voocphy_type = <2>;
+		track,wired_max_power = <330000>;
+		track,wired_fast_chg_scheme = <4>;
+	};
+};
+
 &pio {
 	uart0_rx_gpio_input:uart0_rx_gpio@gpio179 {
 		pins_cmd_dat {
@@ -628,4 +639,3 @@
 		};
 	};
 };
-

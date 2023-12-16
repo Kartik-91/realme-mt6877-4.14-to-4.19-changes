@@ -18,12 +18,15 @@
 };
 
 //#ifdef OPLUS_ARCH_EXTENDS
+//2012/07/12, add for SIA PA ALGO
 &sia81xx_L{
 	si,sia_boost_vol_support = <1>;
 };
 //endif
 
 /*OPLUS_ARCH_EXTENDS*/
+/*2022/07/12, add for sia pa
+ * Modify for sia I2C & gpio config */
 &i2c6 {
     #address-cells = <1>;
     #size-cells = <0>;

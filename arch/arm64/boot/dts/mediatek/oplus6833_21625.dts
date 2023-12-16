@@ -165,6 +165,7 @@
 		qcom,slave_cp_disable_thr_high = <1600>;	//1500+100mA
 		qcom,slave_cp_disable_thr_low = <1400>;		//1500-100mA
 		qcom,voocphy_current_default = <30>;
+		qcom,voocphy_ibat_over_current = <7000>;
 
 		qcom,svooc_cool_down_current_limit = <60 20 20 20 30 40 50 60 60 60 60 60 60 60 60>;
 		qcom,vooc_cool_down_current_limit = <30 10 10 10 15 20 25 30 30 30 30 30 30 30 30>;
@@ -390,17 +391,6 @@
        };
 };
 
-&phy_tuning {
-	compatible = "mediatek,phy_tuning";
-	u2_vrt_ref = <7>;
-	u2_term_ref = <7>;
-	u2_enhance = <3>;
-	
-	host_u2_vrt_ref = <6>;
-	host_u2_term_ref = <6>;
-	host_u2_enhance = <3>;
-};
-
 &lk_charger {
         support_tuv_authentication;
 };
@@ -559,6 +549,7 @@ pinctrl-names = "default",
 	qcom,vooc_project = <5>;
 	qcom,vbatt_num = <1>;
 	qcom,new_ui_warning_support;
+	voocphy_support_display_vooc;
 
 	qcom,normal_vterm_hw_inc = <18>;
 	qcom,non_normal_vterm_hw_inc = <18>;
@@ -1181,6 +1172,8 @@ pinctrl-names = "default",
 	moisture-internal-r = <47000>;
 	/* moisture of water resister ohm, SW mode by auxadc*/
 	moisture-water-r = <10000>;
+	/* add that disable the error for moisture in the Android 12 version of the error in switch of the voip */
+	moisture_disable_error_switch = <1>;
 	/* moisture SW mode config end */
 	status = "okay";
 };
@@ -1246,6 +1239,13 @@ pinctrl-names = "default",
 		vib_limit = <0>;
 		vib_vol= <11>;
 	};
+
+	oplus_boardid:oplus_boardid {
+		compatible = "oplus,oplus_boardid";
+		oplus_boardid,dtsino="21625";//only one u32
+		oplus_boardid,pcbmask="0xffff";//all mask 0xffff
+	};
+
 	oplus_project:oplus_project {
 		compatible = "oppo,oplus_project";
 	};
@@ -1259,6 +1259,7 @@ pinctrl-names = "default",
 			match-projects = <20608 20609 0x2060A 0x2060B 0x2070B 0x2070E 21625 0x216A0 0x216A1 0x216B5 0x216B6>;
 		};
 	};
+
 	kpd_volume_up:kpd_volume_up {
 		compatible = "mediatek, VOLUME_UP-eint";
 		interrupt-parent = <&pio>;
@@ -1726,13 +1727,12 @@ oplus_fp: fingerprint@0 {
 //#endif  /*OPLUS_VENDOR_SWTP*/
 //#endif /* OPLUS_FEATURE_FINGERPRINT */
 
-&msdc1 {
+&mmc1 {
     cd-gpios = <&pio 4 0>;
     status = "okay";
     vmmc-supply = <&mt_pmic_vmch_ldo_reg>;
 };
 &mt6360_ldo {
-	ldo5_ctrls = [00 80 01 2d a4];
 	sdcard_det_en = <1>;
 	sdcard_hlact = <0>;
 };
@@ -1740,5 +1740,13 @@ oplus_fp: fingerprint@0 {
 #include "mediatek/cust_mt6833_camera_21625.dtsi"
 #include <oplus6833_21625/cust.dtsi>
 #include "mediatek/cust_mt6833_nfc_20796.dtsi"
-
+&mmc1 {
+    cd-gpios = <&pio 4 0>;
+    status = "okay";
+    vmmc-supply = <&mt_pmic_vmch_ldo_reg>;
+};
+&mt6360_ldo {
+	sdcard_det_en = <1>;
+	sdcard_hlact = <0>;
+};
 /*End of this file, DO NOT ADD ANYTHING HERE*/

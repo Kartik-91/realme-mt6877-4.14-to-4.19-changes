@@ -18,3 +18,13 @@
 /plugin/;
 #include "oplus6893_20827.dts"
 #include "mediatek/oplus6893_20827_EVT_cust.dtsi"
+
+/delete-node/ &oplus_boardid;
+
+&odm {
+		oplus_boardid:oplus_boardid {
+			compatible = "oplus,oplus_boardid";
+			oplus_boardid,dtsino="20827";//only one u32
+			oplus_boardid,pcbmask="0x0310";//all mask 0xffff
+		};
+};

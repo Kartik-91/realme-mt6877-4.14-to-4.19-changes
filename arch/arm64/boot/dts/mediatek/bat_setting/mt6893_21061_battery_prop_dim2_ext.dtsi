@@ -62,7 +62,7 @@ g_QMAX_SYS_VOL =
 /*Pseudo100 percentage setting*/
 g_FG_PSEUDO100_row = <4>;
 g_FG_PSEUDO100_col = <10>;
-g_FG_PSEUDO100 =        
+g_FG_PSEUDO100 =
 <
 	98   98   98   98
 	98   98   98   98

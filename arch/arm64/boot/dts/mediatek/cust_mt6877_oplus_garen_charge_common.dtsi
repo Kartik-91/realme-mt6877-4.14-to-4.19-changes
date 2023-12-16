@@ -208,7 +208,7 @@
 	qcom,input_current_vooc_ma_warm = <3200>;
 	qcom,vooc_temp_bat_warm_decidegc = <370>;
 	qcom,input_current_vooc_ma_high = <2200>;
-	qcom,vooc_temp_bat_hot_decidegc = <510>;
+	qcom,vooc_temp_bat_hot_decidegc = <440>;
 
 	qcom,charger_current_vooc_ma_normal = <1800>;
 
@@ -601,18 +601,13 @@
 		qcom,vooc_reply_mcu_bits = <7>;
 		#include "mediatek/fastchg_fw/fw_svooc_10v6.3a_4.45v_oplus20181_op10_7b.dtsi"
 		qcom,vooc-low-temp = <0>;
-		qcom,vooc-high-temp = <500>;
+		qcom,vooc-high-temp = <430>;
 		qcom,vooc-low-soc = <1>;
 		qcom,vooc-high-soc = <90>;
 		qcom,vooc-little-cool-temp = <160>;
 		qcom,vooc-cool-temp = <120>;
 		qcom,vooc-little-cool-to-normal-temp = <180>;
 		qcom,vooc-normal-to-little-cool-current = <0x05>;//5A
-		qcom,vooc-version = <5>;
-
-		qcom,vooc-normal-high-temp = <430>;
-		qcom,vooc-warm-allow-vol = <4130>;
-		qcom,vooc-warm-allow-soc = <50>;
 
 		qcom,vooc_cool_bat_volt = <3450>;
 		qcom,vooc_little_cool_bat_volt = <3400>;
@@ -627,7 +622,7 @@
 		qcom,vooc_multistep_adjust_current_support;
 		qcom,vooc_multistep_initial_batt_temp = <1000>;
 		qcom,vooc_strategy_normal_current = <0x0c>;
-		qcom,vooc_batt_over_high_temp = <510>;
+		qcom,vooc_batt_over_high_temp = <440>;
 		qcom,vooc_batt_over_low_temp = <45>;
 		qcom,vooc_over_high_or_low_current = <0x0>;
 
@@ -999,16 +994,18 @@
 };
 
 &odm {
-	usbphy_tuning: usbphy_tuning {
-		compatible = "mediatek,phy_tuning";
-		u2_vrt_ref = <6>;
-		u2_term_ref = <6>;
-		u2_enhance = <3>;
-		u2_discth = <0xc>;
-		host_u2_vrt_ref = <6>;
-		host_u2_term_ref = <6>;
-		host_u2_enhance = <3>;
-		host_u2_discth = <0xc>;
+	mediatek_phy_tuning: mediatek_phy_tuning {
+		phy_tuning {
+			compatible = "mediatek,phy_tuning";
+			eye-vrt = <6>;
+			eye-term = <6>;
+			eye-rev6 = <3>;
+			u2_discth = <0xc>;
+			host-eye-vrt = <6>;
+			host-eye-term = <6>;
+			host-eye-rev6 = <3>;
+			host_u2_discth = <0xc>;
+		};
 	};
 };
 
@@ -1038,4 +1035,9 @@
 &rt5133 {
 	status = "disabled";
 };
+
+&gate_ic {
+	status = "disabled";
+};
+
 //#endif /*OPLUS_FEATURE_CHG_BASIC*/

@@ -10,6 +10,12 @@
 };
 /*#endif*/
 
+&lk_charger{
+	sub_board_temp_support;
+	sub_board_temp_adc_channel = <3>;
+	sub_board_pull_up_r = <100000>;
+};
+
 &charger {
 	qcom,sub_board_pull_up_r_support;
 	qcom,sub_board_pull_up_r = <100000>;

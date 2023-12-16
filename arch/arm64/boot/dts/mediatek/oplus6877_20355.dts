@@ -1,17 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Mediatek's mt6853 SoC device tree source
- *
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2021 MediaTek Inc.
  */
+
 /dts-v1/;
 /plugin/;
 #include <dt-bindings/interrupt-controller/irq.h>
@@ -72,117 +63,6 @@
 	mt6360pd,intr_gpio_num = <5>; /* direct defined GPIO num */
 	mt6360pd,intr_gpio = <&pio 5 0x0>;
 };
-
-&i2c0 {
-	status = "okay";
-		Focaltech20181@38 {
-		compatible = "focaltech,fts";
-		reg = <0x38>;
-		chip-name = "FT3518";
-
-		/* Interrupt && Irq-gpio */
-		interrupt-parent = <&pio>;
-		interrupts = <14 0x2002>;
-
-		/* Power Config */
-		vdd_2v8-supply  = <&mt_pmic_vtp_ldo_reg>;
-		vdd_2v8_volt = <3000000>;
-
-		/* Other HW Resource */
-		irq-gpio = <&pio 14 0x2002>;
-		reset-gpio = <&pio 15 0x1>;
-		//pinctrl-names = "default";
-		//pinctrl-0 = <&ctp_ts_int_active &ctp_ts_reset_active>;
-
-		vid_len = <2>;
-		tp_type = <8>;
-		// type of tp_dev ,TP-SAMSUNG = 8;
-		platform_support_project = <20181 20182 20355>;
-		platform_support_project_dir = <20181 20181 20181>;
-		platform_support_project_commandline = "default_commandline", "default_commandline", "default_commandline";
-
-		touchpanel,max-num-support = <10>;
-		touchpanel,tx-rx-num = <16 34>;
-		touchpanel,panel-coords = <4320 9600>;
-		touchpanel,display-coords = <1080 2400>;
-		touchpanel,touchmajor-limit = <0 216>;
-		touchpanel,report-rate = <120 180>;
-		touchpanel,smooth-level = <255 2 15 25 45 60>;
-		touchpanel,smooth-level-charging = <255 15 20 25 45 60>;
-		touchpanel,sensitive-level = <255 20 16 13 10 5>;
-		touchpanel,single-optimized-time = <8>;
-
-		//prevention,dead_area_width = <20 20>;
-		//prevention,condition_area_width = <60 60 160 160>;
-		//prevention,eli_area_width = <240 1000 1200 240>;
-
-		/* SW Support Feature Control */
-		black_gesture_support;
-		//black_gesture_indep_support;
-		fw_edge_limit_support;
-		pressure_report_support;
-		charger_pump_support;
-		game_switch_support;
-		smart_gesture_support;
-		fw_update_app_support;
-		fingerprint_underscreen_support;
-		headset_pump_support;
-		//irq_need_dev_resume_ok;
-		health_monitor_v2_support;
-		high_resolution_support;
-		//esd_handle_support;
-		lcd_tp_refresh_support;
-		/*
-		 *Virtual Key Config:
-		 *1:touchpanel,button-type: <virtualkey_type  supportted_button-map>
-		 *virtualkey_type:
-		 *Type 1: using board_properties
-		 *Type 2: using same IC (button zone&& touch zone are seprate)
-		 *Type 3: using diffrent IC (button zone&& touch zone are seprate)
-		 *Type 4: No need of virtual key process
-		 *supportted_button-map:select|menu|home|back
-		 *
-		 *2:touchpanel,button-map
-		 *type (X1,Y1)(X2,Y2)(X3,Y3)(Width_X,Hight_Y)--Only when button-type is 0
-		 */
-		touchpanel,button-type = <4>;
-		touchpanel.button-TRx = <0 0>;
-	};
-};
-
-&pio {
-	ctp_pins_default_t: eintdefault {
-	};
-	ctp_ts_int_active_t: int_active {
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO14__FUNC_GPIO14>;
-			slew-rate = <0>;
-			bias-pull-down = <0>;
-		};
-	};
-	ctp_ts_reset_active_t: reset_active {
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO15__FUNC_GPIO15>;
-			slew-rate = <1>;
-			output-high;
-		};
-	};
-	ctp_ts_int_suspend_t: int_suspend {
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO14__FUNC_GPIO14>;
-			slew-rate = <1>;
-			output-low;
-		};
-	};
-	ctp_ts_reset_suspend_t: reset_suspend {
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO15__FUNC_GPIO15>;
-			slew-rate = <0>;
-			output-low;
-		};
-	};
-};
-/*touch end*/
 
 &pio {
 	mtkfb_pins_lcm_led_en1: lcm_led_en1_gpio {
@@ -280,7 +160,6 @@
 	pinctrl-1 = <&mtkfb_pins_lcm_rst_out0_gpio>;
 	pinctrl-2 = <&mtkfb_pins_lcm_dsi_te>;
 	status = "okay";
-
 	helper-value = <0>, /*MTK_DRM_OPT_STAGE*/
 		<1>, /*MTK_DRM_OPT_USE_CMDQ*/
 		<1>, /*MTK_DRM_OPT_USE_M4U*/
@@ -409,6 +288,9 @@
 		vib_timer = <25>;
 		vib_limit = <9>;
 		vib_vol= <9>;
+	};
+	vibrator_fb:vibrator_fb {
+		compatible = "oplus,haptic-feedback";
 	};
 /* sensor start */
 	sensor_fb: sensor_fb {
@@ -669,7 +551,7 @@
 		oplus_boardid,pcbmask="0x0003";//all mask 0xffff
 	};
 
-/* OPLUS_BUG_STABILITY oppo project start */
+/* OPLUS_BUG_STABILITY oplus project start */
 	oplus_project:oplus_project {
 		compatible = "oplus,oplus_project";
 	};
@@ -701,8 +583,11 @@
 			match-projects = <20181 20182 20355>;
 		};
 	};
-/* OPLUS_BUG_STABILITY oppo project end */
-
+/* OPLUS_BUG_STABILITY oplus project end */
+	nfc_chipset:nfc_chipset {
+		compatible = "oplus-nfc-chipset";
+		chipset-20355 = "SN100T";
+	};
 	kpd_volume_down:kpd_volume_down {
 			compatible = "mediatek, VOLUME_DOWN-eint";
 			interrupt-parent = <&pio>;
@@ -736,9 +621,33 @@
                         slew-rate = <0>;  /*direction 0:in, 1:out*/
                         input-enable;
                 };
-	};
+        };
+};
+//#ifdef OPLUS_FEATURE_NFC_BRINGUP
+&i2c8 {
+       status = "okay";
+       nfc_nxp@28 {
+               compatible = "nxp,pn544";
+               reg = <0x28>;
+               nxp,pn544-irq = <&pio 11 0x0>;
+               nxp,pn544-ven = <&pio 13 0x0>;
+               nxp,pn544-fw-dwnld = <&pio 7 0x0>;
+               nxp,pn544-clkreq = <&pio 115 0x0>;
+               interrupt-parent = <&pio>;
+       };
 };
 
+&spi1 {
+       status = "okay";
+       #address-cells = <1>;
+       #size-cells = <0>;
+       spidev1: p61@1 {
+       compatible = "nxp,p61";
+       reg = <0>;
+       spi-max-frequency = <19200000>;
+       };
+};
+//#endif /* OPLUS_FEATURE_NFC_BRINGUP */
 /* GPS GPIO standardization start */
 &pio {
 	gps_pins_default: gps_default {
@@ -860,18 +769,17 @@
 	sel_up: sel_up {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO6__FUNC_GPIO6>;
-			output-low;
+			output-high;
 		};
 	};
 
 	sel_down: sel_down {
 		pins_cmd_dat {
 			pinmux = <PINMUX_GPIO6__FUNC_GPIO6>;
-			output-high;
+			output-low;
 		};
 	};
 };
-
 //#ifdef OPLUS_TFA98XX
 &i2c6 {
 	tfa98xx: tfa98xx@34 {
@@ -915,23 +823,26 @@
 //#endif
 
 /* FINGERPRINT start */
+//ifdef OPLUS_FEATURE_FINGERPRINT
+// add for fingerprint
 &oplus_fp_common {
-    oplus,fp_gpio_num = <1>;
-    oplus,fp_gpio = <35>;
-    oplus,fp_gpio_0 = <&pio 35 0x0>;
-    pinctrl-names = "default";
-    pinctrl-0 = <&gpio_id0_default>;
-    goodix_optical {
-        oplus,fp-id = <0>; // fp id mapping table
-        vendor-chip = <11>; // please refer to the struct fp_vendor_t in oplus_fp_commmon.n
-        eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on
-        chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu
+	compatible = "oplus,fp_common"; //Manufacture, and Model
+	oplus,fp_gpio_num = <1>;
+	oplus,fp_gpio = <35>;
+	oplus,fp_gpio_0 = <&pio 35 0x0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&gpio_id0_default>;
+	goodix_optical {
+		oplus,fp-id = <0>; // fp id mapping table
+		vendor-chip = <11>; // please refer to the struct fp_vendor_t in oplus_fp_commmon.n
+		eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on
+		chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu
 	};
-    goodix_optical_bak {
-        oplus,fp-id = <1>; // fp id mapping table
-        vendor-chip = <11>; // please refer to the struct fp_vendor_t in oplus_fp_commmon.n
-        eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on
-        chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu
+	goodix_optical_bak {
+		oplus,fp-id = <1>; // fp id mapping table
+		vendor-chip = <11>; // please refer to the struct fp_vendor_t in oplus_fp_commmon.n
+		eng-menu = "-1,-1"; // represents SNR, inclination test item in engineer menu, and 0/1 means off/on
+		chip-name = "G_OPTICAL_G3S";  // /proc/fp_id, will be displayed in engineer menu
 	};
 };
 
@@ -947,6 +858,7 @@
 };
 
 &goodix_fp {
+	compatible = "goodix,goodix_fp";
 	goodix,gpio_irq = <&pio 22 0x00>;
 	goodix,gpio_reset = <&pio 21 0x00>;
 	goodix,gpio_cs = <&pio 99 0x00>;
@@ -962,110 +874,189 @@
 #size-cells = <0>;
 status = "okay";
 oplus_fp: fingerprint@0 {
-		 compatible = "oplus,oplus_fp";
-		 reg = <0>;
-		 spi-max-frequency = <50000000>;
-		 spi-id = <5>;
-		 spi-irq = <22>;
-		 spi-reg = <11019000>;
-		 dvdd-supply = <&mt_pmic_vmch_ldo_reg>;
-		 dvdd-config = <3300000 3300000 150000>;
-		 power-num = <1>;
-		 status = "okay";
-		 power_source_1 {
-			 power-mode = <1>;
-			 power-name = "dvdd";
-			 power-config = "dvdd-config";
-			 delay-time = <0>;
-		 };
-	 };
+		compatible = "oplus,oplus_fp";
+		reg = <0>;
+		spi-max-frequency = <50000000>;
+		spi-id = <5>;
+		spi-irq = <22>;
+		spi-reg = <11019000>;
+		dvdd-supply = <&mt_pmic_vmch_ldo_reg>;
+		dvdd-config = <3300000 3300000 150000>;
+		power-num = <1>;
+		status = "okay";
+		power_source_1 {
+			power-mode = <1>;
+			power-name = "dvdd";
+			power-config = "dvdd-config";
+			delay-time = <0>;
+		};
+	};
 };
 // 1 = ldo power, refer to oplus_fp_common.h
 &pio{
 gpio_goodix_reset_default: gpio_goodix_reset_default {
-				   pins_cmd_dat {
-					   pinmux = <PINMUX_GPIO21__FUNC_GPIO21>;
-					   slew-rate = <1>;
-					   output-low;
-				   };
-			   };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO21__FUNC_GPIO21>;
+					slew-rate = <1>;
+					output-low;
+				};
+			};
 gpio_goodix_irq_default: gpio_goodix_irq_default {
-				 pins_cmd_dat {
-					 pinmux = <PINMUX_GPIO22__FUNC_GPIO22>;
-					 slew-rate = <0>;
-					 bias-pull-down;
-				 };
-			 };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO22__FUNC_GPIO22>;
+					slew-rate = <0>;
+					bias-pull-down;
+				};
+			};
 gpio_goodix_clk_6mA: gpio_goodix_clk_6mA {
-			     pins_cmd_dat {
-				      pinmux = <PINMUX_GPIO98__FUNC_SPI5_CLK>;
-				      drive-strength = <2>;
-			     };
-		     };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO98__FUNC_SPI5_CLK>;
+					drive-strength = <2>;
+				};
+			};
 gpio_goodix_mosi_6mA: gpio_goodix_mosi_6mA {
-			      pins_cmd_dat {
-				      pinmux = <PINMUX_GPIO101__FUNC_SPI5_MO>;
-				      drive-strength = <2>;
-			      };
-		      };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO101__FUNC_SPI5_MO>;
+					drive-strength = <2>;
+				};
+			};
 gpio_goodix_miso_6mA: gpio_goodix_miso_6mA {
-			      pins_cmd_dat {
-				      pinmux = <PINMUX_GPIO100__FUNC_SPI5_MI>;
-				      drive-strength = <3>;
-			      };
-		      };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO100__FUNC_SPI5_MI>;
+					drive-strength = <3>;
+				};
+			};
 gpio_goodix_cs_6mA: gpio_goodix_cs_6mA {
-			    pins_cmd_dat {
-				    pinmux = <PINMUX_GPIO99__FUNC_SPI5_CSB>;
-				    drive-strength = <2>;
-			    };
-		    };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO99__FUNC_SPI5_CSB>;
+					drive-strength = <2>;
+				};
+			};
 gpio_goodix_cs_func: gpio_goodix_cs_func {
-			     pins_cmd_dat {
-				     pinmux = <PINMUX_GPIO99__FUNC_SPI5_CSB>;
-				     drive-strength = <2>;
-			     };
-		     };
+				pins_cmd_dat {
+					pinmux = <PINMUX_GPIO99__FUNC_SPI5_CSB>;
+					drive-strength = <2>;
+				};
+			};
 };
 //#endif
 /* FINGERPRINT end */
 
-//#ifdef OPLUS_FEATURE_NFC_BRINGUP
-&i2c8 {
-       status = "okay";
-       nfc_nxp@28 {
-               compatible = "nxp,pn544";
-               reg = <0x28>;
-               nxp,pn544-irq = <&pio 11 0x0>;
-               nxp,pn544-ven = <&pio 13 0x0>;
-               nxp,pn544-fw-dwnld = <&pio 7 0x0>;
-               nxp,pn544-clkreq = <&pio 115 0x0>;
-               interrupt-parent = <&pio>;
-       };
-};
+/*touch start*/
+&i2c0 {
+	status = "okay";
+		Focaltech20181@38 {
+		compatible = "focaltech,fts";
+		reg = <0x38>;
+		chip-name = "FT3518";
 
-&spi1 {
-       status = "okay";
-       #address-cells = <1>;
-       #size-cells = <0>;
-       spidev1: p61@1 {
-       compatible = "nxp,p61";
-       reg = <0>;
-       spi-max-frequency = <19200000>;
-       };
-};
-//#endif /* OPLUS_FEATURE_NFC_BRINGUP */
+		/* Interrupt && Irq-gpio */
+		interrupt-parent = <&pio>;
+		interrupts = <14 0x2002>;
 
-&odm {
-	nfc_chipset:nfc_chipset {
-		compatible = "oplus-nfc-chipset";
-		chipset-20355 = "SN100T";
+		/* Power Config */
+		vdd_2v8-supply  = <&mt_pmic_vtp_ldo_reg>;
+		vdd_2v8_volt = <3000000>;
+
+		/* Other HW Resource */
+		irq-gpio = <&pio 14 0x2002>;
+		reset-gpio = <&pio 15 0x1>;
+		//pinctrl-names = "default";
+		//pinctrl-0 = <&ctp_ts_int_active &ctp_ts_reset_active>;
+
+		vid_len = <2>;
+		tp_type = <8>;
+		// type of tp_dev ,TP-SAMSUNG = 8;
+		platform_support_project = <20181 20182 20355>;
+		platform_support_project_dir = <20181 20181 20181>;
+		platform_support_project_commandline = "default_commandline", "default_commandline", "default_commandline";
+
+		touchpanel,max-num-support = <10>;
+		touchpanel,tx-rx-num = <16 34>;
+		touchpanel,panel-coords = <4320 9600>;
+		touchpanel,display-coords = <1080 2400>;
+		touchpanel,touchmajor-limit = <0 216>;
+		touchpanel,report-rate = <120 180>;
+		touchpanel,smooth-level = <255 2 15 25 45 60>;
+		touchpanel,smooth-level-charging = <255 15 20 25 45 60>;
+		touchpanel,sensitive-level = <255 20 16 13 10 5>;
+		touchpanel,single-optimized-time = <8>;
+
+		//prevention,dead_area_width = <20 20>;
+		//prevention,condition_area_width = <60 60 160 160>;
+		//prevention,eli_area_width = <240 1000 1200 240>;
+
+		/* SW Support Feature Control */
+		black_gesture_support;
+		//black_gesture_indep_support;
+		fw_edge_limit_support;
+		pressure_report_support;
+		charger_pump_support;
+		game_switch_support;
+		smart_gesture_support;
+		fw_update_app_support;
+		fingerprint_underscreen_support;
+		headset_pump_support;
+		//irq_need_dev_resume_ok;
+		health_monitor_v2_support;
+		high_resolution_support;
+		//esd_handle_support;
+		lcd_tp_refresh_support;
+		exception_upload_support;
+		/*
+		 *Virtual Key Config:
+		 *1:touchpanel,button-type: <virtualkey_type  supportted_button-map>
+		 *virtualkey_type:
+		 *Type 1: using board_properties
+		 *Type 2: using same IC (button zone&& touch zone are seprate)
+		 *Type 3: using diffrent IC (button zone&& touch zone are seprate)
+		 *Type 4: No need of virtual key process
+		 *supportted_button-map:select|menu|home|back
+		 *
+		 *2:touchpanel,button-map
+		 *type (X1,Y1)(X2,Y2)(X3,Y3)(Width_X,Hight_Y)--Only when button-type is 0
+		 */
+		touchpanel,button-type = <4>;
+		touchpanel.button-TRx = <0 0>;
 	};
-	//#endif /* OPLUS_FEATURE_NFC_CONSOFT */
 };
-#include <oplus6877_20355/cust.dtsi>
+
+&pio {
+	ctp_pins_default_t: eintdefault {
+	};
+	ctp_ts_int_active_t: int_active {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO14__FUNC_GPIO14>;
+			slew-rate = <0>;
+			bias-pull-down = <0>;
+		};
+	};
+	ctp_ts_reset_active_t: reset_active {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO15__FUNC_GPIO15>;
+			slew-rate = <1>;
+			output-high;
+		};
+	};
+	ctp_ts_int_suspend_t: int_suspend {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO14__FUNC_GPIO14>;
+			slew-rate = <1>;
+			output-low;
+		};
+	};
+	ctp_ts_reset_suspend_t: reset_suspend {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO15__FUNC_GPIO15>;
+			slew-rate = <0>;
+			output-low;
+		};
+	};
+};
+/*touch end*/
+
+#include "oplus6877_20355/cust.dtsi"
 #include "mediatek/cust_mt6877_oplus_garen_charge.dtsi"
-#include "mediatek/cust_mt6877_touch_1080x2300.dtsi"
 #include "mediatek/cust_mt6877_camera.dtsi"
 /*End of this file, DO NOT ADD ANYTHING HERE*/
 

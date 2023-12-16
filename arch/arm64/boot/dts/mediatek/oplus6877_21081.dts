@@ -1,17 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Mediatek's mt6853 SoC device tree source
- *
- * Copyright (C) 2016 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (c) 2021 MediaTek Inc.
  */
+
 /dts-v1/;
 /plugin/;
 #include <dt-bindings/interrupt-controller/irq.h>
@@ -73,6 +64,7 @@
 	mt6360pd,intr_gpio = <&pio 5 0x0>;
 };
 
+/*touch start*/
 &i2c0 {
 	status = "okay";
 		Focaltech20181@38 {
@@ -119,7 +111,8 @@
 
 		/* SW Support Feature Control */
 		black_gesture_support;
-		//black_gesture_indep_support;
+		black_gesture_indep_support;
+		sportify_aod_gesture_support;
 		fw_edge_limit_support;
 		pressure_report_support;
 		charger_pump_support;
@@ -133,6 +126,7 @@
 		high_resolution_support;
 		//esd_handle_support;
 		lcd_tp_refresh_support;
+		exception_upload_support;
 		/*
 		 *Virtual Key Config:
 		 *1:touchpanel,button-type: <virtualkey_type  supportted_button-map>
@@ -331,7 +325,7 @@
 	#size-cells = <0>;
 	panel3@0 {
 		compatible = "oplus21081_samsung_ams643ag01_1080p_dsi_cmd,lcm";
-		reg = <1>;
+		reg = <0>;
 		pm-enable-gpios = <&pio 39 0>;
 		reset-gpios = <&pio 40 0>;
 		bias-gpios = <&pio 110 0>;
@@ -689,7 +683,7 @@
 		oplus_boardid,pcbmask="0xffff";//all mask 0xffff
 	};
 
-/*OPLUS_FEATURE_TP_BASIC oplus project start */
+/* OPLUS_BUG_STABILITY oplus project start */
 	oplus_project:oplus_project {
 		compatible = "oplus,oplus_project";
 	};
@@ -709,45 +703,42 @@
 			match-projects = <21081>;
 		};
 	};
-/*OPLUS_FEATURE_TP_BASIC oplus project end */
+/* OPLUS_BUG_STABILITY oplus project end */
 
-//#ifdef OPLUS_FEATURE_TP_BASIC
 	kpd_volume_down:kpd_volume_down {
-		compatible = "mediatek, VOLUME_DOWN-eint";
-		interrupt-parent = <&pio>;
+			compatible = "mediatek, VOLUME_DOWN-eint";
+			interrupt-parent = <&pio>;
 		interrupts = <29 IRQ_TYPE_EDGE_FALLING 29 0>; /* TRQ num 29 is linked with gpio29 (mt6877) */
-		debounce = <32000>;
-		status = "okay";
+			debounce = <32000>;
+			status = "okay";
 	};
-//#endif OPLUS_FEATURE_TP_BASIC
+
 };
 
-//#ifdef OPLUS_FEATURE_TP_BASIC
 &keypad {
-	keypad,volume-up        = <&pio 120 0x00>;
+        keypad,volume-up        = <&pio 120 0x00>;
 	keypad,volume-down      = <&pio 29 0x00>;
-	pinctrl-names = "volume_up_as_int", "volume_down_as_int";
-	pinctrl-0 = <&volume_up_gpio_eint>;
-	pinctrl-1 = <&volume_down_gpio_eint>;
-	status = "okay";
+        pinctrl-names = "volume_up_as_int", "volume_down_as_int";
+        pinctrl-0 = <&volume_up_gpio_eint>;
+        pinctrl-1 = <&volume_down_gpio_eint>;
+        status = "okay";
 };
-
 &pio {
-	volume_up_gpio_eint:volume_up@0{
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO120__FUNC_GPIO120>;
-			slew-rate = <0>;  /*direction 0:in, 1:out*/
-			input-enable;
-		};
-	};
+        volume_up_gpio_eint:volume_up@0{
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO120__FUNC_GPIO120>;
+                        slew-rate = <0>;  /*direction 0:in, 1:out*/
+                        input-enable;
+                };
+        };
 
-	volume_down_gpio_eint:volume_down@0{
-		pins_cmd_dat {
+        volume_down_gpio_eint:volume_down@0{
+                pins_cmd_dat {
 			pinmux = <PINMUX_GPIO29__FUNC_GPIO29>;
-			slew-rate = <0>;  /*direction 0:in, 1:out*/
-			input-enable;
-		};
-	};
+                        slew-rate = <0>;  /*direction 0:in, 1:out*/
+                        input-enable;
+                };
+        };
 
 	hw_pins_default:default@hw_sub_id {
 		};
@@ -779,7 +770,6 @@
 		};
 	};
 };
-//#endif OPLUS_FEATURE_TP_BASIC
 
 /* GPS GPIO standardization start */
 &pio {
@@ -916,7 +906,9 @@
 };
 
 /* FINGERPRINT start */
+//add for fingerprint
 &oplus_fp_common {
+	compatible = "oplus,fp_common"; //Manufacture, and Model
 	oplus,fp_gpio_num = <1>;
 	oplus,fp_gpio = <35>;
 	oplus,fp_gpio_0 = <&pio 35 0x0>;
@@ -962,10 +954,11 @@ oplus_fp: fingerprint@0 {
 			power-config = "dvdd-config";
 			delay-time = <0>;
 		};
-	 };
+	};
 };
 
 &jiiov_fp {
+	compatible = "jiiov,fingerprint";
 	anc,gpio_irq = <&pio 22 0x00>;
 	anc,gpio_rst = <&pio 21 0x00>;
 	ldo-supply = <&mt_pmic_vmch_ldo_reg>;
@@ -1067,7 +1060,7 @@ jiiov_fp_irq_active: jiiov_fp_irq_active {
 	};
 };
 //#endif
-#include <oplus6877_21081/cust.dtsi>
+#include "oplus6877_21081/cust.dtsi"
 #include "mediatek/dufu/cust_mt6877_oplus_dufu_charge.dtsi"
 #include "mediatek/cust_mt6877_touch_1080x2300.dtsi"
 #include "mediatek/cust_mt6877_camera_dufu.dtsi"

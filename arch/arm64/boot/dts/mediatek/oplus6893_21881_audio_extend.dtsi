@@ -9,6 +9,7 @@
 };
 
 //#ifdef OPLUS_ARCH_EXTENDS
+/* 2021/01/04, for TFA9874 stereo VI signal */
 &i2c8 {
 	aw882xx_smartpa_0: aw882xx_smartpa@37 {
 		compatible = "awinic,aw882xx_smartpa";
@@ -47,6 +48,7 @@
 //#endif /*OPLUS_ARCH_EXTENDS*/
 
 //#ifdef OPLUS_ARCH_EXTENDS
+/*2021/01/04, add for fsa4480 dts*/
 ///delete-node/ &fsa4480;
 
 &i2c8 {

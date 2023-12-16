@@ -57,6 +57,8 @@
 			pinmux = <PINMUX_GPIO80__FUNC_GPIO80>;
 			slew-rate = <0>;  /*direction 0:in, 1:out*/
 			input-enable;
+			drive-strength = <7>; //gpio driving 0~7
+			bias-pull-up = <MTK_PUPD_SET_R1R0_11>;
 		};
 	};
 };
@@ -131,13 +133,6 @@
 
 		qcom,slave-chg-en-gpio = <&pio 82 0x00>;
 	};
-};
-
-&phy_tuning {
-	compatible = "mediatek,phy_tuning";
-	u2_vrt_ref = <6>;
-	u2_term_ref = <6>;
-	u2_enhance = <3>;
 };
 
 &lk_charger {
@@ -399,9 +394,9 @@
 		irq-gpio = <&pio 14 0x2002>;
 		reset-gpio = <&pio 15 0>;
 
-		platform_support_project = <0x2060A 0x2060B 0x206F0 0x206FF 20795 20796 0x2070C 0x2070E 0x2070B>;
-		platform_support_project_dir = <20609 20609 20609 20609 20609 20609 20609 20609 20609>;
-		platform_support_project_commandline = "default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline";
+		platform_support_project = <0x2060A 0x2060B 0x206F0 0x206FF 20795 20796 0x2070C 0x2070E 0x2070B 21747 21748 21749>;
+		platform_support_project_dir = <20609 20609 20609 20609 20609 20609 20609 20609 20609 20609 20609 20609>;
+		platform_support_project_commandline = "default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline","default_commandline";
 
 		touchpanel,max-num-support = <10>;
 		touchpanel,tx-rx-num = <16 36>;
@@ -815,6 +810,8 @@
 	moisture-internal-r = <47000>;
 	/* moisture of water resister ohm, SW mode by auxadc*/
 	moisture-water-r = <10000>;
+	/* add that disable the error for moisture in the Android 12 version of the error in switch of the voip */
+	moisture_disable_error_switch = <1>;
 	/* moisture SW mode config end */
 	status = "okay";
 };
@@ -888,11 +885,12 @@
 
 		main-sub {
 			compatible = "hw-match, main-sub";
-			aboard-patterns = <0 0 0 0 0>;
+			aboard-patterns = <0 0 0 0 0 0 0 0>;
 			/*main board*/
-			match-projects = <20795 20796 0x2070C 0x206F0 0x206FF>;
+			match-projects = <20795 20796 0x2070C 0x206F0 0x206FF 21747 21748 21749>;
 		};
 	};
+
 	kpd_volume_up:kpd_volume_up {
 		compatible = "mediatek, VOLUME_UP-eint";
 		interrupt-parent = <&pio>;
@@ -950,6 +948,14 @@
 		eint_num = <3>;
 		gyro_cali_version= <2>;
 		acc_cali_range= <300 300 300>; //300mg
+	};
+	gsensor_4: gsensor_4 {
+		status = "okay";
+		sensor_name = <11>;//ICM4N607
+		i2c_num = <2>;
+		i2c_addr = <0>;
+		direction = <0>;
+		eint_num = <3>;
 	};
 	/*
 	enum {
@@ -1314,8 +1320,8 @@ gpio_goodix_cs_func: gpio_goodix_cs_func {
 #address-cells = <1>;
 #size-cells = <0>;
 status = "okay";
-oppo_fp: fingerprint@0 {
-		 compatible = "oppo,oppo_fp";
+oplus_fp: fingerprint@0 {
+		 compatible = "oplus,oplus_fp";
 		 reg = <0>;
 		 spi-max-frequency = <8000000>;
 		 spi-id = <5>;
@@ -1333,6 +1339,14 @@ oppo_fp: fingerprint@0 {
 		 };
 	 };
 };
+
+//#ifdef OPLUS_FEATURE_SDCARDFS_SUPPORT
+&mt6360_ldo {
+        sdcard_det_en = <1>;
+        sdcard_hlact = <0>;
+};
+//#endif OPLUS_FEATURE_SDCARDFS_SUPPORT
+
 /*bts*/
 &tboard_thermistor1{
 		 oplus,ntc_cust_support = <1>;
@@ -1357,5 +1371,13 @@ oppo_fp: fingerprint@0 {
 #include "mediatek/cust_mt6833_camera_20796.dtsi"
 #include <oplus6833_20796/cust.dtsi>
 #include "mediatek/cust_mt6833_nfc_20796.dtsi"
-
+&mmc1 {
+    cd-gpios = <&pio 4 0>;
+    status = "okay";
+    vmmc-supply = <&mt_pmic_vmch_ldo_reg>;
+};
+&mt6360_ldo {
+	sdcard_det_en = <1>;
+	sdcard_hlact = <0>;
+};
 /*End of this file, DO NOT ADD ANYTHING HERE*/

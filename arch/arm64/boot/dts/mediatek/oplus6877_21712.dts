@@ -672,22 +672,22 @@
             chipset-216C9 = "ST21H";
             chipset-21712 = "ST21H";
     };
+    nfc:nfc {
+           compatible = "mediatek,nfc-gpio-v2";
+           reg = <0x8>;
+           gpio-rst = <189>;
+           gpio-rst-std = <&pio 189 0x0>;
+           gpio-irq = <11>;
+           gpio-irq-std = <&pio 11 0x0>;
+    };
 /* nfc end */
 
 };
 
-&i2c8 {
-        status = "okay";
-        st21nfc: st21nfc@08 {
-                compatible = "mediatek,nfc";
-                reg = <0x08>;
-                interrupt-parent = <&pio>;
-                interrupts = <11  0>;
-                gpio-irq-std = <&pio 11 0>;
-                gpio-rst-std = <&pio 189 0>;
-                gpio-clkreq-std = <&pio 115 0>;
-                status = "okay";
-        };
+
+&swtp {
+    compatible = "mediatek, swtp-eint";
+    debounce = <512000>;
 };
 
 &keypad {

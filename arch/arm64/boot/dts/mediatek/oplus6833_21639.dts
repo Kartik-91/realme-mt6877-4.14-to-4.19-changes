@@ -391,6 +391,22 @@
 		<1>; /*MTK_DRM_OPT_CLEAR_LAYER*/
 };
 
+/* add for dual-mic or singlemic with miso1 */
+&aud_dat_miso1_off {
+	pins_cmd1_dat {
+		pinmux = <PINMUX_GPIO160__FUNC_GPIO160>;
+		input-enable;
+		bias-pull-down;
+	};
+};
+&aud_dat_miso1_on {
+	pins_cmd1_dat {
+		pinmux = <PINMUX_GPIO160__FUNC_AUD_DAT_MISO1>;
+		input-schmitt-enable;
+		bias-disable;
+	};
+};
+
 &pio {
 	sia81xx_gpio_L: sia81xx_gpio_L {
 		pins_cmd_dat {
@@ -539,7 +555,7 @@
 	 * eint pwm_width, eint pwm_thresh
 	 * eint deb(debounce0, debounce1, debounce2, debounce3), inv_debounce
 	 */
-        
+
 	headset-mode-setting = <0x500 0x500 1 0x1f0
 				0x1325 0x800 0x3D4 0x44
 				0x0 0x7
@@ -1235,10 +1251,13 @@ oplus_fp: fingerprint@0 {
 //#ifdef OPLUS_FEATURE_CHG_BASIC
 #include "mediatek/oplus_charge_mt6833_21639.dtsi"
 //#endif
-
+&mmc1 {
+    cd-gpios = <&pio 4 0>;
+    status = "okay";
+    vmmc-supply = <&mt_pmic_vmch_ldo_reg>;
+};
 &mt6360_ldo {
 	sdcard_det_en = <1>;
 	sdcard_hlact = <0>;
 };
-
 /*End of this file, DO NOT ADD ANYTHING HERE*/

@@ -1,4 +1,3 @@
-
 &audio_extend {
 	//for nxp speaker
 	oplus,speaker-vendor = "nxp";
@@ -60,4 +59,3 @@
 	};
 };
 //#endif /*OPLUS_ARCH_EXTENDS*/
-

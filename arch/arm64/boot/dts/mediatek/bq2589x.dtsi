@@ -11,12 +11,12 @@
  */
 
 /* Please modify i2c bus number according to your platform */
-&i2c7 {
+&i2c5 {
 	bq2589x@6a {
 		compatible = "ti,bq25890h";
 		reg = <0x6a>;
 	    interrupt-parent = <&pio>;
-	    interrupts = <20 IRQ_TYPE_EDGE_FALLING 20 0>;
+	    interrupts = <90 IRQ_TYPE_EDGE_FALLING 90 0>;
 		ti,bq2589x,usb-vlim =<4400>;
 		ti,bq2589x,precharge-current = <256>;
 		ti,bq2589x,termination-current = <250>;
@@ -28,6 +28,7 @@
 		 * Slave charger: secondary_chg
 		 */
 		charger_name = "primary_chg";
+		eint_name = "bq2589x";
 		status = "okay";
 	};
 };
