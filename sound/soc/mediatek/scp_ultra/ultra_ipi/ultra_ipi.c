@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2019 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ * Copyright (C) 2018 MediaTek Inc.
  */
 
 
@@ -17,11 +9,7 @@
  *****************************************************************************/
 #include <linux/delay.h>
 #include "ultra_ipi.h"
-#ifdef CONFIG_MTK_TINYSYS_SCP_SUPPORT
-#include <mt-plat/mtk_tinysys_ipi.h>
-#include "scp_ipi_pin.h"
-#include "scp_mbox_layout.h"  /* for IPI mbox size */
-#endif
+#include "scp.h"
 
 static int ultra_ipi_recv_handler(unsigned int id,
 				 void *prdata,

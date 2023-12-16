@@ -1,19 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.
- * If not, see <http://www.gnu.org/licenses/>.
+ * Copyright (c) 2019 MediaTek Inc.
+ * Author: Michael Hsiao <michael.hsiao@mediatek.com>
  */
+
 /*******************************************************************************
  *
  * Filename:
@@ -53,8 +43,8 @@
 //#define DEBUG_VERBOSE
 
 /**************************************************
- * Variable Definition
-**************************************************/
+  * Variable Definition
+  **************************************************/
 
 #define USE_PERIODS_MAX        8192
 #define OFFLOAD_SIZE_BYTES         (USE_PERIODS_MAX << 9) /* 4M */
@@ -63,6 +53,10 @@
 #define ID AUDIO_TASK_OFFLOAD_ID
 #define GENPOOL_ID AUDIO_DSP_AFE_SHARE_MEM_ID
 
+#define aud_wake_lock_init(dev, name) wakeup_source_register(dev, name)
+#define aud_wake_lock_destroy(ws) wakeup_source_destroy(ws)
+#define aud_wake_lock(ws) __pm_stay_awake(ws)
+#define aud_wake_unlock(ws) __pm_relax(ws)
 
 enum {
 	TASK_SCENE_OFFLOAD_MP3,
@@ -97,6 +91,7 @@ static struct afe_offload_param_t afe_offload_block = {
 static struct afe_offload_codec_t afe_offload_codec_info = {
 	.codec_samplerate = 0,
 	.codec_bitrate = 0,
+	.target_samplerate = 0,
 };
 
 static struct snd_compr_stream *offload_stream;
@@ -112,9 +107,10 @@ static unsigned long long ringbufbridge_writebk;
 
 #ifdef use_wake_lock
 static DEFINE_SPINLOCK(offload_lock);
-struct wakeup_source Offload_suspend_lock;
+struct wakeup_source* Offload_suspend_lock;
 #endif
 static struct mtk_base_dsp *dsp;
+static unsigned int offload_buffer_size;
 
 /*
  * Function  Declaration
@@ -182,27 +178,62 @@ static int offloadservice_getformat(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int offloadservice_setbuffersize(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	offload_buffer_size = (unsigned int)ucontrol->value.integer.value[0];
+	pr_info("%s offload_buffer_size = %d\n", __func__, offload_buffer_size);
+	return 0;
+}
+
+static int offloadservice_getbuffersize(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = offload_buffer_size;
+	return 0;
+}
+
+static int offloadservice_settargetrate(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	afe_offload_codec_info.target_samplerate = (unsigned int)ucontrol->value.integer.value[0];
+	pr_debug("%s target_samplerate = %d\n", __func__, afe_offload_codec_info.target_samplerate);
+	return 0;
+}
+
+static int offloadservice_gettargetrate(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = afe_offload_codec_info.target_samplerate;
+	return 0;
+}
+
+
 static const struct snd_kcontrol_new Audio_snd_dloffload_controls[] = {
 	SOC_SINGLE_EXT("offload digital volume", SND_SOC_NOPM, 0, 0x1000000, 0,
 	offloadservice_getvolume, offloadservice_setvolume),
 	SOC_SINGLE_EXT("offload set format", SND_SOC_NOPM, 0,
 	TASK_SCENE_PLAYBACK_MP3, 0,
 	offloadservice_getformat, offloadservice_setformat),
+	SOC_SINGLE_EXT("offload_buffer_size", SND_SOC_NOPM, 0, 0x400000, 0,
+	offloadservice_getbuffersize, offloadservice_setbuffersize),
+	SOC_SINGLE_EXT("offload_target_rate", SND_SOC_NOPM, 0, 0x100000, 0,
+	offloadservice_gettargetrate, offloadservice_settargetrate),
 };
 
 
 /*
- *                 O F F L O A D V 1   D R I V E R   O P E R A T I O N S
-*/
+  *                 O F F L O A D V 1   D R I V E R   O P E R A T I O N S
+  */
 #ifdef use_wake_lock
 static void mtk_compr_offload_int_wakelock(bool enable)
 {
 	spin_lock(&offload_lock);
 	if (enable ^ afe_offload_block.wakelock) {
 		if (enable)
-			aud_wake_lock(&Offload_suspend_lock);
+			aud_wake_lock(Offload_suspend_lock);
 		else
-			aud_wake_unlock(&Offload_suspend_lock);
+			aud_wake_unlock(Offload_suspend_lock);
 		afe_offload_block.wakelock = enable;
 	}
 	spin_unlock(&offload_lock);
@@ -297,9 +328,9 @@ static int mtk_compr_offload_drain(struct snd_compr_stream *stream)
 
 }
 
-
 static int mtk_compr_offload_open(struct snd_compr_stream *stream)
 {
+	int ret = 0;
 #ifdef use_wake_lock
 	mtk_compr_offload_int_wakelock(true);
 #endif
@@ -317,56 +348,12 @@ static int mtk_compr_offload_open(struct snd_compr_stream *stream)
 		dsp = (struct mtk_base_dsp *)get_dsp_base();
 		pr_debug("get_dsp_base again\n");
 	}
-	return 0;
-}
-
-static int mtk_afe_dloffload_probe(struct snd_soc_platform *platform)
-{
-	snd_soc_add_platform_controls(platform, Audio_snd_dloffload_controls,
-				      ARRAY_SIZE(Audio_snd_dloffload_controls));
-	return 0;
-}
-
-static int mtk_compr_offload_free(struct snd_compr_stream *stream)
-{
-	pr_debug("%s()\n", __func__);
-	offloadservice_setwriteblocked(false);
-	if (dsp)
-		mtk_adsp_genpool_free_sharemem_ring(&dsp->dsp_mem[ID], ID);
-	afe_offload_block.state = OFFLOAD_STATE_INIT;
-#ifdef use_wake_lock
-	mtk_compr_offload_int_wakelock(false);
-#endif
-	return 0;
-}
-
-static int mtk_compr_offload_set_params(struct snd_compr_stream *stream,
-					struct snd_compr_params *params)
-{
-	struct snd_codec codec;
-	struct audio_hw_buffer *audio_hwbuf;
-	struct mtk_base_dsp_mem *audio_dsp_mem;
-	void *ipi_audio_buf; /* dsp <-> audio data struct*/
-	int ret = 0;
-	unsigned int offload_buffer_size;
-
-	audio_task_register_callback(
-			 TASK_SCENE_PLAYBACK_MP3,
-			 offloadservice_ipicmd_received,
-			 offloadservice_task_unloaded_handling);
-
-	codec = params->codec;
-	afe_offload_block.samplerate = codec.sample_rate;
-	offload_buffer_size = codec.reserved[1];
 
 	if (offload_buffer_size < 262144) { // 256K
 		pr_debug("%s err offload_buffer_size = %u\n", __func__, offload_buffer_size);
 		return -1;
 	}
 
-	/* gen pool related */
-	if (dsp)
-		mtk_adsp_genpool_free_sharemem_ring(&dsp->dsp_mem[ID], ID);
 	dsp->dsp_mem[ID].gen_pool_buffer =
 			mtk_get_adsp_dram_gen_pool(GENPOOL_ID);
 	if (dsp->dsp_mem[ID].gen_pool_buffer != NULL) {
@@ -393,6 +380,50 @@ static int mtk_compr_offload_set_params(struct snd_compr_stream *stream,
 			 gen_pool_size(
 			 dsp->dsp_mem[ID].gen_pool_buffer));
 	}
+	return 0;
+}
+
+static int mtk_afe_dloffload_component_probe(struct snd_soc_component *component)
+{
+	snd_soc_add_component_controls(component, Audio_snd_dloffload_controls,
+				      ARRAY_SIZE(Audio_snd_dloffload_controls));
+	return 0;
+}
+
+static int mtk_compr_offload_free(struct snd_compr_stream *stream)
+{
+	pr_debug("%s()\n", __func__);
+	offloadservice_setwriteblocked(false);
+	if (dsp)
+		mtk_adsp_genpool_free_sharemem_ring(&dsp->dsp_mem[ID], ID);
+	afe_offload_block.state = OFFLOAD_STATE_INIT;
+#ifdef use_wake_lock
+	mtk_compr_offload_int_wakelock(false);
+#endif
+	return 0;
+}
+
+static int mtk_compr_offload_set_params(struct snd_compr_stream *stream,
+					struct snd_compr_params *params)
+{
+	struct snd_codec codec;
+	struct audio_hw_buffer *audio_hwbuf;
+	struct mtk_base_dsp_mem *audio_dsp_mem;
+	void *ipi_audio_buf; /* dsp <-> audio data struct*/
+	int ret = 0;
+
+	audio_task_register_callback(
+			 TASK_SCENE_PLAYBACK_MP3,
+			 offloadservice_ipicmd_received,
+			 offloadservice_task_unloaded_handling);
+
+	codec = params->codec;
+	afe_offload_block.samplerate = codec.sample_rate;
+
+	if (!dsp) {
+		pr_debug("dsp is null\n", __func__);
+		return -1;
+	}
 
 	//set shared Dram meme
 	audio_hwbuf = &dsp->dsp_mem[ID].adsp_buf;
@@ -403,7 +434,7 @@ static int mtk_compr_offload_set_params(struct snd_compr_stream *stream,
 	afe_offload_codec_info.codec_bitrate = codec.bit_rate;
 	audio_hwbuf->aud_buffer.buffer_attr.channel = codec.ch_out;
 	audio_hwbuf->aud_buffer.buffer_attr.format = codec.format;
-	audio_hwbuf->aud_buffer.buffer_attr.rate = codec.reserved[2];
+	audio_hwbuf->aud_buffer.buffer_attr.rate = afe_offload_codec_info.target_samplerate;
 	//
 	ret = set_audiobuffer_hw(&dsp->dsp_mem[ID].adsp_buf,
 				 BUFFER_TYPE_SHARE_MEM);
@@ -455,7 +486,6 @@ ERROR:
 	pr_debug("%s err\n", __func__);
 	return -1;
 }
-
 
 static int mtk_compr_offload_get_params(struct snd_compr_stream *stream,
 					struct snd_codec *params)
@@ -807,12 +837,12 @@ static int mtk_compr_offload_pointer(struct snd_compr_stream *stream,
 
 
 /*
-*=======================================================================
-*-----------------------------------------------------------------------
-*||         O F F L O A D    TRIGGER   O P E R A T I O N S
-*-----------------------------------------------------------------------
-*=======================================================================
-*/
+  *=======================================================================
+  *-----------------------------------------------------------------------
+  *||         O F F L O A D    TRIGGER   O P E R A T I O N S
+  *-----------------------------------------------------------------------
+  *=======================================================================
+  */
 static int mtk_compr_offload_start(struct snd_compr_stream *stream)
 {
 	int ret = 0;
@@ -918,8 +948,8 @@ static int mtk_compr_offload_stop(struct snd_compr_stream *stream)
 }
 
 /*****************************************************************************
- * mtk_compr_offload_trigger
-****************************************************************************/
+  * mtk_compr_offload_trigger
+  ****************************************************************************/
 static int mtk_compr_offload_trigger(struct snd_compr_stream *stream, int cmd)
 {
 	pr_debug("%s cmd:%x\n", __func__, cmd);
@@ -950,7 +980,7 @@ static int mtk_asoc_dloffload_new(struct snd_soc_pcm_runtime *rtd)
 static int mtk_dloffload_remove(struct platform_device *pdev)
 {
 	pr_debug("%s\n", __func__);
-	snd_soc_unregister_platform(&pdev->dev);
+	snd_soc_unregister_component(&pdev->dev);
 	return 0;
 }
 
@@ -970,10 +1000,11 @@ static struct snd_compr_ops mtk_offload_compr_ops = {
 	.get_codec_caps  = mtk_compr_offload_get_codec_caps,
 };
 
-static struct snd_soc_platform_driver mtk_dloffload_soc_platform = {
+static struct snd_soc_component_driver mtk_dloffload_soc_component = {
+	.name = AFE_PCM_NAME,
 	.compr_ops        = &mtk_offload_compr_ops,
 	.pcm_new    = mtk_asoc_dloffload_new,
-	.probe      = mtk_afe_dloffload_probe,
+	.probe      = mtk_afe_dloffload_component_probe,
 };
 
 static int mtk_offload_init(void)
@@ -982,23 +1013,21 @@ static int mtk_offload_init(void)
 	init_waitqueue_head(&afe_offload_service.ts_wq);
 	return 0;
 }
-static int mtk_dloffload_probe(struct platform_device *dev)
+
+static int mtk_dloffload_probe(struct platform_device *pdev)
 {
-	if (dev->dev.of_node) {
-		dev_set_name(&dev->dev, "%s", "mt_soc_offload_common");
-		dev->name = dev->dev.kobj.name;
-	} else {
-		pr_debug("%s(), dev->dev.of_node = NULL!!!\n", __func__);
-	}
+	if (pdev->dev.of_node)
+		dev_set_name(&pdev->dev, "%s", "mt_soc_offload_common");
+	pdev->name = pdev->dev.kobj.name;
 
-	pr_info("%s: dev name %s\n", __func__, dev_name(&dev->dev));
+	pr_info("%s: dev name %s\n", __func__, dev_name(&pdev->dev));
 
-	offload_dev = &dev->dev;
-	dsp = (struct mtk_base_dsp *)get_dsp_base();
+	offload_dev = &pdev->dev;
 	mtk_offload_init();
-	return snd_soc_register_platform(&dev->dev,
-					 &mtk_dloffload_soc_platform);
-
+	return snd_soc_register_component(offload_dev,
+					  &mtk_dloffload_soc_component,
+					  NULL,
+					  0);
 }
 
 #ifdef CONFIG_OF
@@ -1042,7 +1071,7 @@ static int __init mtk_offloadplayback_soc_platform_init(void)
 #endif
 	ret = platform_driver_register(&mtk_offloadplayback_driver);
 #ifdef use_wake_lock
-	aud_wake_lock_init(&Offload_suspend_lock, "Offload wakelock");
+	Offload_suspend_lock = aud_wake_lock_init(NULL, "Offload wakelock");
 #endif
 
 	return ret;
@@ -1055,7 +1084,7 @@ static void __exit mtk_offloadplayback_soc_platform_exit(void)
 	pr_debug("%s\n", __func__);
 	platform_driver_unregister(&mtk_offloadplayback_driver);
 #ifdef use_wake_lock
-	aud_wake_lock_destroy(&Offload_suspend_lock);
+	aud_wake_lock_destroy(Offload_suspend_lock);
 #endif
 }
 

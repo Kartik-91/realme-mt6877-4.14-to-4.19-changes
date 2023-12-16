@@ -13,8 +13,8 @@
 
 #if defined(CONFIG_SND_SOC_MTK_AUDIO_DSP)
 #include "audio_task.h"
-#include "../audio_dsp/mtk-dsp-common_define.h"
-#include "../audio_dsp/mtk-dsp-mem-control.h"
+#include "mtk-dsp-common_define.h"
+#include "mtk-dsp-mem-control.h"
 #include "audio_messenger_ipi.h"
 #endif
 
@@ -34,9 +34,9 @@
 #include "../../codecs/tfa98xx/inc/tfa98xx_ext.h"
 #endif
 
-// #ifdef CONFIG_SND_SOC_AW87339
-// #include "aw87339.h"
-// #endif
+#ifdef CONFIG_SND_SOC_AW87339
+#include "aw87339.h"
+#endif
 
 #define MTK_SPK_NAME "Speaker Codec"
 #define MTK_SPK_REF_NAME "Speaker Codec Ref"
@@ -47,6 +47,7 @@ static struct mtk_spk_i2c_ctrl mtk_spk_list[MTK_SPK_TYPE_NUM] = {
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
 	},
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
 #if defined(CONFIG_SND_SOC_RT5509)
 	[MTK_SPK_RICHTEK_RT5509] = {
 		.i2c_probe = rt5509_i2c_probe,
@@ -64,6 +65,7 @@ static struct mtk_spk_i2c_ctrl mtk_spk_list[MTK_SPK_TYPE_NUM] = {
 		.codec_name = "MT6660_MT_0",
 	},
 #endif /* CONFIG_SND_SOC_MT6660 */
+#endif /*OPLUS_FEATURE_CAMERA_COMMON*/
 #ifdef CONFIG_SND_SOC_RT5512
 	[MTK_SPK_MEDIATEK_RT5512] = {
 		.i2c_probe = rt5512_i2c_probe,
@@ -144,19 +146,19 @@ EXPORT_SYMBOL(mtk_spk_get_i2s_in_type);
 
 int mtk_ext_spk_get_status(void)
 {
-// #ifdef CONFIG_SND_SOC_AW87339
-//	 return aw87339_spk_status_get();
-// #else
+#ifdef CONFIG_SND_SOC_AW87339
+	return aw87339_spk_status_get();
+#else
 	return 0;
-// #endif
+#endif
 }
 EXPORT_SYMBOL(mtk_ext_spk_get_status);
 
 void mtk_ext_spk_enable(int enable)
 {
-// #ifdef CONFIG_SND_SOC_AW87339
-// 	  aw87339_spk_enable_set(enable);
-// #endif
+#ifdef CONFIG_SND_SOC_AW87339
+	aw87339_spk_enable_set(enable);
+#endif
 }
 EXPORT_SYMBOL(mtk_ext_spk_enable);
 

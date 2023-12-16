@@ -1,18 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.
- * If not, see <http://www.gnu.org/licenses/>.
+ * Copyright (c) 2019 MediaTek Inc.
+ * Author: Michael Hsiao <michael.hsiao@mediatek.com>
  */
 
 /*******************************************************************************
@@ -70,6 +59,7 @@
 #include <linux/module.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/proc_fs.h>
 #include <linux/sched.h>
@@ -84,6 +74,7 @@
 
 #include "mtk-soc-codec-63xx.h"
 #include <linux/clk.h>
+
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/platform_device.h>
@@ -93,6 +84,14 @@
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
 #include "mtk-soc-speaker-amp.h"
+
+#if defined(OPLUS_ARCH_EXTENDS)
+#if defined(CONFIG_SND_SOC_SIA81XX_V1_2_0)
+#include "../../codecs/audio/sia81xx_1.2.0/sia81xx_aux_dev_if.h"
+#elif defined(CONFIG_SIA_PA_ALGO)
+#include "../../codecs/audio/sia81xx/sia81xx_aux_dev_if.h"
+#endif
+#endif
 
 #if defined(CONFIG_SND_SOC_CS43130)
 #include "mtk-cs43130-machine-ops.h"
@@ -607,7 +606,7 @@ static struct snd_soc_dai_link mt_soc_dai_common[] = {
 		.codec_name = MT_SOC_CODEC_NAME,
 		.playback_only = true,
 	},
-#ifdef CONFIG_SND_SOC_MTK_SCP_SMARTPA
+#ifdef CONFIG_MTK_AUDIO_SCP_SPKPROTECT_SUPPORT
 	{
 		.name = "DL1SCPSPKOUTPUT",
 		.stream_name = MT_SOC_DL1SCPSPK_STREAM_NAME,
@@ -679,6 +678,7 @@ static struct snd_soc_dai_link mt_soc_extspk_dai[] = {
 		.ops = &cs35l35_ops,
 #else
 #ifdef OPLUS_BUG_COMPATIBILITY
+		/*2019/08/26,add TFA9890 ALSA driver for MT6763 */
 #ifdef CONFIG_SND_SOC_ALSACODEC_TFA9890
 		.codec_dai_name = "tfa98xx-aif-3-35",
 		.codec_name = "tfa98xx.3-0035",
@@ -706,7 +706,7 @@ static struct snd_soc_dai_link mt_soc_extspk_dai[] = {
 static struct snd_soc_dai_link
 	mt_soc_dai_component[ARRAY_SIZE(mt_soc_dai_common) +
 #ifdef CONFIG_SND_SOC_MTK_BTCVSD
-	ARRAY_SIZE(mt_soc_btcvsd_dai) +
+			     ARRAY_SIZE(mt_soc_btcvsd_dai) +
 #endif
 			     ARRAY_SIZE(mt_soc_exthp_dai) +
 			     ARRAY_SIZE(mt_soc_extspk_dai)];
@@ -716,21 +716,16 @@ static struct snd_soc_card mt_snd_soc_card_mt = {
 	.dai_link = mt_soc_dai_common,
 	.num_links = ARRAY_SIZE(mt_soc_dai_common),
 };
-#if 0
-static void get_ext_dai_codec_name(void)
-{
-	get_extspk_dai_codec_name(mt_soc_extspk_dai);
-	get_exthp_dai_codec_name(mt_soc_exthp_dai);
-}
-#endif
 
 #ifdef CONFIG_OPLUS_FEATURE_KTV_V2_NONDAPM
+/* 2017/08/01, add for KTV */
 DEFINE_SPINLOCK(ktv_dl_data_lock);
 DEFINE_SPINLOCK(ktv_dl_ctrl_lock);
 
 char ktv_dl_data_unit[3840] = {0};
 struct afe_block_t user_dl_block;
 
+/* 2019/11/25, add for KTV 2.0 */
 wait_queue_head_t ktvsleep;
 int ktv_running = 0;
 int prevu4read = 0;
@@ -795,6 +790,9 @@ static ssize_t ktvdev_write(struct file *fp, const char __user *data, size_t cou
 	}
 	spin_unlock_irqrestore(&ktv_dl_ctrl_lock, flags);
 
+	/* 2018/03/01, we do not need memset 0 value in this routine
+	 * because the voice data comes from UL.
+	 * Unnecessary memset 0 will cause consumption */
 
 	tmp = kmalloc(ktvUnitSize, GFP_KERNEL);
 	if (tmp == NULL) {
@@ -814,6 +812,7 @@ static ssize_t ktvdev_write(struct file *fp, const char __user *data, size_t cou
 
 	auddrv_dl1_write_handler(ktvUnitSize);
 
+	/* 2019/11/25, add for KTV 2.0 */
 	if (dl_init_done == 1) {
 		ktv_running = 1;
 	}
@@ -825,6 +824,7 @@ static ssize_t ktvdev_write(struct file *fp, const char __user *data, size_t cou
 	return ret;
 }
 
+/* 2019/11/25, add for KTV 2.0 */
 static int ktvdev_release(struct inode *inode, struct file *file)
 {
 	pr_info("%s: \n", __func__);
@@ -837,6 +837,7 @@ static const struct file_operations ktvdevw_fops = {
 	.open    = ktvdevw_open,
 	.unlocked_ioctl   = ktvdevw_ioctl,
 	.write   = ktvdev_write,
+	/* 2019/11/25, add for KTV 2.0 */
 	.release = ktvdev_release,
 };
 
@@ -850,10 +851,17 @@ static struct miscdevice ktvw_device = {
 static int mt_soc_snd_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &mt_snd_soc_card_mt;
+#ifdef CONFIG_SND_SOC_MTK_BTCVSD
 	struct device_node *btcvsd_node;
+#endif
 	int ret;
 	int daiLinkNum = 0;
+#ifdef CONFIG_SIA_PA_ALGO
+	const char *codec_name = NULL;
+#endif
+
 #ifndef OPLUS_BUG_COMPATIBILITY
+	//2019/08/26, Remove for load tfa98xx
 	ret = mtk_spk_update_dai_link(mt_soc_extspk_dai, pdev);
 	if (ret) {
 		dev_err(&pdev->dev, "%s(), mtk_spk_update_dai_link error\n",
@@ -861,9 +869,9 @@ static int mt_soc_snd_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 #endif /* OPLUS_BUG_COMPATIBILITY */
-	/*get_ext_dai_codec_name();*/
-	pr_debug("dai_link = %p\n",
-		mt_snd_soc_card_mt.dai_link);
+	/* get_ext_dai_codec_name(); */
+	pr_debug("%s(), dai_link = %p\n",
+		 __func__, mt_snd_soc_card_mt.dai_link);
 
 	/* DEAL WITH DAI LINK */
 	memcpy(mt_soc_dai_component, mt_soc_dai_common,
@@ -899,6 +907,23 @@ static int mt_soc_snd_probe(struct platform_device *pdev)
 	card->dev = &pdev->dev;
 	platform_set_drvdata(pdev, card);
 
+#if defined(OPLUS_ARCH_EXTENDS) && defined(CONFIG_SIA_PA_ALGO)
+	ret = of_property_read_string(pdev->dev.of_node,
+			"oplus,speaker-pa-device", &codec_name);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: read oplus,speaker-pa-device error = %d\n",
+			__func__, ret);
+		return ret;
+	}
+	if (codec_name != NULL && !strcmp(codec_name, "sia")) {
+		ret = soc_aux_init_only_sia81xx(pdev, card);
+			if (ret)
+				dev_err(&pdev->dev,
+					"%s soc_aux_init_only_sia8108 fail %d\n",
+					__func__, ret);
+	}
+#endif
+
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret)
 		dev_err(&pdev->dev, "%s snd_soc_register_card fail %d\n",
@@ -917,6 +942,7 @@ static int mt_soc_snd_probe(struct platform_device *pdev)
 #endif
 
 #ifdef CONFIG_OPLUS_FEATURE_KTV_V2_NONDAPM
+	/*  2017/08/01, add for KTV */
 	/* register KTV MISC device */
 	ret = misc_register(&ktvw_device);
 	if (ret) {
@@ -932,7 +958,7 @@ static int mt_soc_snd_probe(struct platform_device *pdev)
 static int mt_soc_snd_remove(struct platform_device *pdev)
 {
 	pr_debug("%s\n", __func__);
-	snd_soc_unregister_platform(&pdev->dev);
+	snd_soc_unregister_component(&pdev->dev);
 	return 0;
 }
 

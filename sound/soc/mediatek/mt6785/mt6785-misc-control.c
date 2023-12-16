@@ -20,7 +20,7 @@
 #define SGEN_MUTE_CH1_KCONTROL_NAME "Audio_SineGen_Mute_Ch1"
 #define SGEN_MUTE_CH2_KCONTROL_NAME "Audio_SineGen_Mute_Ch2"
 
-static const char * const mt6785_sgen_mode_str[] = {
+static const char *mt6785_sgen_mode_str[] = {
 	"I0I1",   "I2",     "I3I4",   "I5I6",
 	"I7I8",   "I9",     "I10I11", "I12I13",
 	"I14",    "I15I16", "I17I18", "I19I20",
@@ -38,7 +38,7 @@ static const char * const mt6785_sgen_mode_str[] = {
 	"OFF",    "O3",     "O4",
 };
 
-static const int const mt6785_sgen_mode_idx[] = {
+static const int mt6785_sgen_mode_idx[] = {
 	0, 1, 2, 3,
 	4, 5, 6, 7,
 	8, 9, 10, 11,
@@ -63,7 +63,7 @@ static const char * const mt6785_sgen_rate_str[] = {
 	"192k"
 };
 
-static const int const mt6785_sgen_rate_idx[] = {
+static const int mt6785_sgen_rate_idx[] = {
 	0, 1, 2, 4,
 	5, 6, 8, 9,
 	10, 11, 12, 13,
@@ -1824,29 +1824,31 @@ static const struct snd_kcontrol_new mt6785_afe_bargein_controls[] = {
 		       mt6785_afe_vow_bargein_set),
 };
 
-int mt6785_add_misc_control(struct snd_soc_platform *platform)
+int mt6785_add_misc_control(struct snd_soc_component *platform)
 {
 	dev_info(platform->dev, "%s()\n", __func__);
 
-	snd_soc_add_platform_controls(platform,
+	snd_soc_add_component_controls(platform,
 				      mt6785_afe_sgen_controls,
 				      ARRAY_SIZE(mt6785_afe_sgen_controls));
 
-	snd_soc_add_platform_controls(platform,
+	snd_soc_add_component_controls(platform,
 				      mt6785_afe_debug_controls,
 				      ARRAY_SIZE(mt6785_afe_debug_controls));
 
-	snd_soc_add_platform_controls(platform,
+	snd_soc_add_component_controls(platform,
 				      mt6785_afe_usb_controls,
 				      ARRAY_SIZE(mt6785_afe_usb_controls));
 
-	snd_soc_add_platform_controls(platform,
+	snd_soc_add_component_controls(platform,
 				      mt6785_afe_speech_controls,
 				      ARRAY_SIZE(mt6785_afe_speech_controls));
 
-	snd_soc_add_platform_controls(platform,
+#if defined(CONFIG_MTK_VOW_BARGE_IN_SUPPORT)
+	snd_soc_add_component_controls(platform,
 				      mt6785_afe_bargein_controls,
 				      ARRAY_SIZE(mt6785_afe_bargein_controls));
+#endif
 
 	return 0;
 }

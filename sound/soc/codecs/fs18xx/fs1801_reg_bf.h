@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+
 /**
  * Copyright (C) 2016-2019 Fourier Semiconductor Inc. All rights reserved.
  * 2019-08-29 File created.

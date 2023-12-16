@@ -80,6 +80,9 @@ enum {
 	MT6885_DAI_NUM,
 };
 
+#ifdef OPLUS_ARCH_EXTENDS
+#define MT6885_DAI_I2S_MAX_NUM 9 //depends each platform's max i2s num
+#endif
 #define MT6885_RECORD_MEMIF MT6885_MEMIF_VUL12
 #define MT6885_ECHO_REF_MEMIF MT6885_MEMIF_AWB
 #define MT6885_PRIMARY_MEMIF MT6885_MEMIF_DL1
@@ -250,7 +253,7 @@ int mt6885_dai_tdm_register(struct mtk_base_afe *afe);
 
 int mt6885_dai_hostless_register(struct mtk_base_afe *afe);
 
-int mt6885_add_misc_control(struct snd_soc_platform *platform);
+int mt6885_add_misc_control(struct snd_soc_component *component);
 
 int mt6885_set_local_afe(struct mtk_base_afe *afe);
 
@@ -265,4 +268,8 @@ int mt6885_adda_dl_gain_control(bool mute);
 
 int mt6885_dai_set_priv(struct mtk_base_afe *afe, int id,
 			int priv_size, const void *priv_data);
+#ifdef CONFIG_SND_SOC_CS35L43
+extern const struct snd_soc_ops cirrus_amp_ops;
+extern int cs35l41_snd_init(struct snd_soc_pcm_runtime *rtd);
+#endif
 #endif

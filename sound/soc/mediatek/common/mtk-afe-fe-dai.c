@@ -1,17 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * mtk-afe-fe-dais.c  --  Mediatek afe fe dai operator
  *
  * Copyright (c) 2016 MediaTek Inc.
  * Author: Garlic Tseng <garlic.tseng@mediatek.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 and
- * only version 2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
  */
 
 #include <linux/io.h>
@@ -19,12 +11,14 @@
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <sound/soc.h>
+#include "mtk-afe-platform-driver.h"
 #include <sound/pcm_params.h>
-
 #include "mtk-afe-fe-dai.h"
 #include "mtk-base-afe.h"
+
+#if defined(CONFIG_MTK_VOW_BARGE_IN_SUPPORT)
 #include "../scp_vow/mtk-scp-vow-common.h"
-#include "mtk-sp-common.h"
+#endif
 
 #if defined(CONFIG_MTK_ION)
 #include "mtk-mmap-ion.h"
@@ -36,16 +30,12 @@
 
 /* dsp relate */
 #if defined(CONFIG_SND_SOC_MTK_AUDIO_DSP)
-#include "../audio_dsp/mtk-dsp-common_define.h"
-#include "../audio_dsp/mtk-dsp-common.h"
+#include "mtk-dsp-common_define.h"
+#include "mtk-dsp-common.h"
 #endif
 
 #if defined(CONFIG_MTK_AUDIODSP_SUPPORT)
 #include "adsp_helper.h"
-#endif
-
-#if defined(CONFIG_MTK_TINYSYS_SCP_SUPPORT)
-#include <scp_helper.h>
 #endif
 
 #if defined(CONFIG_SND_SOC_MTK_SCP_SMARTPA)
@@ -56,28 +46,7 @@
 #include "../scp_ultra/mtk-scp-ultra-mem-control.h"
 #endif
 
-//#ifdef OPLUS_ARCH_EXTENDS
-#include <soc/oplus/system/oplus_mm_kevent_fb.h>
-#define OPLUS_AUDIO_EVENTID_AFE_ERROR  (10026)
-//#endif
-
 #define AFE_BASE_END_OFFSET 8
-
-static bool is_semaphore_control_need(bool is_scp_sema_support)
-{
-	bool is_adsp_active = false;
-
-#if defined(CONFIG_MTK_AUDIODSP_SUPPORT)
-	is_adsp_active = is_adsp_feature_in_active();
-#endif
-
-	/* If is_scp_sema_support is true,
-	 * scp semaphore is to ensure AP/SCP/ADSP synchronization.
-	 * Otherwise, using adsp semaphore for synchronization
-	 * if adsp feature is active.
-	 */
-	return is_scp_sema_support | is_adsp_active;
-}
 
 int mtk_regmap_update_bits(struct regmap *map, int reg,
 			   unsigned int mask,
@@ -161,7 +130,7 @@ void mtk_afe_fe_shutdown(struct snd_pcm_substream *substream,
 			 struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
+	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
 	struct mtk_base_afe_memif *memif = &afe->memif[rtd->cpu_dai->id];
 	int irq_id;
 
@@ -192,7 +161,7 @@ int mtk_afe_fe_hw_params(struct snd_pcm_substream *substream,
 	unsigned int rate = params_rate(params);
 	snd_pcm_format_t format = params_format(params);
 
-#if defined(CONFIG_MTK_ION)
+#if defined(CONFIG_MTK_ION) && defined(MMAP_SUPPORT)
 	// mmap don't alloc buffer
 	if (memif->use_mmap_share_mem != 0) {
 		unsigned long phy_addr;
@@ -237,7 +206,7 @@ int mtk_afe_fe_hw_params(struct snd_pcm_substream *substream,
 
 	substream->runtime->dma_bytes = params_buffer_bytes(params);
 
-#if defined(CONFIG_MTK_VOW_SUPPORT)
+#if defined(CONFIG_MTK_VOW_BARGE_IN_SUPPORT)
 	if (memif->vow_bargein_enable) {
 		ret = allocate_vow_bargein_mem(substream,
 					       &substream->runtime->dma_addr,
@@ -245,7 +214,6 @@ int mtk_afe_fe_hw_params(struct snd_pcm_substream *substream,
 					       substream->runtime->dma_bytes,
 					       params_format(params),
 					       afe);
-
 		if (ret < 0)
 			return ret;
 
@@ -335,7 +303,7 @@ int mtk_afe_fe_hw_params(struct snd_pcm_substream *substream,
 #endif
 
 
-#if defined(CONFIG_MTK_ION)
+#if defined(CONFIG_MTK_ION) && defined(MMAP_SUPPORT)
 END:
 #endif
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
@@ -356,7 +324,7 @@ END:
 		return ret;
 	}
 
-#if defined(CONFIG_MTK_VOW_SUPPORT) ||\
+#if defined(CONFIG_MTK_VOW_BARGE_IN_SUPPORT) ||\
 		defined(CONFIG_SND_SOC_MTK_SCP_SMARTPA) ||\
 		defined(CONFIG_MTK_ULTRASND_PROXIMITY)
 BYPASS_AFE_FE_ALLOCATE_MEM:
@@ -423,7 +391,11 @@ int mtk_afe_fe_hw_free(struct snd_pcm_substream *substream,
 		memif->using_sram = 0;
 		return mtk_audio_sram_free(afe->sram, substream);
 	}
-
+#if IS_ENABLED(CONFIG_MTK_VOW_SUPPORT)
+	// vow uses reserve dram, ignore free
+	if (memif->vow_bargein_enable)
+		return 0;
+#endif
 #if defined(CONFIG_MTK_ION)
 	// mmap don't free buffer
 	if (memif->use_mmap_share_mem != 0)
@@ -593,7 +565,7 @@ EXPORT_SYMBOL_GPL(mtk_dynamic_irq_release);
 
 int mtk_afe_dai_suspend(struct snd_soc_dai *dai)
 {
-	struct mtk_base_afe *afe = dev_get_drvdata(dai->dev);
+	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
 	struct device *dev = afe->dev;
 	struct regmap *regmap = afe->regmap;
 	int i;
@@ -618,7 +590,7 @@ EXPORT_SYMBOL_GPL(mtk_afe_dai_suspend);
 
 int mtk_afe_dai_resume(struct snd_soc_dai *dai)
 {
-	struct mtk_base_afe *afe = dev_get_drvdata(dai->dev);
+	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
 	struct device *dev = afe->dev;
 	struct regmap *regmap = afe->regmap;
 	int i = 0;
@@ -676,24 +648,24 @@ EXPORT_SYMBOL_GPL(mtk_memif_set_disable);
 int mtk_dsp_memif_set_enable(struct mtk_base_afe *afe, int id)
 {
 	int ret = 0;
-	int adsp_sem_ret = 0;
+#if defined(CONFIG_MTK_AUDIODSP_SUPPORT) && defined(CONFIG_SND_SOC_MTK_AUDIO_DSP)
+	int adsp_sem_ret = ADSP_ERROR;
 
-	if (!afe)
-		return -EPERM;
-
-	if (!is_semaphore_control_need(afe->is_scp_sema_support))
-		return mtk_memif_set_enable(afe, id);
-
-	adsp_sem_ret = AUDREG_SEMA_3WAY_GET(afe->is_scp_sema_support);
-	if (adsp_sem_ret) {
-		pr_info("%s() error adsp_sem_ret: %d, is_scp_sema_support: %d\n",
-			__func__, adsp_sem_ret, afe->is_scp_sema_support);
-		return -EBUSY;
-	}
-
-	ret = mtk_memif_set_enable(afe, id);
-
-	AUDREG_SEMA_3WAY_RELEASE(afe->is_scp_sema_support);
+#ifdef AUDIO_DSP_V1
+	if (adsp_feature_is_active())
+#else
+	if (is_adsp_feature_in_active())
+#endif
+		adsp_sem_ret = get_adsp_semaphore(SEMA_AUDIOREG);
+	/* get sem ok*/
+	if (adsp_sem_ret == ADSP_OK) {
+		ret = mtk_memif_set_enable(afe, id);
+		release_adsp_semaphore(SEMA_AUDIOREG);
+	} else if (adsp_sem_ret == ADSP_SEMAPHORE_BUSY)
+		pr_info("%s adsp_sem_ret[%d]\n", __func__, adsp_sem_ret);
+	else
+#endif
+		ret = mtk_memif_set_enable(afe, id);
 
 	return ret;
 }
@@ -702,24 +674,23 @@ EXPORT_SYMBOL_GPL(mtk_dsp_memif_set_enable);
 int mtk_dsp_memif_set_disable(struct mtk_base_afe *afe, int id)
 {
 	int ret = 0;
-	int adsp_sem_ret = 0;
-
-	if (!afe)
-		return -EPERM;
-
-	if (!is_semaphore_control_need(afe->is_scp_sema_support))
-		return mtk_memif_set_disable(afe, id);
-
-	adsp_sem_ret = AUDREG_SEMA_3WAY_GET(afe->is_scp_sema_support);
-	if (adsp_sem_ret) {
-		pr_info("%s() error adsp_sem_ret: %d, is_scp_sema_support: %d\n",
-			__func__, adsp_sem_ret, afe->is_scp_sema_support);
-		return -EBUSY;
-	}
-
-	ret = mtk_memif_set_disable(afe, id);
-
-	AUDREG_SEMA_3WAY_RELEASE(afe->is_scp_sema_support);
+#if defined(CONFIG_MTK_AUDIODSP_SUPPORT) && defined(CONFIG_SND_SOC_MTK_AUDIO_DSP)
+	int adsp_sem_ret = ADSP_ERROR;
+#ifdef AUDIO_DSP_V1
+	if (adsp_feature_is_active())
+#else
+	if (is_adsp_feature_in_active())
+#endif
+		adsp_sem_ret = get_adsp_semaphore(SEMA_AUDIOREG);
+	/* get sem ok*/
+	if (adsp_sem_ret == ADSP_OK) {
+		ret = mtk_memif_set_disable(afe, id);
+		release_adsp_semaphore(SEMA_AUDIOREG);
+	} else if (adsp_sem_ret == ADSP_SEMAPHORE_BUSY)
+		pr_info("%s adsp_sem_ret[%d]\n", __func__, adsp_sem_ret);
+	else
+#endif
+		ret = mtk_memif_set_disable(afe, id);
 
 	return ret;
 }
@@ -730,29 +701,34 @@ int mtk_dsp_irq_set_enable(struct mtk_base_afe *afe,
 			   const struct mtk_base_irq_data *irq_data)
 {
 	int ret = 0;
-	int adsp_sem_ret = 0;
+#if defined(CONFIG_MTK_AUDIODSP_SUPPORT) && defined(CONFIG_SND_SOC_MTK_AUDIO_DSP)
+	int adsp_sem_ret = ADSP_ERROR;
+#endif
 
 	if (!afe)
 		return -EPERM;
 	if (!irq_data)
 		return -EPERM;
-
-	if (!is_semaphore_control_need(afe->is_scp_sema_support))
-		return regmap_update_bits(afe->regmap, irq_data->irq_en_reg,
-					  1 << irq_data->irq_en_shift,
-					  1 << irq_data->irq_en_shift);
-
-	adsp_sem_ret = AUDREG_SEMA_3WAY_GET(afe->is_scp_sema_support);
-	if (adsp_sem_ret) {
-		pr_info("%s() error adsp_sem_ret: %d, is_scp_sema_support: %d\n",
-			__func__, adsp_sem_ret, afe->is_scp_sema_support);
-		return -EBUSY;
-	}
-
-	regmap_update_bits(afe->regmap, irq_data->irq_en_reg,
-			   1 << irq_data->irq_en_shift,
-			   1 << irq_data->irq_en_shift);
-	AUDREG_SEMA_3WAY_RELEASE(afe->is_scp_sema_support);
+#if defined(CONFIG_MTK_AUDIODSP_SUPPORT) && defined(CONFIG_SND_SOC_MTK_AUDIO_DSP)
+#ifdef AUDIO_DSP_V1
+	if (adsp_feature_is_active())
+#else
+	if (is_adsp_feature_in_active())
+#endif
+		adsp_sem_ret = get_adsp_semaphore(SEMA_AUDIOREG);
+	/* get sem ok*/
+	if (adsp_sem_ret == ADSP_OK) {
+		regmap_update_bits(afe->regmap, irq_data->irq_en_reg,
+				   1 << irq_data->irq_en_shift,
+				   1 << irq_data->irq_en_shift);
+		release_adsp_semaphore(SEMA_AUDIOREG);
+	} else if (adsp_sem_ret == ADSP_SEMAPHORE_BUSY)
+		pr_info("%s adsp_sem_ret[%d]\n", __func__, adsp_sem_ret);
+	else
+#endif
+		regmap_update_bits(afe->regmap, irq_data->irq_en_reg,
+				   1 << irq_data->irq_en_shift,
+				   1 << irq_data->irq_en_shift);
 
 	return ret;
 }
@@ -762,29 +738,36 @@ int mtk_dsp_irq_set_disable(struct mtk_base_afe *afe,
 			    const struct mtk_base_irq_data *irq_data)
 {
 	int ret = 0;
-	int adsp_sem_ret = 0;
+#if defined(CONFIG_MTK_AUDIODSP_SUPPORT) && defined(CONFIG_SND_SOC_MTK_AUDIO_DSP)
+		int adsp_sem_ret = ADSP_ERROR;
+#endif
 
 	if (!afe)
 		return -EPERM;
 	if (!irq_data)
 		return -EPERM;
 
-	if (!is_semaphore_control_need(afe->is_scp_sema_support))
-		return regmap_update_bits(afe->regmap, irq_data->irq_en_reg,
-					  1 << irq_data->irq_en_shift,
-					  0 << irq_data->irq_en_shift);
+#if defined(CONFIG_MTK_AUDIODSP_SUPPORT) && defined(CONFIG_SND_SOC_MTK_AUDIO_DSP)
+#ifdef AUDIO_DSP_V1
+	if (adsp_feature_is_active())
+#else
+	if (is_adsp_feature_in_active())
+#endif
+		adsp_sem_ret = get_adsp_semaphore(SEMA_AUDIOREG);
 
-	adsp_sem_ret = AUDREG_SEMA_3WAY_GET(afe->is_scp_sema_support);
-	if (adsp_sem_ret) {
-		pr_info("%s() error adsp_sem_ret: %d, is_scp_sema_support: %d\n",
-			__func__, adsp_sem_ret, afe->is_scp_sema_support);
-		return -EBUSY;
-	}
-
-	regmap_update_bits(afe->regmap, irq_data->irq_en_reg,
-			   1 << irq_data->irq_en_shift,
-			   0 << irq_data->irq_en_shift);
-	AUDREG_SEMA_3WAY_RELEASE(afe->is_scp_sema_support);
+	/* get sem ok*/
+	if (adsp_sem_ret == ADSP_OK) {
+		regmap_update_bits(afe->regmap, irq_data->irq_en_reg,
+				   1 << irq_data->irq_en_shift,
+				   0 << irq_data->irq_en_shift);
+		release_adsp_semaphore(SEMA_AUDIOREG);
+	} else if (adsp_sem_ret == ADSP_SEMAPHORE_BUSY)
+		pr_info("%s adsp_sem_ret[%d]\n", __func__, adsp_sem_ret);
+	else
+#endif
+		regmap_update_bits(afe->regmap, irq_data->irq_en_reg,
+				   1 << irq_data->irq_en_shift,
+				   0 << irq_data->irq_en_shift);
 
 	return ret;
 }
@@ -799,9 +782,9 @@ int mtk_memif_set_addr(struct mtk_base_afe *afe, int id,
 	int msb_at_bit33 = upper_32_bits(dma_addr) ? 1 : 0;
 	unsigned int phys_buf_addr = lower_32_bits(dma_addr);
 	unsigned int phys_buf_addr_upper_32 = upper_32_bits(dma_addr);
-//#ifdef OPLUS_ARCH_EXTENDS
+
+    //#ifdef OPLUS_ARCH_EXTENDS
 	unsigned int value = 0;
-	char buf[MM_KEVENT_MAX_PAYLOAD_SIZE] = {0};
 
 	/* check the memif already disable */
 	regmap_read(afe->regmap, memif->data->enable_reg, &value);
@@ -809,11 +792,8 @@ int mtk_memif_set_addr(struct mtk_base_afe *afe, int id,
 		mtk_memif_set_disable(afe, id);
 		pr_info("%s memif[%d] is enabled before set_addr, en:0x%x\n",
 			__func__, id, value);
-		scnprintf(buf, sizeof(buf) - 1, "$$memif_id@@%d$regs@@%x", \
-			id, value);
-		mm_fb_audio_kevent_named(OPLUS_AUDIO_EVENTID_AFE_ERROR, MM_FB_KEY_RATELIMIT_1MIN, buf);
 	}
-//#endif
+    //#endif
 
 	memif->dma_area = dma_area;
 	memif->dma_addr = dma_addr;
@@ -917,7 +897,9 @@ int mtk_memif_set_rate_substream(struct snd_pcm_substream *substream,
 				 int id, unsigned int rate)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
 	int fs = 0;
 
 	if (!afe->memif_fs) {
@@ -994,4 +976,3 @@ EXPORT_SYMBOL_GPL(mtk_memif_set_pbuf_size);
 MODULE_DESCRIPTION("Mediatek simple fe dai operator");
 MODULE_AUTHOR("Garlic Tseng <garlic.tseng@mediatek.com>");
 MODULE_LICENSE("GPL v2");
-

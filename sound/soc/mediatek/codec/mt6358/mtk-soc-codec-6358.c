@@ -1,18 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.
- * If not, see <http://www.gnu.org/licenses/>.
+ * Copyright (C) 2018 MediaTek Inc.
  */
 
 /*******************************************************************************
@@ -3742,6 +3730,7 @@ static int Audio_AmpR_Set(struct snd_kcontrol *kcontrol,
 }
 
 #ifdef OPLUS_BUG_COMPATIBILITY
+/* 2019/08/26,add for HS Left Right control sperate */
 static int Headset_Left_Right_Set(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -4713,6 +4702,7 @@ static const struct snd_kcontrol_new Audio_snd_auxadc_controls[] = {
 };
 
 #ifdef OPLUS_BUG_COMPATIBILITY
+/* 2019/08/26,add for HS Left Right control sperate */
 static const char *Headset_Left_Right_Setting[] = {"LeftOn",
 	"LeftOff", "RightOn","RightOff", "Both","None"};
 #endif /* OPLUS_BUG_COMPATIBILITY */
@@ -5295,6 +5285,7 @@ static const struct soc_enum Audio_DL_Enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(dctrim_control_state),
 	dctrim_control_state),
 #ifdef OPLUS_BUG_COMPATIBILITY
+    /* 2019/08/26,add for HS Left Right control sperate */
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(Headset_Left_Right_Setting), Headset_Left_Right_Setting),
 #endif /* OPLUS_BUG_COMPATIBILITY */
 };
@@ -5357,6 +5348,7 @@ static const struct snd_kcontrol_new mt6358_snd_controls[] = {
 		     disable_pmic_dctrim_set),
 #endif
 #ifdef OPLUS_BUG_COMPATIBILITY
+	/* 2019/08/26,add for HS Left Right control sperate */
 	SOC_ENUM_EXT("Headset_Left_Right_Sel", Audio_DL_Enum[14],
 		Headset_Left_Right_Get, Headset_Left_Right_Set),
 #endif /* OPLUS_BUG_COMPATIBILITY */
@@ -5413,6 +5405,7 @@ static bool TurnOnADcPowerACC(int ADCType, bool enable)
 			if (mCodec_data->ana_mux[MICSOURCE_MUX_IN_1] == 0) {
 				/* phone mic */
 #ifdef OPLUS_BUG_COMPATIBILITY
+		/* 2019/08/26,modify for changing micbias vol to 2.5V of main/sub/headset mic */
 				Ana_Set_Reg(AUDENC_ANA_CON9, 0x0051, 0xffff);
 #else /* OPLUS_BUG_COMPATIBILITY */
 				/* Enable MICBIAS0, MISBIAS0 = 1P9V */
@@ -5519,6 +5512,7 @@ static bool TurnOnADcPowerACC(int ADCType, bool enable)
 				/* headset mic */
 				/* Disable MICBIAS1 */
 #ifdef OPLUS_BUG_COMPATIBILITY
+		/* 2019/08/26,modify for changing micbias vol to 2.7V for headset mic not recording */
 				Ana_Set_Reg(AUDENC_ANA_CON10, 0x0071, 0xffff);
 #endif /* OPLUS_BUG_COMPATIBILITY */
 				Ana_Set_Reg(AUDENC_ANA_CON10, 0x0000, 0x0001);
@@ -7698,7 +7692,7 @@ static int read_efuse_hp_impedance_current_calibration(void)
 	return value;
 }
 
-static void mt6358_codec_init_reg(struct snd_soc_codec *codec)
+static void mt6358_codec_init_reg(struct snd_soc_component *codec)
 {
 	pr_debug("%s\n", __func__);
 
@@ -7786,7 +7780,7 @@ static int dc_trim_thread(void *arg)
 	return 0;
 }
 
-static int mt6358_codec_probe(struct snd_soc_codec *codec)
+static int mt6358_component_probe(struct snd_soc_component *component)
 {
 	int ret = 0;
 
@@ -7796,14 +7790,13 @@ static int mt6358_codec_probe(struct snd_soc_codec *codec)
 		return 0;
 
 	/* add codec controls */
-	snd_soc_add_codec_controls(codec, mt6358_snd_controls,
+	snd_soc_add_component_controls(component, mt6358_snd_controls,
 				   ARRAY_SIZE(mt6358_snd_controls));
-	snd_soc_add_codec_controls(codec, mt6358_UL_Codec_controls,
+	snd_soc_add_component_controls(component, mt6358_UL_Codec_controls,
 				   ARRAY_SIZE(mt6358_UL_Codec_controls));
-	snd_soc_add_codec_controls(codec, mt6358_pmic_Test_controls,
+	snd_soc_add_component_controls(component, mt6358_pmic_Test_controls,
 				   ARRAY_SIZE(mt6358_pmic_Test_controls));
-
-	snd_soc_add_codec_controls(codec, Audio_snd_auxadc_controls,
+	snd_soc_add_component_controls(component, Audio_snd_auxadc_controls,
 				   ARRAY_SIZE(Audio_snd_auxadc_controls));
 
 	/* here to set  private data */
@@ -7812,10 +7805,10 @@ static int mt6358_codec_probe(struct snd_soc_codec *codec)
 		/*pr_warn("Failed to allocate private data\n");*/
 		return -ENOMEM;
 	}
-	snd_soc_codec_set_drvdata(codec, mCodec_data);
+	snd_soc_component_set_drvdata(component, mCodec_data);
 
 	memset((void *)mCodec_data, 0, sizeof(struct mt6358_codec_priv));
-	mt6358_codec_init_reg(codec);
+	mt6358_codec_init_reg(component);
 	InitCodecDefault();
 	efuse_current_calibrate = read_efuse_hp_impedance_current_calibration();
 	mInitCodec = true;
@@ -7833,30 +7826,32 @@ static int mt6358_codec_probe(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static int mt6358_codec_remove(struct snd_soc_codec *codec)
+static int mt6358_component_remove(struct snd_soc_component *component)
 {
 	return 0;
 }
 
-static unsigned int mt6358_read(struct snd_soc_codec *codec, unsigned int reg)
+static unsigned int mt6358_component_read(struct snd_soc_component *component,
+					  unsigned int reg)
 {
 	Ana_Get_Reg(reg);
 	return 0;
 }
 
-static int mt6358_write(struct snd_soc_codec *codec, unsigned int reg,
-			unsigned int value)
+static int mt6358_component_write(struct snd_soc_component *component,
+				  unsigned int reg,
+				  unsigned int value)
 {
 	Ana_Set_Reg(reg, value, 0xffffffff);
 	return 0;
 }
 
-static struct snd_soc_codec_driver soc_mtk_codec = {
-	.probe = mt6358_codec_probe,
-	.remove = mt6358_codec_remove,
-
-	.read = mt6358_read,
-	.write = mt6358_write,
+static const struct snd_soc_component_driver mt6358_component_driver = {
+	.name = CODEC_MT6358_NAME,
+	.probe = mt6358_component_probe,
+	.remove = mt6358_component_remove,
+	.read = mt6358_component_read,
+	.write = mt6358_component_write,
 };
 
 static int mtk_mt6358_codec_dev_probe(struct platform_device *pdev)
@@ -7874,18 +7869,18 @@ static int mtk_mt6358_codec_dev_probe(struct platform_device *pdev)
 			 __func__, mUseHpDepopFlow);
 
 	} else {
-		pr_warn("%s(), pdev->dev.of_node = NULL!!!\n", __func__);
+		pr_info("%s(), pdev->dev.of_node = NULL!!!\n", __func__);
 	}
 
-	pr_debug("%s: dev name %s\n", __func__, dev_name(&pdev->dev));
-	return snd_soc_register_codec(&pdev->dev,
-				      &soc_mtk_codec, mtk_6358_dai_codecs,
+	pr_info("%s: dev name %s\n", __func__, dev_name(&pdev->dev));
+	return snd_soc_register_component(&pdev->dev,
+				      &mt6358_component_driver, mtk_6358_dai_codecs,
 				      ARRAY_SIZE(mtk_6358_dai_codecs));
 }
 
 static int mtk_mt6358_codec_dev_remove(struct platform_device *pdev)
 {
-	snd_soc_unregister_codec(&pdev->dev);
+	snd_soc_unregister_component(&pdev->dev);
 	return 0;
 
 }
@@ -7915,7 +7910,7 @@ static struct platform_device *soc_mtk_codec6358_dev;
 
 static int __init mtk_mt6358_codec_init(void)
 {
-	pr_debug("%s:\n", __func__);
+	pr_info("%s:\n", __func__);
 #ifndef CONFIG_OF
 	int ret = 0;
 

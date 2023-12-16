@@ -14,4 +14,4 @@
 #define __AUDIO_EXTEND_DRV_H__
 extern void extend_codec_i2s_be_dailinks(struct snd_soc_dai_link *dailink, size_t size);
 extern bool extend_codec_i2s_compare(struct snd_soc_dai_link *dailink, int dailink_num);
-#endif
+#endif /*__AUDIO_EXTEND_DRV_H__*/

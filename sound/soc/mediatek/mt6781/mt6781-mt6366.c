@@ -9,25 +9,20 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 
+#include "../common/mtk-afe-platform-driver.h"
 #include "mt6781-afe-common.h"
 #include "mt6781-afe-clk.h"
 #include "mt6781-afe-gpio.h"
 #include "../../codecs/mt6358.h"
 #include "../common/mtk-sp-spk-amp.h"
-//#ifdef ODM_HQ_EDIT
-#include "../sia81xx_space/sia81xx_aux_dev_if.h"
-//#endif
+
 /*
  * if need additional control for the ext spk amp that is connected
  * after Lineout Buffer / HP Buffer on the codec, put the control in
  * mt6781_mt6366_spk_amp_event()
  */
 #define EXT_SPK_AMP_W_NAME "Ext_Speaker_Amp"
-//#ifdef ODM_HQ_EDIT
-extern unsigned char aw87319_audio_speaker(void);
-extern unsigned char aw87319_audio_receiver(void);
-extern unsigned char aw87319_audio_off(void);
-//#endif
+
 static const char *const mt6781_spk_type_str[] = {MTK_SPK_NOT_SMARTPA_STR,
 						  MTK_SPK_RICHTEK_RT5509_STR,
 						  MTK_SPK_MEDIATEK_MT6660_STR};
@@ -86,15 +81,9 @@ static int mt6781_mt6366_spk_amp_event(struct snd_soc_dapm_widget *w,
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
 		/* spk amp on control */
-		//#ifdef ODM_HQ_EDIT
-		aw87319_audio_speaker();
-		//#endif /* ODM_HQ_EDIT */
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
 		/* spk amp off control */
-		//#ifdef ODM_HQ_EDIT
-		aw87319_audio_off();
-		//#endif /* ODM_HQ_EDIT */
 		break;
 	default:
 		break;
@@ -146,8 +135,12 @@ static const struct snd_soc_ops mt6781_mt6366_i2s_ops = {
 
 static int mt6781_mt6366_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 {
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
 	struct mt6781_afe_private *afe_priv = afe->platform_priv;
+	struct snd_soc_component *codec_component =
+		snd_soc_rtdcom_lookup(rtd, CODEC_MT6358_NAME);
 	int phase = 0;
 	unsigned int monitor = 0;
 	int test_done_1, test_done_2 = 0;
@@ -164,7 +157,7 @@ static int mt6781_mt6366_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 	mt6781_afe_gpio_request(afe, true, MT6781_DAI_ADDA, 1);
 	mt6781_afe_gpio_request(afe, true, MT6781_DAI_ADDA, 0);
 
-	mt6358_mtkaif_calibration_enable(&rtd->codec->component);
+	mt6358_mtkaif_calibration_enable(codec_component);
 
 	/* set clock protocol 2 */
 	regmap_update_bits(afe->regmap, AFE_AUD_PAD_TOP, 0xff, 0x38);
@@ -183,7 +176,7 @@ static int mt6781_mt6366_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 	     phase <= afe_priv->mtkaif_calibration_num_phase &&
 	     afe_priv->mtkaif_calibration_ok;
 	     phase++) {
-		mt6358_set_mtkaif_calibration_phase(&rtd->codec->component,
+		mt6358_set_mtkaif_calibration_phase(codec_component,
 						    phase, phase);
 
 		regmap_update_bits(afe_priv->topckgen, CKSYS_AUD_TOP_CFG,
@@ -243,7 +236,7 @@ static int mt6781_mt6366_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 
 	}
 
-	mt6358_set_mtkaif_calibration_phase(&rtd->codec->component,
+	mt6358_set_mtkaif_calibration_phase(codec_component,
 			(afe_priv->mtkaif_chosen_phase[0] < 0) ?
 			0 : afe_priv->mtkaif_chosen_phase[0],
 			(afe_priv->mtkaif_chosen_phase[1] < 0) ?
@@ -252,7 +245,7 @@ static int mt6781_mt6366_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 	/* disable rx fifo */
 	regmap_update_bits(afe->regmap, AFE_AUD_PAD_TOP, 0xff, 0x38);
 
-	mt6358_mtkaif_calibration_disable(&rtd->codec->component);
+	mt6358_mtkaif_calibration_disable(codec_component);
 
 	mt6781_afe_gpio_request(afe, false, MT6781_DAI_ADDA, 1);
 	mt6781_afe_gpio_request(afe, false, MT6781_DAI_ADDA, 0);
@@ -280,18 +273,22 @@ static int mt6781_mt6366_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 static int mt6781_mt6366_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct mt6358_codec_ops ops;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
 	struct mt6781_afe_private *afe_priv = afe->platform_priv;
 	struct snd_soc_dapm_context *dapm = &rtd->card->dapm;
+	struct snd_soc_component *codec_component =
+		snd_soc_rtdcom_lookup(rtd, CODEC_MT6358_NAME);
 
 	ops.enable_dc_compensation = mt6781_enable_dc_compensation;
 	ops.set_lch_dc_compensation = mt6781_set_lch_dc_compensation;
 	ops.set_rch_dc_compensation = mt6781_set_rch_dc_compensation;
 	ops.adda_dl_gain_control = mt6781_adda_dl_gain_control;
-	mt6358_set_codec_ops(&rtd->codec->component, &ops);
+	mt6358_set_codec_ops(codec_component, &ops);
 
 	/* set mtkaif protocol */
-	mt6358_set_mtkaif_protocol(&rtd->codec->component,
+	mt6358_set_mtkaif_protocol(codec_component,
 				   MT6358_MTKAIF_PROTOCOL_1);
 	afe_priv->mtkaif_protocol = MT6358_MTKAIF_PROTOCOL_1;
 
@@ -332,8 +329,10 @@ static const struct snd_pcm_hardware mt6781_mt6366_vow_hardware = {
 static int mt6781_mt6366_vow_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
-	struct snd_soc_component *component = NULL;
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
+	struct snd_soc_component *comp = NULL;
 	struct snd_soc_rtdcom_list *rtdcom = NULL;
 
 	dev_info(afe->dev, "%s(), start\n", __func__);
@@ -343,8 +342,8 @@ static int mt6781_mt6366_vow_startup(struct snd_pcm_substream *substream)
 
 	/* ASoC will call pm_runtime_get, but vow don't need */
 	for_each_rtdcom(rtd, rtdcom) {
-		component = rtdcom->component;
-		pm_runtime_put_autosuspend(component->dev);
+		comp = rtdcom->component;
+		pm_runtime_put_autosuspend(comp->dev);
 	}
 	return 0;
 }
@@ -352,8 +351,10 @@ static int mt6781_mt6366_vow_startup(struct snd_pcm_substream *substream)
 static void mt6781_mt6366_vow_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
-	struct snd_soc_component *component = NULL;
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
+	struct snd_soc_component *comp = NULL;
 	struct snd_soc_rtdcom_list *rtdcom = NULL;
 
 	dev_info(afe->dev, "%s(), end\n", __func__);
@@ -361,8 +362,8 @@ static void mt6781_mt6366_vow_shutdown(struct snd_pcm_substream *substream)
 
 	/* restore to fool ASoC */
 	for_each_rtdcom(rtd, rtdcom) {
-		component = rtdcom->component;
-		pm_runtime_get_sync(component->dev);
+		comp = rtdcom->component;
+		pm_runtime_get_sync(comp->dev);
 	}
 }
 
@@ -1121,9 +1122,6 @@ static int mt6781_mt6366_dev_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "%s(), devm_snd_soc_register_card\n", __func__);
 
-         //#ifdef ODM_HQ_EDIT
-        soc_aux_init_only_sia81xx(pdev, card);
-        //#endif
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret)
 		dev_err(&pdev->dev, "%s snd_soc_register_card fail %d\n",

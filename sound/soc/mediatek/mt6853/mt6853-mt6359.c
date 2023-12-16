@@ -16,6 +16,7 @@
 #include "mt6853-afe-gpio.h"
 #include "../../codecs/mt6359.h"
 #include "../common/mtk-sp-spk-amp.h"
+#include "../common/mtk-afe-platform-driver.h"
 
 /*
  * if need additional control for the ext spk amp that is connected
@@ -28,6 +29,7 @@
 #endif  /*OPLUS_BUG_COMPATIBILITY*/
 
 #ifdef OPLUS_ARCH_EXTENDS
+/*2022/07/12, Add for oplus extend audio*/
 extern void extend_codec_i2s_be_dailinks(struct snd_soc_dai_link *dailink, size_t size);
 extern bool extend_codec_i2s_compare(struct snd_soc_dai_link *dailink, int dailink_num);
 #endif
@@ -134,10 +136,6 @@ static int mt6853_audio_extern_config_ctl(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 #endif  /*OPLUS_BUG_COMPATIBILITY*/ 
-#ifdef CONFIG_SND_SOC_CODEC_AW87339
-	extern unsigned char aw87339_audio_spk_if_kspk(void);
-	extern unsigned char aw87339_audio_spk_if_off(void);
-#endif  /*CONFIG_SND_SOC_CODEC_AW87339*/
 static int mt6853_spk_type_get(struct snd_kcontrol *kcontrol,
 			       struct snd_ctl_elem_value *ucontrol)
 {
@@ -220,11 +218,6 @@ static int mt6853_mt6359_spk_amp_event(struct snd_soc_dapm_widget *w,
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
 		/* spk amp on control */
-#ifdef CONFIG_SND_SOC_CODEC_AW87339
-		if (OPLUS_PA_AWINIC == oplus_pa_type) {
-			aw87339_audio_spk_if_kspk();
-		}
-#endif  /*CONFIG_SND_SOC_CODEC_AW87339*/
 
 #ifdef OPLUS_FEATURE_SPEAKER_MUTE
 		if(speaker_mute_control){
@@ -245,12 +238,6 @@ static int mt6853_mt6359_spk_amp_event(struct snd_soc_dapm_widget *w,
 #ifdef OPLUS_FEATURE_SPEAKER_MUTE
 		kspk_enable_spk_pa_state = 0;
 #endif /* OPLUS_FEATURE_SPEAKER_MUTE */
-#ifdef CONFIG_SND_SOC_CODEC_AW87339
-		if (OPLUS_PA_AWINIC == oplus_pa_type) {
-			aw87339_audio_spk_if_off();
-		}
-#endif  /*CONFIG_SND_SOC_CODEC_AW87339*/
-
 #ifdef OPLUS_BUG_COMPATIBILITY
         if (OPLUS_PA_SIA == oplus_pa_type) {
 	        dev_err(card->dev, "%s(), line = %d event %d\n", __func__, __LINE__, event);
@@ -275,17 +262,6 @@ static const struct snd_soc_dapm_route mt6853_mt6359_routes[] = {
 	{EXT_SPK_AMP_W_NAME, NULL, "Headphone R Ext Spk Amp"},
 };
 
-#ifdef CONFIG_OPLUS_FEATURE_MM_FEEDBACK
-#define HAL_FEEDBACK_MAX_BYTES         (256)
-extern int hal_feedback_config_get(struct snd_kcontrol *kcontrol,
-			unsigned int __user *bytes,
-			unsigned int size);
-extern int hal_feedback_config_set(struct snd_kcontrol *kcontrol,
-			const unsigned int __user *bytes,
-			unsigned int size);
-#endif  /*CONFIG_OPLUS_FEATURE_MM_FEEDBACK*/
-
-
 static const struct snd_kcontrol_new mt6853_mt6359_controls[] = {
 	SOC_DAPM_PIN_SWITCH(EXT_SPK_AMP_W_NAME),
 	SOC_ENUM_EXT("MTK_SPK_TYPE_GET", mt6853_spk_type_enum[0],
@@ -294,11 +270,6 @@ static const struct snd_kcontrol_new mt6853_mt6359_controls[] = {
 		     mt6853_spk_i2s_out_type_get, NULL),
 	SOC_ENUM_EXT("MTK_SPK_I2S_IN_TYPE_GET", mt6853_spk_type_enum[1],
 		     mt6853_spk_i2s_in_type_get, NULL),
-	#ifdef CONFIG_OPLUS_FEATURE_MM_FEEDBACK
-	SND_SOC_BYTES_TLV("HAL FEEDBACK",
-			  HAL_FEEDBACK_MAX_BYTES,
-			  hal_feedback_config_get, hal_feedback_config_set),
-	#endif //CONFIG_OPLUS_FEATURE_MM_FEEDBACK
 	#ifdef OPLUS_BUG_COMPATIBILITY
 	#ifdef OPLUS_FEATURE_SPEAKER_MUTE
 	SOC_ENUM_EXT("Speaker_Mute_Switch", spkmute_snd_enum[0], speaker_mute_get_status, speaker_mute_put_status),
@@ -335,8 +306,12 @@ static const struct snd_soc_ops mt6853_mt6359_i2s_ops = {
 
 static int mt6853_mt6359_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 {
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
 	struct mt6853_afe_private *afe_priv = afe->platform_priv;
+	struct snd_soc_component *codec_component =
+		snd_soc_rtdcom_lookup(rtd, CODEC_MT6359_NAME);
 	int phase;
 	unsigned int monitor;
 	int test_done_1, test_done_2, test_done_3;
@@ -353,7 +328,7 @@ static int mt6853_mt6359_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 	mt6853_afe_gpio_request(afe, true, MT6853_DAI_ADDA_CH34, 1);
 	mt6853_afe_gpio_request(afe, true, MT6853_DAI_ADDA_CH34, 0);
 
-	mt6359_mtkaif_calibration_enable(&rtd->codec->component);
+	mt6359_mtkaif_calibration_enable(codec_component);
 
 	/* set clock protocol 2 */
 	regmap_update_bits(afe->regmap, AFE_AUD_PAD_TOP, 0xff, 0x38);
@@ -373,7 +348,7 @@ static int mt6853_mt6359_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 	     phase <= afe_priv->mtkaif_calibration_num_phase &&
 	     mtkaif_calib_ok;
 	     phase++) {
-		mt6359_set_mtkaif_calibration_phase(&rtd->codec->component,
+		mt6359_set_mtkaif_calibration_phase(codec_component,
 						    phase, phase, phase);
 
 		regmap_update_bits(afe_priv->topckgen,
@@ -447,7 +422,7 @@ static int mt6853_mt6359_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 			break;
 	}
 
-	mt6359_set_mtkaif_calibration_phase(&rtd->codec->component,
+	mt6359_set_mtkaif_calibration_phase(codec_component,
 		(afe_priv->mtkaif_chosen_phase[0] < 0) ?
 		0 : afe_priv->mtkaif_chosen_phase[0],
 		(afe_priv->mtkaif_chosen_phase[1] < 0) ?
@@ -458,7 +433,7 @@ static int mt6853_mt6359_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 	/* disable rx fifo */
 	regmap_update_bits(afe->regmap, AFE_AUD_PAD_TOP, 0xff, 0x38);
 
-	mt6359_mtkaif_calibration_disable(&rtd->codec->component);
+	mt6359_mtkaif_calibration_disable(codec_component);
 
 	mt6853_afe_gpio_request(afe, false, MT6853_DAI_ADDA, 1);
 	mt6853_afe_gpio_request(afe, false, MT6853_DAI_ADDA, 0);
@@ -478,18 +453,22 @@ static int mt6853_mt6359_mtkaif_calibration(struct snd_soc_pcm_runtime *rtd)
 static int mt6853_mt6359_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct mt6359_codec_ops ops;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
 	struct mt6853_afe_private *afe_priv = afe->platform_priv;
 	struct snd_soc_dapm_context *dapm = &rtd->card->dapm;
+	struct snd_soc_component *codec_component =
+		snd_soc_rtdcom_lookup(rtd, CODEC_MT6359_NAME);
 
 	ops.enable_dc_compensation = mt6853_enable_dc_compensation;
 	ops.set_lch_dc_compensation = mt6853_set_lch_dc_compensation;
 	ops.set_rch_dc_compensation = mt6853_set_rch_dc_compensation;
 	ops.adda_dl_gain_control = mt6853_adda_dl_gain_control;
-	mt6359_set_codec_ops(&rtd->codec->component, &ops);
+	mt6359_set_codec_ops(codec_component, &ops);
 
 	/* set mtkaif protocol */
-	mt6359_set_mtkaif_protocol(&rtd->codec->component,
+	mt6359_set_mtkaif_protocol(codec_component,
 				   MT6359_MTKAIF_PROTOCOL_2_CLK_P2);
 	afe_priv->mtkaif_protocol = MTKAIF_PROTOCOL_2_CLK_P2;
 
@@ -530,8 +509,10 @@ static const struct snd_pcm_hardware mt6853_mt6359_vow_hardware = {
 static int mt6853_mt6359_vow_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
-	struct snd_soc_component *component;
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
+	struct snd_soc_component *comp;
 	struct snd_soc_rtdcom_list *rtdcom;
 
 	dev_info(afe->dev, "%s(), start\n", __func__);
@@ -541,8 +522,8 @@ static int mt6853_mt6359_vow_startup(struct snd_pcm_substream *substream)
 
 	/* ASoC will call pm_runtime_get, but vow don't need */
 	for_each_rtdcom(rtd, rtdcom) {
-		component = rtdcom->component;
-		pm_runtime_put_autosuspend(component->dev);
+		comp = rtdcom->component;
+		pm_runtime_put_autosuspend(comp->dev);
 	}
 
 	return 0;
@@ -551,8 +532,10 @@ static int mt6853_mt6359_vow_startup(struct snd_pcm_substream *substream)
 static void mt6853_mt6359_vow_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
-	struct snd_soc_component *component;
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
+	struct snd_soc_component *comp;
 	struct snd_soc_rtdcom_list *rtdcom;
 
 	dev_info(afe->dev, "%s(), end\n", __func__);
@@ -560,8 +543,8 @@ static void mt6853_mt6359_vow_shutdown(struct snd_pcm_substream *substream)
 
 	/* restore to fool ASoC */
 	for_each_rtdcom(rtd, rtdcom) {
-		component = rtdcom->component;
-		pm_runtime_get_sync(component->dev);
+		comp = rtdcom->component;
+		pm_runtime_get_sync(comp->dev);
 	}
 }
 
@@ -1382,6 +1365,7 @@ static int mt6853_mt6359_dev_probe(struct platform_device *pdev)
 	}
 
 #ifdef OPLUS_ARCH_EXTENDS
+	/*2022/07/12, Add for oplus extend audio*/
 	extend_codec_i2s_be_dailinks(mt6853_mt6359_dai_links, ARRAY_SIZE(mt6853_mt6359_dai_links));
 #endif /* OPLUS_ARCH_EXTENDS */
 
@@ -1391,6 +1375,8 @@ static int mt6853_mt6359_dev_probe(struct platform_device *pdev)
 		    i == spk_iv_dai_link_idx)
 			continue;
 #ifdef OPLUS_ARCH_EXTENDS
+		/*2022/07/12, Add for oplus extend
+		 * audio*/
 		if (extend_codec_i2s_compare(mt6853_mt6359_dai_links, i))
 			continue;
 #endif /* OPLUS_ARCH_EXTENDS */

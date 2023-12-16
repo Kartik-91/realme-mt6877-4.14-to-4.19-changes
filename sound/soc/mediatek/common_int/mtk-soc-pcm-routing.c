@@ -1,18 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2015 MediaTek Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.
- * If not, see <http://www.gnu.org/licenses/>.
+ * Copyright (c) 2019 MediaTek Inc.
+ * Author: Michael Hsiao <michael.hsiao@mediatek.com>
  */
 
 /****************************************************************************
@@ -82,7 +71,7 @@
 
 static int mtk_afe_routing_probe(struct platform_device *pdev);
 static int mtk_routing_pcm_close(struct snd_pcm_substream *substream);
-static int mtk_afe_routing_platform_probe(struct snd_soc_platform *platform);
+static int mtk_afe_routing_component_probe(struct snd_soc_component *component);
 
 static int mDac_Sinegen = 27; /* "OFF" */
 static const char *const DAC_DL_SINEGEN[] = {
@@ -104,7 +93,9 @@ static const char *const DAC_DL_SINEGEN_AMPLITUE[] = {
 	"1/128", "1/64", "1/32", "1/16", "1/8", "1/4", "1/2", "1"};
 static const char *const spk_type_str[] = {"MTK_SPK_NOT_SMARTPA",
 					   "MTK_SPK_RICHTEK_RT5509",
+#if defined(CONFIG_SND_SOC_TAS5782M)
 					   "MTK_SPK_TI_TAS5782M",
+#endif
 					   "MTK_SPK_MTK_MT6660"};
 
 static bool mEnableSideToneFilter;
@@ -122,6 +113,7 @@ static const char *const Audio_IPOH_State[] = {"Off", "On"};
 static const char *const Audio_I2S1_Setting[] = {"Off", "On"};
 
 #ifdef OPLUS_BUG_COMPATIBILITY
+/* 2019/08/26, Add for smartPa */
 static const char *audio_i2s0di_setting[] = {"Off", "On"};
 static bool is_audio_i2s0di_setting = false;
 #endif /* OPLUS_BUG_COMPATIBILITY */
@@ -521,6 +513,7 @@ static int AudioDebug_Setting_Set(struct snd_kcontrol *kcontrol,
 }
 
 #ifdef OPLUS_BUG_COMPATIBILITY
+/* 2019/08/26, add for SmartPA */
 static void auddrv_i2s0di_gpio_set(void)
 {
 	auddrv_gpio_i2s0_select(true);
@@ -535,6 +528,7 @@ static void auddrv_i2s0di_gpio_reset(void)
 static void Auddrv_I2S1GpioSet(void)
 {
 #ifdef OPLUS_BUG_COMPATIBILITY
+/* 2019/08/26, add for SmartPA */
 	auddrv_gpio_i2s1_select(true);
 	auddrv_i2s0di_gpio_set();
 #else /* OPLUS_BUG_COMPATIBILITY */
@@ -557,6 +551,7 @@ static void Auddrv_I2S1GpioSet(void)
 static void Auddrv_I2S1GpioReset(void)
 {
 #ifdef OPLUS_BUG_COMPATIBILITY
+/* 2019/08/26, add for SmartPA */
 	auddrv_gpio_i2s1_select(false);
 	auddrv_i2s0di_gpio_reset();
 #else /* OPLUS_BUG_COMPATIBILITY */
@@ -583,6 +578,7 @@ static int AudioDebug_Setting_Get(struct snd_kcontrol *kcontrol,
 }
 
 #ifdef OPLUS_BUG_COMPATIBILITY
+/*  2019/08/26, add for SmartPA */
 static int audio_i2s0_setting_set(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
@@ -805,6 +801,7 @@ static const struct soc_enum Audio_Routing_Enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(Audio_IPOH_State), Audio_IPOH_State),
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(Audio_I2S1_Setting), Audio_I2S1_Setting),
 #ifdef OPLUS_BUG_COMPATIBILITY
+	/* 2019/08/26, add for SmartPA. */
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(audio_i2s0di_setting), audio_i2s0di_setting),
 #endif /* OPLUS_BUG_COMPATIBILITY */
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(spk_type_str), spk_type_str),
@@ -845,6 +842,7 @@ static const struct snd_kcontrol_new Audio_snd_routing_controls[] = {
 	SOC_ENUM_EXT("MTK_SPK_TYPE_GET",
 		     Audio_Routing_Enum[9], spk_type_get, NULL),
 #ifdef OPLUS_BUG_COMPATIBILITY
+	/* 2019/08/26, add for MT6750N smartPa. */
 	SOC_ENUM_EXT("Audio_I2S0_Setting", Audio_Routing_Enum[9],
 		       audio_i2s0_setting_get, audio_i2s0_setting_set),
 #endif /* OPLUS_BUG_COMPATIBILITY */
@@ -896,13 +894,13 @@ static int mtk_routing_pcm_open(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int ret = 0;
 
-	pr_debug("routing_pcm_open\n");
+	pr_debug("mtk_routing_pcm_open\n");
 
 	ret = snd_pcm_hw_constraint_list(runtime, 0, SNDRV_PCM_HW_PARAM_RATE,
 					 &constraints_sample_rates);
 
 	/* print for hw pcm information */
-	pr_debug("routing_pcm_open runtime rate = %d channels = %d\n",
+	pr_debug("mtk_routing_pcm_open runtime rate = %d channels = %d\n",
 		runtime->rate, runtime->channels);
 	if (substream->pcm->device & 1) {
 		runtime->hw.info &= ~SNDRV_PCM_INFO_INTERLEAVED;
@@ -913,11 +911,11 @@ static int mtk_routing_pcm_open(struct snd_pcm_substream *substream)
 			~(SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID);
 
 	if (ret < 0) {
-		pr_debug("routing_pcm_close\n");
+		pr_debug("mtk_routing_pcm_close\n");
 		mtk_routing_pcm_close(substream);
 		return ret;
 	}
-	pr_debug("routing_pcm_open return\n");
+	pr_debug("mtk_routing_pcm_open return\n");
 	return 0;
 }
 
@@ -939,6 +937,23 @@ static int mtk_routing_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	return -EINVAL;
 }
 
+static int mtk_routing_pcm_copy(struct snd_pcm_substream *substream,
+				int channel,
+				unsigned long pos,
+				void __user *buf,
+				unsigned long bytes)
+{
+	return 0;
+}
+
+static int mtk_routing_pcm_silence(struct snd_pcm_substream *substream,
+				   int channel,
+				   unsigned long pos,
+				   unsigned long bytes)
+{
+	return 0; /* do nothing */
+}
+
 static void *dummy_page[2];
 
 static struct page *mtk_routing_pcm_page(struct snd_pcm_substream *substream,
@@ -949,7 +964,7 @@ static struct page *mtk_routing_pcm_page(struct snd_pcm_substream *substream,
 
 static int mtk_routing_pcm_prepare(struct snd_pcm_substream *substream)
 {
-	pr_debug("alsa_prepare\n");
+	pr_debug("mtk_alsa_prepare\n");
 	return 0;
 }
 
@@ -958,13 +973,13 @@ static int mtk_routing_pcm_hw_params(struct snd_pcm_substream *substream,
 {
 	int ret = 0;
 
-	pr_debug("routing_pcm_hw_params\n");
+	pr_debug("mtk_routing_pcm_hw_params\n");
 	return ret;
 }
 
 static int mtk_routing_pcm_hw_free(struct snd_pcm_substream *substream)
 {
-	pr_debug("routing_pcm_hw_free\n");
+	pr_debug("mtk_routing_pcm_hw_free\n");
 	return snd_pcm_lib_free_pages(substream);
 }
 
@@ -976,36 +991,44 @@ static struct snd_pcm_ops mtk_afe_ops = {
 	.hw_free = mtk_routing_pcm_hw_free,
 	.prepare = mtk_routing_pcm_prepare,
 	.trigger = mtk_routing_pcm_trigger,
+	.copy_user = mtk_routing_pcm_copy,
+	.fill_silence = mtk_routing_pcm_silence,
 	.page = mtk_routing_pcm_page,
 };
 
-static struct snd_soc_platform_driver mtk_soc_routing_platform = {
-	.ops = &mtk_afe_ops, .probe = mtk_afe_routing_platform_probe,
+static struct snd_soc_component_driver mtk_soc_routing_component = {
+	.name = AFE_PCM_NAME,
+	.ops = &mtk_afe_ops,
+	.probe = mtk_afe_routing_component_probe,
 };
 
 static int mtk_afe_routing_probe(struct platform_device *pdev)
 {
-	pr_debug("afe_routing_probe\n");
+	pr_debug("%s\n", __func__);
 
-	if (pdev->dev.of_node) {
+	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
+	if (!pdev->dev.dma_mask)
+		pdev->dev.dma_mask = &pdev->dev.coherent_dma_mask;
+
+	if (pdev->dev.of_node)
 		dev_set_name(&pdev->dev, "%s", MT_SOC_ROUTING_PCM);
-		pdev->name = pdev->dev.kobj.name;
-	} else {
-		pr_debug("%s(), pdev->dev.of_node = NULL!!!\n", __func__);
-	}
+	pdev->name = pdev->dev.kobj.name;
 
 	pr_debug("%s: dev name %s\n", __func__, dev_name(&pdev->dev));
-	return snd_soc_register_platform(&pdev->dev, &mtk_soc_routing_platform);
+	return snd_soc_register_component(&pdev->dev,
+					  &mtk_soc_routing_component,
+					  NULL,
+					  0);
 }
 
-static int mtk_afe_routing_platform_probe(struct snd_soc_platform *platform)
+static int mtk_afe_routing_component_probe(struct snd_soc_component *component)
 {
-	pr_debug("afe_routing_platform_probe\n");
+	pr_debug("%s\n", __func__);
 
 	/* add  controls */
-	snd_soc_add_platform_controls(platform, Audio_snd_routing_controls,
+	snd_soc_add_component_controls(component, Audio_snd_routing_controls,
 				      ARRAY_SIZE(Audio_snd_routing_controls));
-	snd_soc_add_platform_controls(platform, Afe_Anc_controls,
+	snd_soc_add_component_controls(component, Afe_Anc_controls,
 				      ARRAY_SIZE(Afe_Anc_controls));
 	/*Auddrv_Devtree_Init();*/
 	return 0;
@@ -1014,7 +1037,7 @@ static int mtk_afe_routing_platform_probe(struct snd_soc_platform *platform)
 static int mtk_afe_routing_remove(struct platform_device *pdev)
 {
 	pr_debug("%s\n", __func__);
-	snd_soc_unregister_platform(&pdev->dev);
+	snd_soc_unregister_component(&pdev->dev);
 	return 0;
 }
 

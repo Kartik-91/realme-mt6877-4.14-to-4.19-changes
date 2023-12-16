@@ -29,7 +29,6 @@ int snd_usb_is_big_endian_format(struct snd_usb_audio *chip,
 				 struct audioformat *fp);
 
 void snd_usb_endpoint_start_quirk(struct snd_usb_endpoint *ep);
-void snd_usb_endpoint_stop_quirk(struct snd_usb_endpoint *ep);
 
 void snd_usb_set_interface_quirk(struct usb_device *dev);
 void snd_usb_ctl_msg_quirk(struct usb_device *dev, unsigned int pipe,
@@ -42,5 +41,13 @@ int snd_usb_select_mode_quirk(struct snd_usb_substream *subs,
 u64 snd_usb_interface_dsd_format_quirks(struct snd_usb_audio *chip,
 					struct audioformat *fp,
 					unsigned int sample_bytes);
+
+void snd_usb_audioformat_attributes_quirk(struct snd_usb_audio *chip,
+					  struct audioformat *fp,
+					  int stream);
+
+bool snd_usb_support_autosuspend_quirk(struct usb_device *dev);
+
+bool snd_usb_registration_quirk(struct snd_usb_audio *chip, int iface);
 
 #endif /* __USBAUDIO_QUIRKS_H */

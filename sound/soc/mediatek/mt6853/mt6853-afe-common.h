@@ -240,7 +240,7 @@ int mt6853_dai_tdm_register(struct mtk_base_afe *afe);
 
 int mt6853_dai_hostless_register(struct mtk_base_afe *afe);
 
-int mt6853_add_misc_control(struct snd_soc_platform *platform);
+int mt6853_add_misc_control(struct snd_soc_component *platform);
 
 int mt6853_set_local_afe(struct mtk_base_afe *afe);
 

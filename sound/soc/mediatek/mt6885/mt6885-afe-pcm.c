@@ -25,7 +25,10 @@
 #include "../common/mtk-afe-fe-dai.h"
 #include "../common/mtk-sp-pcm-ops.h"
 #include "../common/mtk-sram-manager.h"
+
+#if defined(CONFIG_MTK_ION)
 #include "../common/mtk-mmap-ion.h"
+#endif
 
 #include "mt6885-afe-common.h"
 #include "mt6885-afe-clk.h"
@@ -33,7 +36,7 @@
 #include "mt6885-interconnection.h"
 
 #if defined(CONFIG_SND_SOC_MTK_AUDIO_DSP)
-#include "../audio_dsp/mtk-dsp-common.h"
+#include "../audio_dsp/v2/mtk-dsp-common.h"
 #include <adsp_core.h>
 #endif
 
@@ -270,7 +273,9 @@ static int mt6885_memif_fs(struct snd_pcm_substream *substream,
 			   unsigned int rate)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
+	struct snd_soc_component *component =
+			snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
 	int id = rtd->cpu_dai->id;
 
 	return mt6885_rate_transform(afe->dev, rate, id);
@@ -285,7 +290,9 @@ static int mt6885_get_dai_fs(struct mtk_base_afe *afe,
 static int mt6885_irq_fs(struct snd_pcm_substream *substream, unsigned int rate)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
+	struct snd_soc_component *component =
+			snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
 
 	return mt6885_general_rate_transform(afe->dev, rate);
 }
@@ -1177,6 +1184,7 @@ static int mt6885_adsp_mem_set(struct snd_kcontrol *kcontrol,
 }
 #endif
 
+#if defined(CONFIG_MTK_ION)
 static int mt6885_mmap_dl_scene_get(struct snd_kcontrol *kcontrol,
 				    struct snd_ctl_elem_value *ucontrol)
 {
@@ -1263,10 +1271,7 @@ static int mt6885_mmap_ion_get(struct snd_kcontrol *kcontrol,
 static int mt6885_mmap_ion_set(struct snd_kcontrol *kcontrol,
 			       struct snd_ctl_elem_value *ucontrol)
 {
-	/* for bring up */
-#if 1
 	mtk_get_ion_buffer();
-#endif
 	return 0;
 }
 
@@ -1311,6 +1316,7 @@ static int mt6885_ul_mmap_fd_set(struct snd_kcontrol *kcontrol,
 {
 	return 0;
 }
+#endif
 
 static const struct snd_kcontrol_new mt6885_pcm_kcontrols[] = {
 	SOC_SINGLE_EXT("Audio IRQ1 CNT", SND_SOC_NOPM, 0, 0x3ffff, 0,
@@ -1385,6 +1391,7 @@ static const struct snd_kcontrol_new mt6885_pcm_kcontrols[] = {
 		       mt6885_adsp_mem_get,
 		       mt6885_adsp_mem_set),
 #endif
+#if defined(CONFIG_MTK_ION)
 	SOC_SINGLE_EXT("mmap_play_scenario", SND_SOC_NOPM, 0, 0x1, 0,
 		       mt6885_mmap_dl_scene_get, mt6885_mmap_dl_scene_set),
 	SOC_SINGLE_EXT("mmap_record_scenario", SND_SOC_NOPM, 0, 0x1, 0,
@@ -1401,6 +1408,7 @@ static const struct snd_kcontrol_new mt6885_pcm_kcontrols[] = {
 		       SND_SOC_NOPM, 0, 0xffffffff, 0,
 		       mt6885_ul_mmap_fd_get,
 		       mt6885_ul_mmap_fd_set),
+#endif
 };
 
 static int ul_tinyconn_event(struct snd_soc_dapm_widget *w,
@@ -1458,6 +1466,7 @@ static const struct snd_kcontrol_new memif_ul1_ch1_mix[] = {
 	SOC_DAPM_SINGLE_AUTODISABLE("ADDA_UL_CH3", AFE_CONN21,
 				    I_ADDA_UL_CH3, 1, 0),
 #ifdef OPLUS_BUG_COMPATIBILITY
+    /* 2021/1/20, add for supporting aec record*/
     SOC_DAPM_SINGLE_AUTODISABLE("DL4_CH1", AFE_CONN21_1,
                     I_DL4_CH1, 1, 0),
 #endif
@@ -1473,13 +1482,10 @@ static const struct snd_kcontrol_new memif_ul1_ch2_mix[] = {
 	SOC_DAPM_SINGLE_AUTODISABLE("ADDA_UL_CH4", AFE_CONN22,
 				    I_ADDA_UL_CH4, 1, 0),
 #ifdef OPLUS_BUG_COMPATIBILITY
+    /* 2021/1/20, add for supporting aec record */
     SOC_DAPM_SINGLE_AUTODISABLE("DL4_CH2", AFE_CONN22_1,
                     I_DL4_CH2, 1, 0),
 #endif
-#ifdef CONFIG_SND_SOC_DBMDX
-	SOC_DAPM_SINGLE_AUTODISABLE("DL4_CH1", AFE_CONN22_1,
-				    I_DL4_CH1, 1, 0),
-#endif /* CONFIG_SND_SOC_DBMDX */
 };
 
 static const struct snd_kcontrol_new memif_ul1_ch3_mix[] = {
@@ -1583,10 +1589,10 @@ static const struct snd_kcontrol_new memif_ul4_ch1_mix[] = {
 				    I_ADDA_UL_CH1, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("I2S0_CH1", AFE_CONN38,
 				    I_I2S0_CH1, 1, 0),
-#ifdef OPLUS_BUG_COMPATIBILITY
+    #ifdef OPLUS_BUG_COMPATIBILITY
 	SOC_DAPM_SINGLE_AUTODISABLE("I2S2_CH1", AFE_CONN38,
 				    I_I2S0_CH1, 1, 0),
-#endif
+    #endif
 };
 
 static const struct snd_kcontrol_new memif_ul4_ch2_mix[] = {
@@ -1594,10 +1600,10 @@ static const struct snd_kcontrol_new memif_ul4_ch2_mix[] = {
 				    I_ADDA_UL_CH2, 1, 0),
 	SOC_DAPM_SINGLE_AUTODISABLE("I2S0_CH2", AFE_CONN39,
 				    I_I2S0_CH2, 1, 0),
-#ifdef OPLUS_BUG_COMPATIBILITY
+    #ifdef OPLUS_BUG_COMPATIBILITY
 	SOC_DAPM_SINGLE_AUTODISABLE("I2S2_CH2", AFE_CONN39,
 				    I_I2S0_CH1, 1, 0),
-#endif
+    #endif
 };
 
 static const struct snd_kcontrol_new memif_ul5_ch1_mix[] = {
@@ -1860,11 +1866,6 @@ static const struct snd_soc_dapm_route mt6885_memif_routes[] = {
 	{"UL1_CH4", "ADDA_UL_CH3", "ADDA_CH34_UL_Mux"},
 	{"UL1_CH4", "ADDA_UL_CH4", "ADDA_CH34_UL_Mux"},
 
-#ifdef CONFIG_SND_SOC_DBMDX
-	{"UL1_CH1", "DL4_CH1", "DL4"},
-	{"UL1_CH2", "DL4_CH1", "DL4"},
-#endif /* CONFIG_SND_SOC_DBMDX */
-
 	{"UL2", NULL, "UL2_CH1"},
 	{"UL2", NULL, "UL2_CH2"},
 
@@ -1990,12 +1991,13 @@ static const struct snd_soc_dapm_route mt6885_memif_routes[] = {
 	{"HW_GAIN2_IN_CH1", "ADDA_UL_CH1", "ADDA_UL_Mux"},
 	{"HW_GAIN2_IN_CH2", "ADDA_UL_CH2", "ADDA_UL_Mux"},
 #ifdef OPLUS_BUG_COMPATIBILITY
+	/*2021/1/20, add for supporting aec record*/
 	{"UL1_CH1", "DL4_CH1", "Hostless_UL1 UL"},
 	{"UL1_CH2", "DL4_CH2", "Hostless_UL1 UL"},
 	{"Hostless_UL1 UL", NULL, "UL1_VIRTUAL_INPUT"},
 	{"UL4_CH1", "I2S2_CH1", "I2S2"},
 	{"UL4_CH2", "I2S2_CH2", "I2S2"},
-#endif
+    #endif
 };
 
 static const struct mtk_base_memif_data memif_data[MT6885_MEMIF_NUM] = {
@@ -3481,7 +3483,9 @@ static int mt6885_afe_pcm_copy(struct snd_pcm_substream *substream,
 			       mtk_sp_copy_f sp_copy)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct mtk_base_afe *afe = snd_soc_platform_get_drvdata(rtd->platform);
+	struct snd_soc_component *component =
+			snd_soc_rtdcom_lookup(rtd, AFE_PCM_NAME);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
 	int ret = 0;
 
 	mt6885_set_audio_int_bus_parent(afe, CLK_TOP_MAINPLL_D4_D4);
@@ -3597,18 +3601,19 @@ static const struct mtk_audio_sram_ops mt6885_sram_ops = {
 	.set_sram_mode = mt6885_set_sram_mode,
 };
 
-static int mt6885_afe_pcm_platform_probe(struct snd_soc_platform *platform)
+static int mt6885_afe_component_probe(struct snd_soc_component *component)
 {
-	mtk_afe_add_sub_dai_control(platform);
-	mt6885_add_misc_control(platform);
+	mtk_afe_add_sub_dai_control(component);
+	mt6885_add_misc_control(component);
 	return 0;
 }
 
-const struct snd_soc_platform_driver mt6885_afe_pcm_platform = {
+static const struct snd_soc_component_driver mt6885_afe_component = {
+	.name = AFE_PCM_NAME,
 	.ops = &mtk_afe_pcm_ops,
 	.pcm_new = mtk_afe_pcm_new,
 	.pcm_free = mtk_afe_pcm_free,
-	.probe = mt6885_afe_pcm_platform_probe,
+	.probe = mt6885_afe_component_probe,
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -6235,11 +6240,11 @@ static int mt6885_afe_pcm_dev_probe(struct platform_device *pdev)
 #endif
 
 	/* register platform */
-	ret = devm_snd_soc_register_platform(&pdev->dev,
-					     &mt6885_afe_pcm_platform);
+	ret = devm_snd_soc_register_component(&pdev->dev, &mt6885_afe_component,
+					      NULL, 0);
 	if (ret) {
 		dev_warn(dev, "err_platform\n");
-		goto err_platform;
+		goto err_pm_disable;
 	}
 
 	ret = devm_snd_soc_register_component(&pdev->dev,
@@ -6264,9 +6269,6 @@ static int mt6885_afe_pcm_dev_probe(struct platform_device *pdev)
 
 err_dai_component:
 	snd_soc_unregister_component(&pdev->dev);
-
-err_platform:
-	snd_soc_unregister_platform(&pdev->dev);
 
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
