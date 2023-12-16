@@ -542,4 +542,3 @@ static void __exit oplus_wcc_fini(void)
 
 module_init(oplus_wcc_init);
 module_exit(oplus_wcc_fini);
-

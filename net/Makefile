@@ -20,11 +20,11 @@ obj-$(CONFIG_TLS)		+= tls/
 obj-$(CONFIG_XFRM)		+= xfrm/
 obj-$(CONFIG_UNIX_SCM)		+= unix/
 obj-$(CONFIG_NET)		+= ipv6/
+obj-$(CONFIG_BPFILTER)		+= bpfilter/
 obj-$(CONFIG_PACKET)		+= packet/
 obj-$(CONFIG_NET_KEY)		+= key/
 obj-$(CONFIG_BRIDGE)		+= bridge/
 obj-$(CONFIG_NET_DSA)		+= dsa/
-obj-$(CONFIG_IPX)		+= ipx/
 obj-$(CONFIG_ATALK)		+= appletalk/
 obj-$(CONFIG_X25)		+= x25/
 obj-$(CONFIG_LAPB)		+= lapb/
@@ -86,7 +86,11 @@ obj-y				+= l3mdev/
 endif
 obj-$(CONFIG_QRTR)		+= qrtr/
 obj-$(CONFIG_NET_NCSI)		+= ncsi/
+obj-$(CONFIG_XDP_SOCKETS)	+= xdp/
 
+#ifdef OPLUS_FEATURE_WIFI_CAPCENTER
+obj-$(CONFIG_OPLUS_FEATURE_WIFI_CAPCENTER) += oplus_wificapcenter/
+#endif /* OPLUS_FEATURE_WIFI_CAPCENTER */
 
 #ifdef OPLUS_FEATURE_WIFI_SLA
 obj-$(CONFIG_OPLUS_FEATURE_WIFI_SLA)                  	+= oplus_connectivity_sla/
@@ -96,12 +100,4 @@ obj-$(CONFIG_OPLUS_FEATURE_WIFI_SLA)                  	+= oplus_connectivity_sla
 obj-$(CONFIG_OPLUS_FEATURE_DATA_EVAL) += oplus_score/
 #endif /* OPLUS_FEATURE_DATA_EVAL */
 
-#ifdef OPLUS_FEATURE_WIFI_CAPCENTER
-obj-$(CONFIG_OPLUS_FEATURE_WIFI_CAPCENTER) += oplus_wificapcenter/
-#endif /* OPLUS_FEATURE_WIFI_CAPCENTER */
-
 obj-y                           += oplus_modules/
-
-#ifdef OPLUS_FEATURE_NWPOWER
-obj-y				+= oplus_nwpower/
-#endif /* OPLUS_FEATURE_NWPOWER */
