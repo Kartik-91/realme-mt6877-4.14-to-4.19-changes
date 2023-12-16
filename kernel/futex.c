@@ -72,6 +72,9 @@
 #include <asm/futex.h>
 
 #include "locking/rtmutex_common.h"
+#if IS_ENABLED(CONFIG_OPLUS_FEATURE_CPU_JANKINFO)
+#include <linux/cpu_jankinfo/jank_tasktrack.h>
+#endif
 
 /*
  * READ this before attempting to hack on futexes!
@@ -910,24 +913,6 @@ static void put_pi_state(struct futex_pi_state *pi_state)
 	}
 }
 
-/*
- * Look up the task based on what TID userspace gave us.
- * We dont trust it.
- */
-static struct task_struct *futex_find_get_task(pid_t pid)
-{
-	struct task_struct *p;
-
-	rcu_read_lock();
-	p = find_task_by_vpid(pid);
-	if (p)
-		get_task_struct(p);
-
-	rcu_read_unlock();
-
-	return p;
-}
-
 #ifdef CONFIG_FUTEX_PI
 
 /*
@@ -1323,7 +1308,7 @@ static int attach_to_pi_owner(u32 __user *uaddr, u32 uval, union futex_key *key,
 	 */
 	if (!pid)
 		return -EAGAIN;
-	p = futex_find_get_task(pid);
+	p = find_get_task_by_vpid(pid);
 	if (!p)
 		return handle_exit_race(uaddr, uval, NULL);
 
@@ -1618,8 +1603,10 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_pi_state *pi_
 	 */
 	newval = FUTEX_WAITERS | task_pid_vnr(new_owner);
 
-	if (unlikely(should_fail_futex(true)))
+	if (unlikely(should_fail_futex(true))) {
 		ret = -EFAULT;
+		goto out_unlock;
+	}
 
 	ret = cmpxchg_futex_value_locked(&curval, uaddr, uval, newval);
 	if (!ret && (curval != uval)) {
@@ -1734,8 +1721,8 @@ static int futex_atomic_op_inuser(unsigned int encoded_op, u32 __user *uaddr)
 {
 	unsigned int op =	  (encoded_op & 0x70000000) >> 28;
 	unsigned int cmp =	  (encoded_op & 0x0f000000) >> 24;
-	int oparg = sign_extend32((encoded_op & 0x00fff000) >> 12, 12);
-	int cmparg = sign_extend32(encoded_op & 0x00000fff, 12);
+	int oparg = sign_extend32((encoded_op & 0x00fff000) >> 12, 11);
+	int cmparg = sign_extend32(encoded_op & 0x00000fff, 11);
 	int oldval, ret;
 
 	if (encoded_op & (FUTEX_OP_OPARG_SHIFT << 28)) {
@@ -2519,10 +2506,22 @@ retry:
 		}
 
 		/*
-		 * Since we just failed the trylock; there must be an owner.
+		 * The trylock just failed, so either there is an owner or
+		 * there is a higher priority waiter than this one.
 		 */
 		newowner = rt_mutex_owner(&pi_state->pi_mutex);
-		BUG_ON(!newowner);
+		/*
+		 * If the higher priority waiter has not yet taken over the
+		 * rtmutex then newowner is NULL. We can't return here with
+		 * that state because it's inconsistent vs. the user space
+		 * state. So drop the locks and try again. It's a valid
+		 * situation and not any different from the other retry
+		 * conditions.
+		 */
+		if (unlikely(!newowner)) {
+			err = -EAGAIN;
+			goto handle_err;
+		}
 	} else {
 		WARN_ON_ONCE(argowner != current);
 		if (oldowner == current) {
@@ -2730,7 +2729,10 @@ static void futex_wait_queue_me(struct futex_hash_bucket *hb, struct futex_q *q,
 		 * flagged for rescheduling. Only call schedule if there
 		 * is no timeout, or if it has yet to expire.
 		 */
-		if (!timeout || timeout->task){
+		if (!timeout || timeout->task) {
+#if IS_ENABLED(CONFIG_OPLUS_FEATURE_CPU_JANKINFO)
+			android_vh_futex_sleep_start_handelr(NULL, current);
+#endif
 #if defined (OPLUS_FEATURE_HEALTHINFO) && defined (CONFIG_OPLUS_JANK_INFO)
 			current->in_futex = 1;
 #endif /* OPLUS_FEATURE_HEALTHINFO */
@@ -2876,14 +2878,13 @@ retry:
 		goto out;
 
 	restart = &current->restart_block;
-	restart->fn = futex_wait_restart;
 	restart->futex.uaddr = uaddr;
 	restart->futex.val = val;
 	restart->futex.time = *abs_time;
 	restart->futex.bitset = bitset;
 	restart->futex.flags = flags | FLAGS_HAS_TIMEOUT;
 
-	ret = -ERESTART_RESTARTBLOCK;
+	ret = set_restart_fn(restart, futex_wait_restart);
 
 out:
 	if (to) {
@@ -3887,8 +3888,7 @@ long do_futex(u32 __user *uaddr, int op, u32 val, ktime_t *timeout,
 
 	if (op & FUTEX_CLOCK_REALTIME) {
 		flags |= FLAGS_CLOCKRT;
-		if (cmd != FUTEX_WAIT && cmd != FUTEX_WAIT_BITSET && \
-		    cmd != FUTEX_WAIT_REQUEUE_PI)
+		if (cmd != FUTEX_WAIT_BITSET &&	cmd != FUTEX_WAIT_REQUEUE_PI)
 			return -ENOSYS;
 	}
 
@@ -3905,10 +3905,12 @@ long do_futex(u32 __user *uaddr, int op, u32 val, ktime_t *timeout,
 	switch (cmd) {
 	case FUTEX_WAIT:
 		val3 = FUTEX_BITSET_MATCH_ANY;
+		/* fall through */
 	case FUTEX_WAIT_BITSET:
 		return futex_wait(uaddr, flags, val, timeout, val3);
 	case FUTEX_WAKE:
 		val3 = FUTEX_BITSET_MATCH_ANY;
+		/* fall through */
 	case FUTEX_WAKE_BITSET:
 		return futex_wake(uaddr, flags, val, val3);
 	case FUTEX_REQUEUE:
@@ -4127,7 +4129,7 @@ err_unlock:
 }
 
 COMPAT_SYSCALL_DEFINE6(futex, u32 __user *, uaddr, int, op, u32, val,
-		struct compat_timespec __user *, utime, u32 __user *, uaddr2,
+		struct old_timespec32 __user *, utime, u32 __user *, uaddr2,
 		u32, val3)
 {
 	struct timespec ts;

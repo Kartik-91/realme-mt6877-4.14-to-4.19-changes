@@ -21,6 +21,7 @@
 #include <linux/sched/debug.h>
 
 #include <trace/events/sched.h>
+
 #ifdef CONFIG_OPLUS_FEATURE_HUNG_TASK_ENHANCE
 #include <linux/sched/sysctl.h>
 #include <soc/oplus/system/hung_task_enhance.h>
@@ -54,6 +55,11 @@ int sysctl_hung_task_selective_monitoring = 1;
  * Zero means infinite timeout - no checking done:
  */
 unsigned long __read_mostly sysctl_hung_task_timeout_secs = CONFIG_DEFAULT_HUNG_TASK_TIMEOUT;
+
+/*
+ * Zero (default value) means use sysctl_hung_task_timeout_secs:
+ */
+unsigned long __read_mostly sysctl_hung_task_check_interval_secs;
 
 int __read_mostly sysctl_hung_task_warnings = 10;
 
@@ -114,8 +120,11 @@ static void check_hung_task(struct task_struct *t, unsigned long timeout)
 
 	if (switch_count != t->last_switch_count) {
 		t->last_switch_count = switch_count;
+		t->last_switch_time = jiffies;
 		return;
 	}
+	if (time_is_after_jiffies(t->last_switch_time + timeout * HZ))
+		return;
 
 	trace_sched_process_hang(t);
 
@@ -181,6 +190,7 @@ static void check_hung_uninterruptible_tasks(unsigned long timeout)
 	int max_count = sysctl_hung_task_check_count;
 	unsigned long last_break = jiffies;
 	struct task_struct *g, *t;
+
 #if defined(CONFIG_OPLUS_FEATURE_HUNG_TASK_ENHANCE) && defined(CONFIG_OPLUS_FEATURE_DEATH_HEALER)
 	unsigned int iowait_count = 0;
 #endif
@@ -208,10 +218,11 @@ static void check_hung_uninterruptible_tasks(unsigned long timeout)
 		/* use "==" to skip the TASK_KILLABLE tasks waiting on NFS */
 		if (t->state == TASK_UNINTERRUPTIBLE)
 #ifdef CONFIG_OPLUS_FEATURE_HUNG_TASK_ENHANCE
+			/* Check for selective monitoring */
 			if (!sysctl_hung_task_selective_monitoring ||
 			    t->hang_detection_enabled)
 #endif
-			check_hung_task(t, timeout);
+				check_hung_task(t, timeout);
 #endif
 	}
  unlock:
@@ -296,8 +307,13 @@ static int watchdog(void *dummy)
 
 	for ( ; ; ) {
 		unsigned long timeout = sysctl_hung_task_timeout_secs;
-		long t = hung_timeout_jiffies(hung_last_checked, timeout);
+		unsigned long interval = sysctl_hung_task_check_interval_secs;
+		long t;
 
+		if (interval == 0)
+			interval = timeout;
+		interval = min_t(unsigned long, interval, timeout);
+		t = hung_timeout_jiffies(hung_last_checked, interval);
 		if (t <= 0) {
 			if (!atomic_xchg(&reset_hung_task, 0) &&
 			    !hung_detector_suspended)

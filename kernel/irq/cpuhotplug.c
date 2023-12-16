@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Generic cpu hotunplug interrupt migration code copied from the
  * arch/arm implementation
@@ -13,10 +14,6 @@
 #include <linux/irq.h>
 
 #include "internals.h"
-
-#ifdef OPLUS_FEATURE_CHG_BASIC
-extern bool oplus_daily_build(void);
-#endif
 
 /* For !GENERIC_IRQ_EFFECTIVE_AFF_MASK this looks at general affinity mask */
 static inline bool irq_needs_fixup(struct irq_data *d)
@@ -119,7 +116,7 @@ static bool migrate_one_irq(struct irq_desc *desc)
 		 */
 		if (irqd_affinity_is_managed(d)) {
 			irqd_set_managed_shutdown(d);
-			irq_shutdown(desc);
+			irq_shutdown_and_deactivate(desc);
 			return false;
 		}
 		affinity = cpu_online_mask;
@@ -167,18 +164,10 @@ void irq_migrate_all_off_this_cpu(void)
 		affinity_broken = migrate_one_irq(desc);
 		raw_spin_unlock(&desc->lock);
 
-#ifndef OPLUS_FEATURE_CHG_BASIC
 		if (affinity_broken) {
 			pr_warn_ratelimited("IRQ %u: no longer affine to CPU%u\n",
 					    irq, smp_processor_id());
 		}
-#else
-		if (oplus_daily_build() == true) {
-			if (affinity_broken)
-				pr_warn_ratelimited("IRQ%u no longer affine to CPU%u\n",
-						irq, smp_processor_id());
-		}
-#endif /*OPLUS_FEATURE_CHG_BASIC*/
 	}
 }
 

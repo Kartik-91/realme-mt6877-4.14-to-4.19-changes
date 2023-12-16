@@ -32,13 +32,6 @@
 #include <linux/sched_assist/sched_assist_common.h>
 #endif
 
-#ifdef OPLUS_FEATURE_SCHED_ASSIST
-//#ifdef CONFIG_UXCHAIN_V2
-#include <linux/sched/clock.h>
-#include <linux/mm.h>
-#include <linux/sched.h>
-extern int sysctl_mmapsem_uninterruptable_time;
-#endif
 /*
  * Guide to the rw_semaphore's count field for common values.
  * (32-bit case illustrated, similar for 64-bit)
@@ -108,12 +101,13 @@ void __init_rwsem(struct rw_semaphore *sem, const char *name,
 	sem->owner = NULL;
 	osq_lock_init(&sem->osq);
 #endif
-#ifdef CONFIG_MTK_TASK_TURBO
-	sem->turbo_owner = NULL;
-#endif
 #ifdef OPLUS_FEATURE_SCHED_ASSIST
 	sem->ux_dep_task = NULL;
 #endif /* OPLUS_FEATURE_SCHED_ASSIST */
+
+#ifdef CONFIG_MTK_TASK_TURBO
+	sem->turbo_owner = NULL;
+#endif
 #ifdef CONFIG_KERNEL_LOCK_OPT
 	INIT_LIST_HEAD(&sem->owner_list);
 #endif
@@ -167,10 +161,6 @@ static void __rwsem_mark_wake(struct rw_semaphore *sem,
 
 	if (waiter->type == RWSEM_WAITING_FOR_WRITE) {
 		if (wake_type == RWSEM_WAKE_ANY) {
-#ifdef OPLUS_FEATURE_SCHED_ASSIST
-//#ifdef CONFIG_UXCHAIN_V2
-			uxchain_rwsem_wake(waiter->task, sem);
-#endif
 			/*
 			 * Mark writer at the front of the queue for wakeup.
 			 * Until the task is actually later awoken later by
@@ -240,7 +230,6 @@ static void __rwsem_mark_wake(struct rw_semaphore *sem,
 	list_for_each_entry(waiter, &sem->wait_list, list) {
 		if (waiter->type == RWSEM_WAITING_FOR_WRITE)
 			break;
-
 		woken++;
 	}
 	list_cut_before(&wlist, &sem->wait_list, &waiter->list);
@@ -260,7 +249,6 @@ static void __rwsem_mark_wake(struct rw_semaphore *sem,
 
 		tsk = waiter->task;
 		get_task_struct(tsk);
-
 		/*
 		 * Ensure calling get_task_struct() before setting the reader
 		 * waiter to nil such that rwsem_down_read_failed() cannot
@@ -268,10 +256,6 @@ static void __rwsem_mark_wake(struct rw_semaphore *sem,
 		 * to the task to wakeup.
 		 */
 		smp_store_release(&waiter->task, NULL);
-#ifdef OPLUS_FEATURE_SCHED_ASSIST
-//#ifdef CONFIG_UXCHAIN_V2
-		uxchain_rwsem_wake(tsk, sem);
-#endif
 		/*
 		 * Ensure issuing the wakeup (either by us or someone else)
 		 * after setting the reader waiter to nil.
@@ -291,12 +275,6 @@ __rwsem_down_read_failed_common(struct rw_semaphore *sem, int state)
 	long count, adjustment = -RWSEM_ACTIVE_READ_BIAS;
 	struct rwsem_waiter waiter;
 	DEFINE_WAKE_Q(wake_q);
-#ifdef OPLUS_FEATURE_SCHED_ASSIST
-//#ifdef CONFIG_UXCHAIN_V2
-	int mem_sem_flag = 0;
-	u64 sleep_begin, sleep_end;
-#endif
-
 
 	waiter.task = current;
 	waiter.type = RWSEM_WAITING_FOR_READ;
@@ -340,6 +318,7 @@ __rwsem_down_read_failed_common(struct rw_semaphore *sem, int state)
 	}
 #endif
 #endif /* OPLUS_FEATURE_SCHED_ASSIST */
+
 #ifdef CONFIG_MTK_TASK_TURBO
 	if (waiter.task)
 		rwsem_start_turbo_inherit(sem);
@@ -349,13 +328,6 @@ __rwsem_down_read_failed_common(struct rw_semaphore *sem, int state)
 
 	/* wait to be given the lock */
 	while (true) {
-#ifdef OPLUS_FEATURE_SCHED_ASSIST
-//#ifdef CONFIG_UXCHAIN_V2
-		if (current->mm && sem == &(current->mm->mmap_sem)) {
-			mem_sem_flag = 1;
-			sleep_begin = sched_clock();
-		}
-#endif
 		set_current_state(state);
 		if (!waiter.task)
 			break;
@@ -378,14 +350,6 @@ __rwsem_down_read_failed_common(struct rw_semaphore *sem, int state)
 	__set_current_state(TASK_RUNNING);
 #ifdef CONFIG_KERNEL_LOCK_OPT
 	deboost_owner(sem, RWSEM_WAITING_FOR_READ);
-#endif
-#ifdef OPLUS_FEATURE_SCHED_ASSIST
-//#ifdef CONFIG_UXCHAIN_V2
-	if (mem_sem_flag) {
-		sleep_end = sched_clock();
-		sysctl_mmapsem_uninterruptable_time +=
-			(sleep_end - sleep_begin) >> 20;
-	}
 #endif
 	return sem;
 out_nolock:
@@ -469,6 +433,15 @@ static inline bool rwsem_try_write_lock_unqueued(struct rw_semaphore *sem)
 	}
 }
 
+static inline bool owner_on_cpu(struct task_struct *owner)
+{
+	/*
+	 * As lock holder preemption issue, we both skip spinning if
+	 * task is not on cpu or its cpu is preempted
+	 */
+	return owner->on_cpu && !vcpu_is_preempted(task_cpu(owner));
+}
+
 static inline bool rwsem_can_spin_on_owner(struct rw_semaphore *sem)
 {
 	struct task_struct *owner;
@@ -481,17 +454,10 @@ static inline bool rwsem_can_spin_on_owner(struct rw_semaphore *sem)
 
 	rcu_read_lock();
 	owner = READ_ONCE(sem->owner);
-	if (!owner || !is_rwsem_owner_spinnable(owner)) {
-		ret = !owner;	/* !owner is spinnable */
-		goto done;
+	if (owner) {
+		ret = is_rwsem_owner_spinnable(owner) &&
+		      owner_on_cpu(owner);
 	}
-
-	/*
-	 * As lock holder preemption issue, we both skip spinning if task is not
-	 * on cpu or its cpu is preempted
-	 */
-	ret = owner->on_cpu && !vcpu_is_preempted(task_cpu(owner));
-done:
 	rcu_read_unlock();
 	return ret;
 }
@@ -520,8 +486,7 @@ static noinline bool rwsem_spin_on_owner(struct rw_semaphore *sem)
 		 * abort spinning when need_resched or owner is not running or
 		 * owner's cpu is preempted.
 		 */
-		if (!owner->on_cpu || need_resched() ||
-				vcpu_is_preempted(task_cpu(owner))) {
+		if (need_resched() || !owner_on_cpu(owner)) {
 			rcu_read_unlock();
 			return false;
 		}
@@ -620,18 +585,12 @@ __rwsem_down_write_failed_common(struct rw_semaphore *sem, int state)
 	struct rwsem_waiter waiter;
 	struct rw_semaphore *ret = sem;
 	DEFINE_WAKE_Q(wake_q);
-#ifdef OPLUS_FEATURE_SCHED_ASSIST
-//#ifdef CONFIG_UXCHAIN_V2
-	int mem_sem_flag = 0;
-	u64 sleep_begin, sleep_end;
-#endif
-
 
 	/* undo write bias from down_write operation, stop active locking */
 	count = atomic_long_sub_return(RWSEM_ACTIVE_WRITE_BIAS, &sem->count);
 
 	/* do optimistic spinning and steal lock if possible */
-	if (rwsem_optimistic_spin(sem)){
+	if (rwsem_optimistic_spin(sem)) {
 #ifdef CONFIG_KERNEL_LOCK_OPT
 		record_rwsem_optimistic_spin(sem);
 #endif
@@ -691,11 +650,6 @@ __rwsem_down_write_failed_common(struct rw_semaphore *sem, int state)
 
 	} else
 		count = atomic_long_add_return(RWSEM_WAITING_BIAS, &sem->count);
-
-#ifdef CONFIG_MTK_TASK_TURBO
-	/* inherit if current is turbo */
-	rwsem_start_turbo_inherit(sem);
-#endif
 #ifdef CONFIG_KERNEL_LOCK_OPT
 	boost_owner(sem, RWSEM_WAITING_FOR_WRITE);
 #endif
@@ -707,14 +661,10 @@ __rwsem_down_write_failed_common(struct rw_semaphore *sem, int state)
 #endif
 #endif /* OPLUS_FEATURE_SCHED_ASSIST */
 
-#ifdef OPLUS_FEATURE_SCHED_ASSIST
-//#ifdef CONFIG_UXCHAIN_V2
-	if (current->mm && sem == &(current->mm->mmap_sem)) {
-		mem_sem_flag = 1;
-		sleep_begin = sched_clock();
-	}
+#ifdef CONFIG_MTK_TASK_TURBO
+	/* inherit if current is turbo */
+	rwsem_start_turbo_inherit(sem);
 #endif
-
 	/* wait until we successfully acquire the lock */
 	set_current_state(state);
 	while (true) {
@@ -743,14 +693,6 @@ __rwsem_down_write_failed_common(struct rw_semaphore *sem, int state)
 	raw_spin_unlock_irq(&sem->wait_lock);
 #ifdef CONFIG_KERNEL_LOCK_OPT
 	deboost_owner(sem, RWSEM_WAITING_FOR_WRITE);
-#endif
-#ifdef OPLUS_FEATURE_SCHED_ASSIST
-//#ifdef CONFIG_UXCHAIN_V2
-	if (mem_sem_flag) {
-		sleep_end = sched_clock();
-		sysctl_mmapsem_uninterruptable_time +=
-			(sleep_end - sleep_begin) >> 20;
-	}
 #endif
 
 	return ret;

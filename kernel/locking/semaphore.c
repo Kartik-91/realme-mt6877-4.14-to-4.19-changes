@@ -37,6 +37,7 @@
 #ifdef CONFIG_OPLUS_FEATURE_HUNG_TASK_ENHANCE
 #include <soc/oplus/system/oplus_signal.h>
 #endif
+
 static noinline void __down(struct semaphore *sem);
 static noinline int __down_interruptible(struct semaphore *sem);
 static noinline int __down_killable(struct semaphore *sem);

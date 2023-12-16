@@ -20,9 +20,16 @@
 #define RWSEM_ANONYMOUSLY_OWNED	(1UL << 0)
 #define RWSEM_READER_OWNED	((struct task_struct *)RWSEM_ANONYMOUSLY_OWNED)
 
+#ifdef CONFIG_DEBUG_RWSEMS
+# define DEBUG_RWSEMS_WARN_ON(c)	DEBUG_LOCKS_WARN_ON(c)
+#else
+# define DEBUG_RWSEMS_WARN_ON(c)
+#endif
+
 #ifdef CONFIG_KERNEL_LOCK_OPT
 #include <linux/klockopt/klockopt.h>
 #endif
+
 #ifdef CONFIG_RWSEM_SPIN_ON_OWNER
 /*
  * All writes to owner are protected by WRITE_ONCE() to make sure that
@@ -57,7 +64,7 @@ static inline void rwsem_set_reader_owned(struct rw_semaphore *sem)
 #ifdef CONFIG_KERNEL_LOCK_OPT
 	add_owner(current, sem);
 #endif
-	if (sem->owner != RWSEM_READER_OWNED)
+	if (READ_ONCE(sem->owner) != RWSEM_READER_OWNED)
 		WRITE_ONCE(sem->owner, RWSEM_READER_OWNED);
 }
 
