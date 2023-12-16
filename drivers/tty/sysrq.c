@@ -159,20 +159,6 @@ static struct sysrq_key_op sysrq_reboot_op = {
 	.enable_mask	= SYSRQ_ENABLE_BOOT,
 };
 
-#ifdef CONFIG_OPLUS_FEATURE_PANIC_FLUSH
-extern int panic_flush_device_cache(int timeout);
-static void sysrq_handle_flush(int key)
-{
-	panic_flush_device_cache(0);
-}
-static struct sysrq_key_op sysrq_flush_op = {
-	.handler	= sysrq_handle_flush,
-	.help_msg	= "flush(y)",
-	.action_msg	= "Emergency Flush",
-	.enable_mask	= SYSRQ_ENABLE_SYNC,
-};
-#endif
-
 static void sysrq_handle_sync(int key)
 {
 	emergency_sync();
@@ -355,7 +341,7 @@ static void send_sig_all(int sig)
 		if (is_global_init(p))
 			continue;
 
-		do_send_sig_info(sig, SEND_SIG_FORCED, p, true);
+		do_send_sig_info(sig, SEND_SIG_FORCED, p, PIDTYPE_MAX);
 	}
 	read_unlock(&tasklist_lock);
 }
@@ -496,11 +482,7 @@ static struct sysrq_key_op *sysrq_key_table[36] = {
 	/* x: May be registered on sparc64 for global PMU dump */
 	NULL,				/* x */
 	/* y: May be registered on sparc64 for global register dump */
-#ifdef CONFIG_OPLUS_FEATURE_PANIC_FLUSH
-	&sysrq_flush_op,		/* y */
-#else
 	NULL,				/* y */
-#endif
 	&sysrq_ftrace_dump_op,		/* z */
 };
 
@@ -665,13 +647,13 @@ static void sysrq_parse_reset_sequence(struct sysrq_state *state)
 	state->reset_seq_version = sysrq_reset_seq_version;
 }
 
-static void sysrq_do_reset(unsigned long _state)
+static void sysrq_do_reset(struct timer_list *t)
 {
-	struct sysrq_state *state = (struct sysrq_state *) _state;
+	struct sysrq_state *state = from_timer(state, t, keyreset_timer);
 
 	state->reset_requested = true;
 
-	sys_sync();
+	ksys_sync();
 	kernel_restart(NULL);
 }
 
@@ -684,7 +666,7 @@ static void sysrq_handle_reset_request(struct sysrq_state *state)
 		mod_timer(&state->keyreset_timer,
 			jiffies + msecs_to_jiffies(sysrq_reset_downtime_ms));
 	else
-		sysrq_do_reset((unsigned long)state);
+		sysrq_do_reset(&state->keyreset_timer);
 }
 
 static void sysrq_detect_reset_sequence(struct sysrq_state *state,
@@ -920,8 +902,7 @@ static int sysrq_connect(struct input_handler *handler,
 	sysrq->handle.handler = handler;
 	sysrq->handle.name = "sysrq";
 	sysrq->handle.private = sysrq;
-	setup_timer(&sysrq->keyreset_timer,
-		    sysrq_do_reset, (unsigned long)sysrq);
+	timer_setup(&sysrq->keyreset_timer, sysrq_do_reset, 0);
 
 	error = input_register_handle(&sysrq->handle);
 	if (error) {
