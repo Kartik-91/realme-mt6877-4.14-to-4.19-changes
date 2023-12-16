@@ -1,5 +1,5 @@
 /***********************************************************
-** Copyright (C), 2008-2019, OPPO Mobile Comm Corp., Ltd.
+** Copyright (C), 2008-2019, Mobile Comm Corp., Ltd.
 ** File: hans_netfilter.c
 ** Description: Add for hans freeze manager
 **
@@ -32,7 +32,7 @@ static inline uid_t sock2uid(struct sock *sk)
 		return 0;
 }
 
-/*Add netlink monitor uid. When the monitored UID has incoming network package, tell HANS native deamon*/
+// Add netlink monitor uid. When the monitored UID has incoming network package, tell HANS native deamon
 static void hans_add_monitored_uid(uid_t target_uid)
 {
 	int i = 0;
@@ -41,11 +41,11 @@ static void hans_add_monitored_uid(uid_t target_uid)
 
 	spin_lock_irqsave(&uids_lock, flags);
 	for (i = 0; i < MAX_SLOT; i++) {
-		if (monitored_uids[i] == target_uid) {  /*already in the monitored array*/
+		if (monitored_uids[i] == target_uid) {  //already in the monitored array
 			spin_unlock_irqrestore(&uids_lock, flags);
-			/*printk(KERN_WARNING "%s: uid = %d already in array\n", __func__, target_uid);*/
+			//printk(KERN_WARNING "%s: uid = %d already in array\n", __func__, target_uid);
 			return;
-		} else if (monitored_uids[i] == 0 && fisrt_empty_slot == MAX_SLOT) {  /*first empty slot for monitoring uid*/
+		} else if (monitored_uids[i] == 0 && fisrt_empty_slot == MAX_SLOT) {  // first empty slot for monitoring uid
 			fisrt_empty_slot = i;
 		}
 	}
@@ -96,7 +96,7 @@ static bool hans_find_remove_monitored_uid(uid_t target_uid)
 
         spin_lock_irqsave(&uids_lock, flags);
 	for (i = 0; i < MAX_SLOT; i++) {
-		if (unlikely(monitored_uids[i] == target_uid)) {
+		if (unlikely (monitored_uids[i] == target_uid)) {
 			found = true;
 			monitored_uids[i] = 0;
 			break;
@@ -112,22 +112,22 @@ static bool hans_find_remove_monitored_uid(uid_t target_uid)
 void hans_network_cmd_parse(uid_t uid, enum pkg_cmd cmd)
 {
 	switch (cmd) {
-	case ADD_ONE_UID:
-		hans_add_monitored_uid(uid);
-		break;
-	case DEL_ONE_UID:
-		hans_remove_monitored_uid(uid);
-		break;
-	case DEL_ALL_UID:
-		hans_remove_all_monitored_uid();
-		break;
-	default:
-		pr_err("%s: pkg_cmd type invalid %d\n", __func__, cmd);
-		break;
+		case ADD_ONE_UID:
+			hans_add_monitored_uid(uid);
+			break;
+		case DEL_ONE_UID:
+			hans_remove_monitored_uid(uid);
+			break;
+		case DEL_ALL_UID:
+			hans_remove_all_monitored_uid();
+			break;
+		default:
+			pr_err("%s: pkg_cmd type invalid %d\n", __func__, cmd);
+			break;
 	}
 }
 
-/*Moniter the uid by netlink filter hook function.*/
+// Moniter the uid by netlink filter hook function.
 static unsigned int hans_nf_ipv4v6_in(void *priv,
 					struct sk_buff *skb,
 					const struct nf_hook_state *state)
@@ -157,7 +157,7 @@ static unsigned int hans_nf_ipv4v6_in(void *priv,
 	uid = sock2uid(sk);
 	if (uid < MIN_USERAPP_UID) return NF_ACCEPT;
 
-	/*Find the monitored UID and clear it from the monitor array*/
+	// Find the monitored UID and clear it from the monitor array
 	found = hans_find_remove_monitored_uid(uid);
 	if (!found)
 		return NF_ACCEPT;
@@ -167,8 +167,9 @@ static unsigned int hans_nf_ipv4v6_in(void *priv,
 	return NF_ACCEPT;
 }
 
-/*Only monitor input network packages*/
+//Only monitor input network packages
 static struct nf_hook_ops hans_nf_ops[] = {
+
 	{
 		.hook     = hans_nf_ipv4v6_in,
 		.pf       = NFPROTO_IPV4,

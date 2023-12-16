@@ -1,5 +1,5 @@
 /***********************************************************
-** Copyright (C), 2008-2019, OPPO Mobile Comm Corp., Ltd.
+** Copyright (C), 2008-2019, Mobile Comm Corp., Ltd.
 ** File: hans.c
 ** Description: Add for hans freeze manager
 **
@@ -23,6 +23,15 @@
 
 static struct sock *sock_handle = NULL;
 static atomic_t hans_deamon_port;
+
+/*
+ *reuse LOOPBACK and FROZEN_TRANS channel to notify framework whether kernel support cgroupv2 or not
+ */
+static void hans_kern_support_cgrpv2() {
+	/*notify framework that kernel support cgroupv2*/
+	hans_report(PKG, -1, -1, -1, -1, "PKG", HANS_USE_CGRPV2);
+	printk(KERN_ERR "%s: hans support cgroupv2\n", __func__);
+}
 
 /*
  * netlink report function to tell HANS native deamon unfreeze process info
@@ -76,7 +85,7 @@ int hans_report(enum message_type type, int caller_pid, int caller_uid, int targ
 	data->caller_uid = caller_uid;
 	data->target_pid = target_pid;
 	data->target_uid = target_uid;
-	data->pkg_cmd = -1; /*invalid package cmd*/
+	data->pkg_cmd = -1; //invalid package cmd
 	data->code = code;
 	strlcpy(data->rpc_name, rpc_name, INTERFACETOKEN_BUFF_SIZE);
 	nlmsg_end(skb, nlh);
@@ -89,7 +98,7 @@ int hans_report(enum message_type type, int caller_pid, int caller_uid, int targ
 	return HANS_NOERROR;
 }
 
-/*HANS kernel module handle the message from HANS native deamon*/
+// HANS kernel module handle the message from HANS native deamon
 static void hans_handler(struct sk_buff *skb)
 {
 	struct hans_message *data = NULL;
@@ -109,13 +118,12 @@ static void hans_handler(struct sk_buff *skb)
 		pr_err("%s: uid: %d, permission denied\n", __func__, uid);
 		return;
 	}
-
 	if (skb->len >= NLMSG_SPACE(0)) {
 		nlh = nlmsg_hdr(skb);
 		len = NLMSG_PAYLOAD(nlh, 0);
 		data = (struct hans_message *)NLMSG_DATA(nlh);
 
-		if (len < sizeof(struct hans_message)) {
+		if (len < sizeof (struct hans_message)) {
 			pr_err("%s: hans_message len check faied! len = %d  min_expected_len = %lu!\n", __func__, len, sizeof(struct hans_message));
 			return;
 		}
@@ -138,6 +146,7 @@ static void hans_handler(struct sk_buff *skb)
 			atomic_set(&hans_deamon_port, data->port);
 			hans_report(LOOP_BACK, -1, -1, -1, -1, "loop back", CPUCTL_VERSION);
 			printk(KERN_ERR "%s: --> LOOP_BACK, port = %d\n", __func__, data->port);
+			hans_kern_support_cgrpv2();
 			break;
 		case PKG:
 			printk(KERN_ERR "%s: --> PKG, uid = %d, pkg_cmd = %d\n", __func__, data->target_uid, data->pkg_cmd);
@@ -145,8 +154,12 @@ static void hans_handler(struct sk_buff *skb)
 			break;
 		case FROZEN_TRANS:
 		case CPUCTL_TRANS:
-			printk(KERN_ERR "%s: --> FROZEN_TRANS, uid = %d\n", __func__, data->target_uid);
-			hans_check_frozen_transcation(data->target_uid, data->type);
+			if (CHECK_KERN_SUPPORT_CGRPV2 == data->target_uid) {
+				hans_kern_support_cgrpv2();
+			} else {
+				printk(KERN_ERR "%s: --> FROZEN_TRANS, uid = %d\n", __func__, data->target_uid);
+				hans_check_frozen_transcation(data->target_uid, data->type);
+			}
 			break;
 
 		default:
@@ -164,7 +177,7 @@ static int __init hans_core_init(void)
 
 	atomic_set(&hans_deamon_port, -1);
 
-        sock_handle = netlink_kernel_create(&init_net, NETLINK_OPPO_HANS, &cfg);
+        sock_handle = netlink_kernel_create(&init_net, NETLINK_OPLUS_HANS, &cfg);
 	if (sock_handle == NULL) {
 		pr_err("%s: create netlink socket failed!\n", __func__);
 		return HANS_ERROR;
@@ -172,7 +185,7 @@ static int __init hans_core_init(void)
 
 	if (hans_netfilter_init() == HANS_ERROR) {
 		pr_err("%s: netfilter init failed!\n", __func__);
-		netlink_kernel_release(sock_handle);  /*release socket*/
+		netlink_kernel_release(sock_handle);  //release socket
                 return HANS_ERROR;
 	}
 
@@ -187,6 +200,7 @@ static void __exit hans_core_exit(void)
 
 	hans_netfilter_deinit();
 	printk(KERN_INFO "%s: -\n", __func__);
+
 }
 
 module_init(hans_core_init);
