@@ -1,6 +1,16 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2019-2020 Oplus. All rights reserved.
+ * Copyright (C) 2019 OPPO, Inc.
+ * Author: Fang Xiang <fangxiang@oppo.com>
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
  */
 
 #define pr_fmt(fmt) "%s:%s " fmt, KBUILD_MODNAME, __func__
@@ -18,7 +28,6 @@
 #include <linux/slab.h>
 #include <linux/idr.h>
 #include <linux/spinlock.h>
-#include <linux/seq_file.h>
 
 enum {
 	SHELL_FRONT = 0,
@@ -134,8 +143,8 @@ static struct platform_driver horae_shell_platdrv = {
 static ssize_t proc_shell_write(struct file *filp, const char __user *buf,
 				size_t count, loff_t *pos)
 {
-	int ret, temp, len;
-	unsigned int index = 0;
+	int ret;
+	int index, temp, len;
 	char tmp[BUF_LEN + 1];
 	unsigned long flags;
 
@@ -174,33 +183,8 @@ static ssize_t proc_shell_write(struct file *filp, const char __user *buf,
 	return count;
 }
 
-static int proc_shell_show(struct seq_file *m, void *v)
-{
-	int temp = 0, index;
-	unsigned long flags;
-
-	spin_lock_irqsave(&horae_lock, flags);
-	for (index = 0; index < SHELL_MAX; index++) {
-		if (shell_temp[index] > temp)
-			temp = shell_temp[index];
-	}
-	spin_unlock_irqrestore(&horae_lock, flags);
-	seq_printf(m, "%d", temp);
-	return 0;
-}
-
-static int proc_shell_open(struct inode *inode, struct file *file)
-{
-
-	return single_open(file, proc_shell_show, NULL);
-}
-
-
 static const struct file_operations proc_shell_fops = {
-	.open = proc_shell_open,
 	.write = proc_shell_write,
-	.read = seq_read,
-	.release = single_release,
 };
 
 static int __init horae_shell_init(void)
@@ -226,4 +210,3 @@ static void __exit horae_shell_exit(void)
 
 module_init(horae_shell_init);
 module_exit(horae_shell_exit);
-MODULE_LICENSE("GPL v2");
