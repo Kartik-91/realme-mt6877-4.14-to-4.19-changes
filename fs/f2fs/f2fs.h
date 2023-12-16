@@ -23,7 +23,6 @@
 #include <linux/blkdev.h>
 #include <linux/quotaops.h>
 #include <crypto/hash.h>
-#include <linux/overflow.h>
 
 #include <linux/fscrypt.h>
 #include <linux/fsverity.h>
@@ -206,19 +205,11 @@ enum {
 
 #define MAX_DISCARD_BLOCKS(sbi)		BLKS_PER_SEC(sbi)
 #define DEF_MAX_DISCARD_REQUEST		8	/* issue 8 discards per round */
-//#define DEF_MIN_DISCARD_ISSUE_TIME	50	/* 50 ms, if exists */
-//#define DEF_MID_DISCARD_ISSUE_TIME	500	/* 500 ms, if device busy */
-//#define DEF_MAX_DISCARD_ISSUE_TIME	60000	/* 60 s, if no candidates */
+#define DEF_MIN_DISCARD_ISSUE_TIME	50	/* 50 ms, if exists */
+#define DEF_MID_DISCARD_ISSUE_TIME	500	/* 500 ms, if device busy */
+#define DEF_MAX_DISCARD_ISSUE_TIME	60000	/* 60 s, if no candidates */
 #define DEF_DISCARD_URGENT_UTIL		80	/* do more discard over 80% */
 #define DEF_CP_INTERVAL			60	/* 60 secs */
-#define DEF_MIN_DISCARD_ISSUE_TIME	100	/* 100 ms, if exists */
-#define DEF_MID_DISCARD_ISSUE_TIME	2000	/* 2 s, if dev is busy */
-#define DEF_MAX_DISCARD_ISSUE_TIME	120000	/* 120 s, if no candidates */
-#define DEF_DISCARD_WAKEUP_INTERVAL	900	/* 900 secs */
-#define DEF_DISCARD_BALANCE_TIME	8000	/* 8000 ms */
-#define DEF_URGENT_DISCARD_ISSUE_TIME	50	/* 50 ms, if force */
-#define DEF_DISCARD_EMPTY_ISSUE_TIME	600000	/* 10 min, undiscard block=0 */
-#define DEF_GC_IDLE_INTERVAL		1	/* 1 secs */
 #define DEF_IDLE_INTERVAL		5	/* 5 secs */
 #define DEF_DISABLE_INTERVAL		5	/* 5 secs */
 #define DEF_DISABLE_QUICK_INTERVAL	1	/* 1 secs */
@@ -328,9 +319,6 @@ struct discard_cmd {
 	int error;			/* bio error */
 	spinlock_t lock;		/* for state/bio_ref updating */
 	unsigned short bio_ref;		/* bio reference count */
-#ifdef CONFIG_F2FS_BD_STAT
-	u64 discard_time;
-#endif
 };
 
 enum {
@@ -338,8 +326,6 @@ enum {
 	DPOLICY_FORCE,
 	DPOLICY_FSTRIM,
 	DPOLICY_UMOUNT,
-	DPOLICY_BALANCE,
-	DPOLICY_PERFORMANCE,
 	MAX_DPOLICY,
 };
 
@@ -355,7 +341,6 @@ struct discard_policy {
 	bool ordered;			/* issue discard by lba order */
 	bool timeout;			/* discard timeout for put_super */
 	unsigned int granularity;	/* discard granularity */
-	bool io_busy;			/* interrupt by user io */
 };
 
 struct discard_cmd_control {
@@ -455,6 +440,9 @@ static inline bool __has_cursum_space(struct f2fs_journal *journal,
 					_IOR(F2FS_IOCTL_MAGIC, 18, __u64)
 #define F2FS_IOC_RESERVE_COMPRESS_BLOCKS				\
 					_IOR(F2FS_IOCTL_MAGIC, 19, __u64)
+
+#define F2FS_IOC_GET_VOLUME_NAME	FS_IOC_GETFSLABEL
+#define F2FS_IOC_SET_VOLUME_NAME	FS_IOC_SETFSLABEL
 
 #define F2FS_IOC_SET_ENCRYPTION_POLICY	FS_IOC_SET_ENCRYPTION_POLICY
 #define F2FS_IOC_GET_ENCRYPTION_POLICY	FS_IOC_GET_ENCRYPTION_POLICY
@@ -824,8 +812,8 @@ struct f2fs_inode_info {
 	int i_extra_isize;		/* size of extra space located in i_addr */
 	kprojid_t i_projid;		/* id for project quota */
 	int i_inline_xattr_size;	/* inline xattr size */
-	struct timespec i_crtime;	/* inode creation time */
-	struct timespec i_disk_time[4];	/* inode disk times */
+	struct timespec64 i_crtime;	/* inode creation time */
+	struct timespec64 i_disk_time[4];/* inode disk times */
 
 	/* for file compress */
 	u64 i_compr_blocks;			/* # of compressed blocks */
@@ -1200,6 +1188,7 @@ struct f2fs_io_info {
 	bool retry;		/* need to reallocate block address */
 	int compr_blocks;	/* # of compressed block addresses */
 	bool encrypted;		/* indicate file is encrypted */
+	bool post_read;		/* require post read */
 	enum iostat_type io_type;	/* io type */
 	struct writeback_control *io_wbc; /* writeback control */
 	struct bio **bio;		/* bio for ipu */
@@ -1572,10 +1561,6 @@ struct f2fs_sb_info {
 	unsigned int ndirty_inode[NR_INODE_TYPE];	/* # of dirty inodes */
 #endif
 	spinlock_t stat_lock;			/* lock for stat operations */
-#ifdef CONFIG_F2FS_BD_STAT
-	spinlock_t bd_lock;
-	struct f2fs_bigdata_info *bd_info;	/* big data collections */
-#endif
 
 	/* For app/fs IO statistics */
 	spinlock_t iostat_lock;
@@ -1616,14 +1601,6 @@ struct f2fs_sb_info {
 
 	struct kmem_cache *inline_xattr_slab;	/* inline xattr entry */
 	unsigned int inline_xattr_slab_size;	/* default inline xattr slab size */
-
-	bool is_frag;				/* urgent gc flag */
-	unsigned long last_frag_check;		/* last urgent check jiffies */
-	atomic_t need_ssr_gc;			/* ssr gc count */
-	bool gc_opt_enable;
-	bool dc_opt_enable;
-	int dpolicy_expect;
-	bool fsync_protect;
 };
 
 struct f2fs_private_dio {
@@ -1679,7 +1656,7 @@ static inline bool f2fs_is_multi_device(struct f2fs_sb_info *sbi)
  * and the return value is in kbytes. s is of struct f2fs_sb_info.
  */
 #define BD_PART_WRITTEN(s)						 \
-(((u64)part_stat_read((s)->sb->s_bdev->bd_part, sectors[1]) -		 \
+(((u64)part_stat_read((s)->sb->s_bdev->bd_part, sectors[STAT_WRITE]) -   \
 		(s)->sectors_written_start) >> 1)
 
 static inline void f2fs_update_time(struct f2fs_sb_info *sbi, int type)
@@ -2944,13 +2921,13 @@ static inline void clear_file(struct inode *inode, int type)
 
 static inline bool f2fs_is_time_consistent(struct inode *inode)
 {
-	if (!timespec_equal(F2FS_I(inode)->i_disk_time, &inode->i_atime))
+	if (!timespec64_equal(F2FS_I(inode)->i_disk_time, &inode->i_atime))
 		return false;
-	if (!timespec_equal(F2FS_I(inode)->i_disk_time + 1, &inode->i_ctime))
+	if (!timespec64_equal(F2FS_I(inode)->i_disk_time + 1, &inode->i_ctime))
 		return false;
-	if (!timespec_equal(F2FS_I(inode)->i_disk_time + 2, &inode->i_mtime))
+	if (!timespec64_equal(F2FS_I(inode)->i_disk_time + 2, &inode->i_mtime))
 		return false;
-	if (!timespec_equal(F2FS_I(inode)->i_disk_time + 3,
+	if (!timespec64_equal(F2FS_I(inode)->i_disk_time + 3,
 						&F2FS_I(inode)->i_crtime))
 		return false;
 	return true;
@@ -3111,7 +3088,7 @@ static inline void f2fs_update_iostat(struct f2fs_sb_info *sbi,
 #if defined(OPLUS_FEATURE_IOMONITOR) && defined(CONFIG_IOMONITOR)
 	if (type == FS_GC_DATA_IO || type == FS_GC_NODE_IO)
 		iomonitor_update_fs_stats(FS_GC_OPT, 1);
-        else if (type == FS_DISCARD)
+	else if (type == FS_DISCARD)
 		iomonitor_update_fs_stats(FS_DISCARD_OPT, 1);
 #endif /*OPLUS_FEATURE_IOMONITOR*/
 
@@ -3266,6 +3243,8 @@ bool f2fs_empty_dir(struct inode *dir);
 
 static inline int f2fs_add_link(struct dentry *dentry, struct inode *inode)
 {
+	if (fscrypt_is_nokey_name(dentry))
+		return -ENOKEY;
 	return f2fs_do_add_link(d_inode(dentry->d_parent), &dentry->d_name,
 				inode, inode->i_ino, inode->i_mode);
 }
@@ -3329,7 +3308,7 @@ bool f2fs_alloc_nid(struct f2fs_sb_info *sbi, nid_t *nid);
 void f2fs_alloc_nid_done(struct f2fs_sb_info *sbi, nid_t nid);
 void f2fs_alloc_nid_failed(struct f2fs_sb_info *sbi, nid_t nid);
 int f2fs_try_to_free_nids(struct f2fs_sb_info *sbi, int nr_shrink);
-void f2fs_recover_inline_xattr(struct inode *inode, struct page *page);
+int f2fs_recover_inline_xattr(struct inode *inode, struct page *page);
 int f2fs_recover_xattr_data(struct inode *inode, struct page *page);
 int f2fs_recover_inode_page(struct f2fs_sb_info *sbi, struct page *page);
 int f2fs_restore_node_summary(struct f2fs_sb_info *sbi,
@@ -3417,7 +3396,7 @@ enum rw_hint f2fs_io_type_to_rw_hint(struct f2fs_sb_info *sbi,
 void f2fs_stop_checkpoint(struct f2fs_sb_info *sbi, bool end_io);
 struct page *f2fs_grab_meta_page(struct f2fs_sb_info *sbi, pgoff_t index);
 struct page *f2fs_get_meta_page(struct f2fs_sb_info *sbi, pgoff_t index);
-struct page *f2fs_get_meta_page_retry(struct f2fs_sb_info *sbi, pgoff_t index);
+struct page *f2fs_get_meta_page_nofail(struct f2fs_sb_info *sbi, pgoff_t index);
 struct page *f2fs_get_tmp_page(struct f2fs_sb_info *sbi, pgoff_t index);
 bool f2fs_is_valid_blkaddr(struct f2fs_sb_info *sbi,
 					block_t blkaddr, int type);
@@ -3765,12 +3744,6 @@ static inline void f2fs_destroy_root_stats(void) { }
 static inline void f2fs_update_sit_info(struct f2fs_sb_info *sbi) {}
 #endif
 
-#ifdef CONFIG_F2FS_BD_STAT
-#include "of2fs_bigdata.h"
-void f2fs_build_bd_stat(struct f2fs_sb_info *sbi);
-void f2fs_destroy_bd_stat(struct f2fs_sb_info *sbi);
-#endif
-
 extern const struct file_operations f2fs_dir_operations;
 extern const struct file_operations f2fs_file_operations;
 extern const struct inode_operations f2fs_file_inode_operations;
@@ -3796,7 +3769,7 @@ int f2fs_convert_inline_page(struct dnode_of_data *dn, struct page *page);
 int f2fs_convert_inline_inode(struct inode *inode);
 int f2fs_try_convert_inline_dir(struct inode *dir, struct dentry *dentry);
 int f2fs_write_inline_data(struct inode *inode, struct page *page);
-bool f2fs_recover_inline_data(struct inode *inode, struct page *npage);
+int f2fs_recover_inline_data(struct inode *inode, struct page *npage);
 struct f2fs_dir_entry *f2fs_find_in_inline_dir(struct inode *dir,
 					const struct f2fs_filename *fname,
 					struct page **res_page);
@@ -4132,6 +4105,8 @@ static inline bool f2fs_force_buffered_io(struct inode *inode,
 		return true;
 	if (fsverity_active(inode))
 		return true;
+	if (f2fs_compressed_file(inode))
+		return true;
 	if (f2fs_is_multi_device(sbi))
 		return true;
 	/*
@@ -4171,24 +4146,6 @@ static inline bool is_journalled_quota(struct f2fs_sb_info *sbi)
 		return true;
 #endif
 	return false;
-}
-
-#define F2FS_FS_FREE_PERCENT		20
-#define F2FS_DEVICE_FREE_PERCENT	10
-
-static inline bool f2fs_is_space_free(struct f2fs_sb_info *sbi)
-{
-	struct discard_cmd_control *dcc = SM_I(sbi)->dcc_info;
-	block_t user_blocks = sbi->user_block_count;
-	block_t ovp_cnt = SM_I(sbi)->ovp_segments << sbi->log_blocks_per_seg;
-	block_t avail_block = user_blocks - valid_user_blocks(sbi) + ovp_cnt;
-	block_t fs_threshold = (block_t)(SM_I(sbi)->main_segments *
-			sbi->blocks_per_seg * F2FS_FS_FREE_PERCENT) / 100;
-	block_t device_threshold = (block_t)(SM_I(sbi)->main_segments *
-			sbi->blocks_per_seg * F2FS_DEVICE_FREE_PERCENT) / 100;
-
-	return avail_block > fs_threshold &&
-			avail_block - dcc->undiscard_blks > device_threshold;
 }
 
 #define EFSBADCRC	EBADMSG		/* Bad CRC detected */

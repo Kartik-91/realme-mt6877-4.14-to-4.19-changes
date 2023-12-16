@@ -18,11 +18,6 @@
 #include <linux/backing-dev.h>
 #include "internal.h"
 
-#if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPLUS_HEALTHINFO)
-// Add for get cpu load
-#include <soc/oplus/healthinfo.h>
-#endif /*OPLUS_FEATURE_HEALTHINFO*/
-
 #if defined(OPLUS_FEATURE_IOMONITOR) && defined(CONFIG_IOMONITOR)
 #include <linux/iomonitor/iomonitor.h>
 #include <linux/iomonitor/iotrace.h>
@@ -116,11 +111,11 @@ static void fdatawait_one_bdev(struct block_device *bdev, void *arg)
  * just write metadata (such as inodes or bitmaps) to block device page cache
  * and do not sync it on their own in ->sync_fs().
  */
-SYSCALL_DEFINE0(sync)
+void ksys_sync(void)
 {
 	int nowait = 0, wait = 1;
 
-	wakeup_flusher_threads(0, WB_REASON_SYNC);
+	wakeup_flusher_threads(WB_REASON_SYNC);
 	iterate_supers(sync_inodes_one_sb, NULL);
 	iterate_supers(sync_fs_one_sb, &nowait);
 	iterate_supers(sync_fs_one_sb, &wait);
@@ -128,6 +123,11 @@ SYSCALL_DEFINE0(sync)
 	iterate_bdevs(fdatawait_one_bdev, NULL);
 	if (unlikely(laptop_mode))
 		laptop_sync_completion();
+}
+
+SYSCALL_DEFINE0(sync)
+{
+	ksys_sync();
 	return 0;
 }
 
@@ -198,12 +198,8 @@ int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 
 	if (!file->f_op->fsync)
 		return -EINVAL;
-	if (!datasync && (inode->i_state & I_DIRTY_TIME)) {
-		spin_lock(&inode->i_lock);
-		inode->i_state &= ~I_DIRTY_TIME;
-		spin_unlock(&inode->i_lock);
+	if (!datasync && (inode->i_state & I_DIRTY_TIME))
 		mark_inode_dirty_sync(inode);
-	}
 	return file->f_op->fsync(file, start, end, datasync);
 }
 EXPORT_SYMBOL(vfs_fsync_range);
@@ -226,25 +222,19 @@ static int do_fsync(unsigned int fd, int datasync)
 {
 	struct fd f = fdget(fd);
 	int ret = -EBADF;
-
-#if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPLUS_HEALTHINFO)
+#if defined(OPLUS_FEATURE_IOMONITOR) && defined(CONFIG_IOMONITOR)
 // Add for record  fsync  time
-    unsigned long fsync_time = jiffies;
-#endif /*OPLUS_FEATURE_HEALTHINFO*/
-
+	unsigned long fsync_time = jiffies;
+#endif /*OPLUS_FEATURE_IOMONITOR*/
 	if (f.file) {
 		ret = vfs_fsync(f.file, datasync);
 		fdput(f);
-#if defined(OPLUS_FEATURE_IOMONITOR) && defined(CONFIG_IOMONITOR) && defined(OPLUS_FEATURE_HEALTHINFO)
+#if defined(OPLUS_FEATURE_IOMONITOR) && defined(CONFIG_IOMONITOR)
 		iomonitor_update_fs_stats(FS_FSYNC, 1);
 		trace_syscall_sync_timeout(f.file, jiffies_to_msecs(jiffies - fsync_time));
-#endif /*OPLUS_FEATURE_IOMONITOR & OPLUS_FEATURE_HEALTHINFO*/
+#endif /*OPLUS_FEATURE_IOMONITOR*/
 		inc_syscfs(current);
 	}
-  
-#if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPLUS_HEALTHINFO)
-	ohm_schedstats_record(OHM_SCHED_FSYNC, current, jiffies_to_msecs(jiffies - fsync_time));
-#endif /*OPLUS_FEATURE_HEALTHINFO*/
 	return ret;
 }
 
@@ -305,8 +295,8 @@ SYSCALL_DEFINE1(fdatasync, unsigned int, fd)
  * already-instantiated disk blocks, there are no guarantees here that the data
  * will be available after a crash.
  */
-SYSCALL_DEFINE4(sync_file_range, int, fd, loff_t, offset, loff_t, nbytes,
-				unsigned int, flags)
+int ksys_sync_file_range(int fd, loff_t offset, loff_t nbytes,
+			 unsigned int flags)
 {
 	int ret;
 	struct fd f;
@@ -384,10 +374,16 @@ out:
 	return ret;
 }
 
+SYSCALL_DEFINE4(sync_file_range, int, fd, loff_t, offset, loff_t, nbytes,
+				unsigned int, flags)
+{
+	return ksys_sync_file_range(fd, offset, nbytes, flags);
+}
+
 /* It would be nice if people remember that not all the world's an i386
    when they introduce new system calls */
 SYSCALL_DEFINE4(sync_file_range2, int, fd, unsigned int, flags,
 				 loff_t, offset, loff_t, nbytes)
 {
-	return sys_sync_file_range(fd, offset, nbytes, flags);
+	return ksys_sync_file_range(fd, offset, nbytes, flags);
 }

@@ -107,7 +107,7 @@ struct page *f2fs_get_meta_page(struct f2fs_sb_info *sbi, pgoff_t index)
 	return __get_meta_page(sbi, index, true);
 }
 
-struct page *f2fs_get_meta_page_retry(struct f2fs_sb_info *sbi, pgoff_t index)
+struct page *f2fs_get_meta_page_nofail(struct f2fs_sb_info *sbi, pgoff_t index)
 {
 	struct page *page;
 	int count = 0;
@@ -243,6 +243,8 @@ int f2fs_ra_meta_pages(struct f2fs_sb_info *sbi, block_t start, int nrpages,
 					blkno * NAT_ENTRY_PER_BLOCK);
 			break;
 		case META_SIT:
+			if (unlikely(blkno >= TOTAL_SEGS(sbi)))
+				goto out;
 			/* get sit block addr */
 			fio.new_blkaddr = current_sit_addr(sbi,
 					blkno * SIT_ENTRY_PER_BLOCK);
@@ -375,7 +377,7 @@ long f2fs_sync_meta_pages(struct f2fs_sb_info *sbi, enum page_type type,
 	};
 	struct blk_plug plug;
 
-	pagevec_init(&pvec, 0);
+	pagevec_init(&pvec);
 
 	blk_start_plug(&plug);
 
@@ -682,20 +684,20 @@ int f2fs_recover_orphan_inodes(struct f2fs_sb_info *sbi)
 		return 0;
 	}
 
-	if (s_flags & MS_RDONLY) {
+	if (s_flags & SB_RDONLY) {
 		f2fs_info(sbi, "orphan cleanup on readonly fs");
-		sbi->sb->s_flags &= ~MS_RDONLY;
+		sbi->sb->s_flags &= ~SB_RDONLY;
 	}
 
 #ifdef CONFIG_QUOTA
 	/* Needed for iput() to work correctly and not trash data */
-	sbi->sb->s_flags |= MS_ACTIVE;
+	sbi->sb->s_flags |= SB_ACTIVE;
 
 	/*
 	 * Turn on quotas which were not enabled for read-only mounts if
 	 * filesystem has quota feature, so that they are updated correctly.
 	 */
-	quota_enabled = f2fs_enable_quota_files(sbi, s_flags & MS_RDONLY);
+	quota_enabled = f2fs_enable_quota_files(sbi, s_flags & SB_RDONLY);
 #endif
 
 	start_blk = __start_cp_addr(sbi) + 1 + __cp_payload(sbi);
@@ -734,7 +736,7 @@ out:
 	if (quota_enabled)
 		f2fs_quota_off_umount(sbi->sb);
 #endif
-	sbi->sb->s_flags = s_flags; /* Restore MS_RDONLY status */
+	sbi->sb->s_flags = s_flags; /* Restore SB_RDONLY status */
 
 	return err;
 }
@@ -1047,8 +1049,12 @@ int f2fs_sync_dirty_inodes(struct f2fs_sb_info *sbi, enum inode_type type)
 				get_pages(sbi, is_dir ?
 				F2FS_DIRTY_DENTS : F2FS_DIRTY_DATA));
 retry:
-	if (unlikely(f2fs_cp_error(sbi)))
+	if (unlikely(f2fs_cp_error(sbi))) {
+		trace_f2fs_sync_dirty_inodes_exit(sbi->sb, is_dir,
+				get_pages(sbi, is_dir ?
+				F2FS_DIRTY_DENTS : F2FS_DIRTY_DATA));
 		return -EIO;
+	}
 
 	spin_lock(&sbi->inode_lock[type]);
 
@@ -1258,6 +1264,8 @@ void f2fs_wait_on_all_pages(struct f2fs_sb_info *sbi, int type)
 	DEFINE_WAIT(wait);
 
 	for (;;) {
+		prepare_to_wait(&sbi->cp_wait, &wait, TASK_UNINTERRUPTIBLE);
+
 		if (!get_pages(sbi, type))
 			break;
 
@@ -1267,10 +1275,6 @@ void f2fs_wait_on_all_pages(struct f2fs_sb_info *sbi, int type)
 		if (type == F2FS_DIRTY_META)
 			f2fs_sync_meta_pages(sbi, META, LONG_MAX,
 							FS_CP_META_IO);
-		else if (type == F2FS_WB_CP_DATA)
-			f2fs_submit_merged_write(sbi, DATA);
-
-		prepare_to_wait(&sbi->cp_wait, &wait, TASK_UNINTERRUPTIBLE);
 		io_schedule_timeout(DEFAULT_IO_TIMEOUT);
 	}
 	finish_wait(&sbi->cp_wait, &wait);
@@ -1379,12 +1383,7 @@ static void commit_checkpoint(struct f2fs_sb_info *sbi,
 	f2fs_submit_merged_write(sbi, META_FLUSH);
 }
 
-#ifdef CONFIG_F2FS_BD_STAT
-static int do_checkpoint(struct f2fs_sb_info *sbi,
-	struct cp_control *cpc, u64 *cp_flush_meta_time)
-#else
 static int do_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
-#endif
 {
 	struct f2fs_checkpoint *ckpt = F2FS_CKPT(sbi);
 	struct f2fs_nm_info *nm_i = NM_I(sbi);
@@ -1398,20 +1397,9 @@ static int do_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 	struct curseg_info *seg_i = CURSEG_I(sbi, CURSEG_HOT_NODE);
 	u64 kbytes_written;
 	int err;
-#ifdef CONFIG_F2FS_BD_STAT
-	u64 cp_flush_meta_begin;
-#endif
 
 	/* Flush all the NAT/SIT pages */
-#ifdef CONFIG_F2FS_BD_STAT
-	cp_flush_meta_begin = local_clock();
-#endif
 	f2fs_sync_meta_pages(sbi, META, LONG_MAX, FS_CP_META_IO);
-#ifdef CONFIG_F2FS_BD_STAT
-	*cp_flush_meta_time += local_clock() - cp_flush_meta_begin;
-#endif
-	f2fs_bug_on(sbi, get_pages(sbi, F2FS_DIRTY_META) &&
-					!f2fs_cp_error(sbi));
 
 	/* start to update checkpoint, cp ver is already updated previously */
 	ckpt->elapsed_time = cpu_to_le64(get_mtime(sbi, true));
@@ -1571,10 +1559,6 @@ int f2fs_write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 	struct f2fs_checkpoint *ckpt = F2FS_CKPT(sbi);
 	unsigned long long ckpt_ver;
 	int err = 0;
-#ifdef CONFIG_F2FS_BD_STAT
-	u64 cp_begin = 0, cp_end, cp_submit_end = 0, discard_begin, discard_end;
-	u64 cp_flush_meta_time, cp_flush_meta_begin;
-#endif
 
 	if (f2fs_readonly(sbi->sb) || f2fs_hw_is_readonly(sbi))
 		return -EROFS;
@@ -1598,9 +1582,6 @@ int f2fs_write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 
 	trace_f2fs_write_checkpoint(sbi->sb, cpc->reason, "start block_ops");
 
-#ifdef CONFIG_F2FS_BD_STAT
-	cp_begin = local_clock();
-#endif
 	err = block_operations(sbi);
 	if (err)
 		goto out;
@@ -1608,9 +1589,6 @@ int f2fs_write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 	trace_f2fs_write_checkpoint(sbi->sb, cpc->reason, "finish block_ops");
 
 	f2fs_flush_merged_writes(sbi);
-#ifdef CONFIG_F2FS_BD_STAT
-	cp_submit_end = local_clock();
-#endif
 
 	/* this is the case of multiple fstrims without any changes */
 	if (cpc->reason & CP_DISCARD) {
@@ -1622,22 +1600,8 @@ int f2fs_write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 		if (NM_I(sbi)->dirty_nat_cnt == 0 &&
 				SIT_I(sbi)->dirty_sentries == 0 &&
 				prefree_segments(sbi) == 0) {
-#ifdef CONFIG_F2FS_BD_STAT
-			cp_flush_meta_begin = local_clock();
-#endif
 			f2fs_flush_sit_entries(sbi, cpc);
-#ifdef CONFIG_F2FS_BD_STAT
-			discard_begin = local_clock();
-			cp_flush_meta_time = discard_begin - cp_flush_meta_begin;
-#endif
 			f2fs_clear_prefree_segments(sbi, cpc);
-#ifdef CONFIG_F2FS_BD_STAT
-			discard_end = local_clock();
-			bd_lock(sbi);
-			bd_max_val(sbi, max_cp_discard_time,
-				   discard_end - discard_begin);
-			bd_unlock(sbi);
-#endif
 			unblock_operations(sbi);
 			goto out;
 		}
@@ -1652,38 +1616,17 @@ int f2fs_write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 	ckpt->checkpoint_ver = cpu_to_le64(++ckpt_ver);
 
 	/* write cached NAT/SIT entries to NAT/SIT area */
-#ifdef CONFIG_F2FS_BD_STAT
-	cp_flush_meta_begin = local_clock();
-#endif
 	err = f2fs_flush_nat_entries(sbi, cpc);
 	if (err)
 		goto stop;
 
 	f2fs_flush_sit_entries(sbi, cpc);
-#ifdef CONFIG_F2FS_BD_STAT
-	cp_flush_meta_time = local_clock() - cp_flush_meta_begin;
 
-	/* unlock all the fs_lock[] in do_checkpoint() */
-	err = do_checkpoint(sbi, cpc, &cp_flush_meta_time);
-	if (err)
-		f2fs_release_discard_addrs(sbi);
-	else {
-		discard_begin = local_clock();
-		f2fs_clear_prefree_segments(sbi, cpc);
-		discard_end = local_clock();
-		bd_lock(sbi);
-		bd_max_val(sbi, max_cp_discard_time,
-			   discard_end - discard_begin);
-		bd_unlock(sbi);
-	}
-#else
-	/* unlock all the fs_lock[] in do_checkpoint() */
 	err = do_checkpoint(sbi, cpc);
 	if (err)
 		f2fs_release_discard_addrs(sbi);
 	else
 		f2fs_clear_prefree_segments(sbi, cpc);
-#endif
 stop:
 	unblock_operations(sbi);
 	stat_inc_cp_count(sbi->stat_info);
@@ -1697,18 +1640,6 @@ stop:
 out:
 	if (cpc->reason != CP_RESIZE)
 		mutex_unlock(&sbi->cp_mutex);
-	#ifdef CONFIG_F2FS_BD_STAT
-	if (!err && cp_begin) {
-		cp_end = local_clock();
-		bd_lock(sbi);
-		bd_inc_val(sbi, cp_success_count, 1);
-		bd_max_val(sbi, max_cp_submit_time, cp_submit_end - cp_begin);
-		bd_inc_val(sbi, cp_time, cp_end - cp_begin);
-		bd_max_val(sbi, max_cp_time, cp_end - cp_begin);
-		bd_max_val(sbi, max_cp_flush_meta_time, cp_flush_meta_time);
-		bd_unlock(sbi);
-	}
-#endif
 	return err;
 }
 

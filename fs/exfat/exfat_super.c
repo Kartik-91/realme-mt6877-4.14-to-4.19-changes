@@ -129,7 +129,7 @@ static time_t accum_days_in_year[] = {
 static void _exfat_truncate(struct inode *inode, loff_t old_size);
 
 /* Convert a FAT time/date pair to a UNIX date (seconds since 1 1 70). */
-void exfat_time_fat2unix(struct exfat_sb_info *sbi, struct timespec *ts,
+void exfat_time_fat2unix(struct exfat_sb_info *sbi, struct timespec64 *ts,
 						 DATE_TIME_T *tp)
 {
 	time_t year = tp->Year;
@@ -148,7 +148,7 @@ void exfat_time_fat2unix(struct exfat_sb_info *sbi, struct timespec *ts,
 }
 
 /* Convert linear UNIX date to a FAT time/date pair. */
-void exfat_time_unix2fat(struct exfat_sb_info *sbi, struct timespec *ts,
+void exfat_time_unix2fat(struct exfat_sb_info *sbi, struct timespec64 *ts,
 						 DATE_TIME_T *tp)
 {
 	time_t second = ts->tv_sec;
@@ -715,7 +715,7 @@ static int exfat_create(struct inode *dir, struct dentry *dentry, int mode,
 {
 	struct super_block *sb = dir->i_sb;
 	struct inode *inode;
-	struct timespec ts;
+	struct timespec64 ts;
 	FILE_ID_T fid;
 	loff_t i_pos;
 	int err;
@@ -740,7 +740,7 @@ static int exfat_create(struct inode *dir, struct dentry *dentry, int mode,
 			err = -EIO;
 		goto out;
 	}
-	dir->i_version++;
+	atomic64_inc(&dir->i_version);
 	dir->i_ctime = dir->i_mtime = dir->i_atime = ts;
 	if (IS_DIRSYNC(dir))
 		(void) exfat_sync_inode(dir);
@@ -754,11 +754,11 @@ static int exfat_create(struct inode *dir, struct dentry *dentry, int mode,
 		err = PTR_ERR(inode);
 		goto out;
 	}
-	inode->i_version++;
+	atomic64_inc(&inode->i_version);
 	inode->i_mtime = inode->i_atime = inode->i_ctime = ts;
 	/* timestamp is already written, so mark_inode_dirty() is unnecessary. */
 
-	dentry->d_time = dentry->d_parent->d_inode->i_version;
+	dentry->d_time = (u64)atomic64_read(&(dentry->d_parent->d_inode->i_version));
 	d_instantiate(dentry, inode);
 
 out:
@@ -847,7 +847,7 @@ static struct dentry *exfat_lookup(struct inode *dir, struct dentry *dentry,
 	}
 out:
 	__unlock_super(sb);
-	dentry->d_time = dentry->d_parent->d_inode->i_version;
+	dentry->d_time = (u64)atomic64_read(&(dentry->d_parent->d_inode->i_version));
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38)
 	dentry->d_op = sb->s_root->d_op;
 	dentry = d_splice_alias(inode, dentry);
@@ -858,7 +858,7 @@ out:
 #else
 	dentry = d_splice_alias(inode, dentry);
 	if (dentry)
-		dentry->d_time = dentry->d_parent->d_inode->i_version;
+		dentry->d_time = (u64)atomic64_read(&(dentry->d_parent->d_inode->i_version));
 #endif
 	DPRINTK("exfat_lookup exited 2\n");
 	return dentry;
@@ -873,7 +873,7 @@ static int exfat_unlink(struct inode *dir, struct dentry *dentry)
 {
 	struct inode *inode = dentry->d_inode;
 	struct super_block *sb = dir->i_sb;
-	struct timespec ts;
+	struct timespec64 ts;
 	int err;
 
 	__lock_super(sb);
@@ -892,7 +892,7 @@ static int exfat_unlink(struct inode *dir, struct dentry *dentry)
 			err = -EIO;
 		goto out;
 	}
-	dir->i_version++;
+	atomic64_inc(&dir->i_version);
 	dir->i_mtime = dir->i_atime = ts;
 	if (IS_DIRSYNC(dir))
 		(void) exfat_sync_inode(dir);
@@ -914,7 +914,7 @@ static int exfat_symlink(struct inode *dir, struct dentry *dentry, const char *t
 {
 	struct super_block *sb = dir->i_sb;
 	struct inode *inode;
-	struct timespec ts;
+	struct timespec64 ts;
 	FILE_ID_T fid;
 	loff_t i_pos;
 	int err;
@@ -952,7 +952,7 @@ static int exfat_symlink(struct inode *dir, struct dentry *dentry, const char *t
 		goto out;
 	}
 
-	dir->i_version++;
+	atomic64_inc(&dir->i_version);
 	dir->i_ctime = dir->i_mtime = dir->i_atime = ts;
 	if (IS_DIRSYNC(dir))
 		(void) exfat_sync_inode(dir);
@@ -966,7 +966,7 @@ static int exfat_symlink(struct inode *dir, struct dentry *dentry, const char *t
 		err = PTR_ERR(inode);
 		goto out;
 	}
-	inode->i_version++;
+	atomic64_inc(&inode->i_version);
 	inode->i_mtime = inode->i_atime = inode->i_ctime = ts;
 	/* timestamp is already written, so mark_inode_dirty() is unneeded. */
 
@@ -977,7 +977,7 @@ static int exfat_symlink(struct inode *dir, struct dentry *dentry, const char *t
 	}
 	memcpy(EXFAT_I(inode)->target, target, len+1);
 
-	dentry->d_time = dentry->d_parent->d_inode->i_version;
+	dentry->d_time = (u64)atomic64_read(&(dentry->d_parent->d_inode->i_version));
 	d_instantiate(dentry, inode);
 
 out:
@@ -994,7 +994,7 @@ static int exfat_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 {
 	struct super_block *sb = dir->i_sb;
 	struct inode *inode;
-	struct timespec ts;
+	struct timespec64 ts;
 	FILE_ID_T fid;
 	loff_t i_pos;
 	int err;
@@ -1019,7 +1019,7 @@ static int exfat_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 			err = -EIO;
 		goto out;
 	}
-	dir->i_version++;
+	atomic64_inc(&dir->i_version);
 	dir->i_ctime = dir->i_mtime = dir->i_atime = ts;
 	if (IS_DIRSYNC(dir))
 		(void) exfat_sync_inode(dir);
@@ -1034,11 +1034,11 @@ static int exfat_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 		err = PTR_ERR(inode);
 		goto out;
 	}
-	inode->i_version++;
+	atomic64_inc(&inode->i_version);
 	inode->i_mtime = inode->i_atime = inode->i_ctime = ts;
 	/* timestamp is already written, so mark_inode_dirty() is unneeded. */
 
-	dentry->d_time = dentry->d_parent->d_inode->i_version;
+	dentry->d_time = (u64)atomic64_read(&(dentry->d_parent->d_inode->i_version));
 	d_instantiate(dentry, inode);
 
 out:
@@ -1051,7 +1051,7 @@ static int exfat_rmdir(struct inode *dir, struct dentry *dentry)
 {
 	struct inode *inode = dentry->d_inode;
 	struct super_block *sb = dir->i_sb;
-	struct timespec ts;
+	struct timespec64 ts;
 	int err;
 
 	__lock_super(sb);
@@ -1076,7 +1076,7 @@ static int exfat_rmdir(struct inode *dir, struct dentry *dentry)
 			err = -EIO;
 		goto out;
 	}
-	dir->i_version++;
+	atomic64_inc(&dir->i_version);
 	dir->i_mtime = dir->i_atime = ts;
 	if (IS_DIRSYNC(dir))
 		(void) exfat_sync_inode(dir);
@@ -1101,7 +1101,7 @@ static int exfat_rename(struct inode *old_dir, struct dentry *old_dentry,
 {
 	struct inode *old_inode, *new_inode;
 	struct super_block *sb = old_dir->i_sb;
-	struct timespec ts;
+	struct timespec64 ts;
 	loff_t i_pos;
 	int err;
 
@@ -1137,7 +1137,7 @@ static int exfat_rename(struct inode *old_dir, struct dentry *old_dentry,
 			err = -EIO;
 		goto out;
 	}
-	new_dir->i_version++;
+	atomic64_inc(&new_dir->i_version);
 	new_dir->i_ctime = new_dir->i_mtime = new_dir->i_atime = ts;
 	if (IS_DIRSYNC(new_dir))
 		(void) exfat_sync_inode(new_dir);
@@ -1160,7 +1160,7 @@ static int exfat_rename(struct inode *old_dir, struct dentry *old_dentry,
 			inc_nlink(new_dir);
 	}
 
-	old_dir->i_version++;
+	atomic64_inc(&old_dir->i_version);
 	old_dir->i_ctime = old_dir->i_mtime = ts;
 	if (IS_DIRSYNC(old_dir))
 		(void) exfat_sync_inode(old_dir);
@@ -1861,7 +1861,7 @@ static int exfat_fill_inode(struct inode *inode, FILE_ID_T *fid)
 	EXFAT_I(inode)->target = NULL;
 	inode->i_uid = sbi->options.fs_uid;
 	inode->i_gid = sbi->options.fs_gid;
-	inode->i_version++;
+	atomic64_inc(&inode->i_version);
 	inode->i_generation = get_seconds();
 
 	if (info.Attr & ATTR_SUBDIR) { /* directory */
@@ -1921,7 +1921,7 @@ static struct inode *exfat_build_inode(struct super_block *sb,
 		goto out;
 	}
 	inode->i_ino = iunique(sb, EXFAT_ROOT_INO);
-	inode->i_version = 1;
+	atomic64_set(&inode->i_version, 1);
 	err = exfat_fill_inode(inode, fid);
 	if (err) {
 		iput(inode);
@@ -2354,7 +2354,7 @@ static int exfat_read_root(struct inode *inode)
 {
 	struct super_block *sb = inode->i_sb;
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
-	struct timespec ts;
+	struct timespec64 ts;
 	FS_INFO_T *p_fs = &(sbi->fs_info);
 	DIR_ENTRY_T info;
 
@@ -2375,7 +2375,7 @@ static int exfat_read_root(struct inode *inode)
 
 	inode->i_uid = sbi->options.fs_uid;
 	inode->i_gid = sbi->options.fs_gid;
-	inode->i_version++;
+	atomic64_inc(&inode->i_version);
 	inode->i_generation = 0;
 	inode->i_mode = exfat_make_mode(sbi, ATTR_SUBDIR, S_IRWXUGO);
 	inode->i_op = &exfat_dir_inode_operations;
@@ -2482,7 +2482,7 @@ static int exfat_fill_super(struct super_block *sb, void *data, int silent)
 	if (!root_inode)
 		goto out_fail2;
 	root_inode->i_ino = EXFAT_ROOT_INO;
-	root_inode->i_version = 1;
+	atomic64_set(&root_inode->i_version, 1);
 	error = exfat_read_root(root_inode);
 	if (error < 0)
 		goto out_fail2;

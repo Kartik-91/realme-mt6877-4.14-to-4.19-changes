@@ -88,11 +88,11 @@
 #define BLKS_PER_SEC(sbi)					\
 	((sbi)->segs_per_sec * (sbi)->blocks_per_seg)
 #define GET_SEC_FROM_SEG(sbi, segno)				\
-	((segno) / (sbi)->segs_per_sec)
+	(((segno) == -1) ? -1: (segno) / (sbi)->segs_per_sec)
 #define GET_SEG_FROM_SEC(sbi, secno)				\
 	((secno) * (sbi)->segs_per_sec)
 #define GET_ZONE_FROM_SEC(sbi, secno)				\
-	((secno) / (sbi)->secs_per_zone)
+	(((secno) == -1) ? -1: (secno) / (sbi)->secs_per_zone)
 #define GET_ZONE_FROM_SEG(sbi, segno)				\
 	GET_ZONE_FROM_SEC(sbi, GET_SEC_FROM_SEG(sbi, segno))
 
@@ -613,8 +613,7 @@ static inline int utilization(struct f2fs_sb_info *sbi)
  * F2FS_IPUT_DISABLE - disable IPU. (=default option in LFS mode)
  */
 #define DEF_MIN_IPU_UTIL	70
-#define DEF_MIN_FSYNC_BLOCKS	20
-/* #define DEF_MIN_FSYNC_BLOCKS	8 */
+#define DEF_MIN_FSYNC_BLOCKS	8
 #define DEF_MIN_HOT_BLOCKS	16
 
 #define SMALL_VOLUME_SEGMENTS	(16 * 512)	/* 16GB */
@@ -753,11 +752,6 @@ static inline void set_to_next_sit(struct sit_info *sit_i, unsigned int start)
 #endif
 }
 
-static inline time64_t ktime_get_boottime_seconds(void)
-{
-	return ktime_divns(ktime_get_boottime(), NSEC_PER_SEC);
-}
-
 static inline unsigned long long get_mtime(struct f2fs_sb_info *sbi,
 						bool base_time)
 {
@@ -870,16 +864,5 @@ static inline void wake_up_discard_thread(struct f2fs_sb_info *sbi, bool force)
 		return;
 wake_up:
 	dcc->discard_wake = 1;
-	wake_up_interruptible_all(&dcc->discard_wait_queue);
-}
-static inline void wake_up_discard_thread_aggressive(struct f2fs_sb_info *sbi,
-						     int policy)
-{
-	struct discard_cmd_control *dcc = SM_I(sbi)->dcc_info;
-
-	if (!sbi->dc_opt_enable)
-		return;
-
-	dcc->discard_wake = policy;
 	wake_up_interruptible_all(&dcc->discard_wait_queue);
 }
