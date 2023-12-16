@@ -1,18 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Gadget Function Driver for MTP
- *
- * Copyright (C) 2010 Google, Inc.
- * Author: Mike Lockwood <lockwood@android.com>
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
+ * Copyright (c) 2018 MediaTek Inc.
  */
 
 /* #define DEBUG */
@@ -40,12 +28,8 @@
 #include <linux/usb/composite.h>
 
 #include "configfs.h"
-#ifdef CONFIG_MEDIATEK_SOLUTION
 #include "usb_boost.h"
-//#include "aee.h"
-#endif
 
-#include <linux/of.h>
 
 #define MTP_BULK_BUFFER_SIZE       16384
 #define INTR_BUFFER_SIZE           28
@@ -64,7 +48,7 @@
 
 /* number of tx and rx requests to allocate */
 #define TX_REQ_MAX 4
-#define RX_REQ_MAX 2
+#define RX_REQ_MAX 4
 #define INTR_REQ_MAX 5
 
 /* ID for Microsoft MTP OS String */
@@ -587,6 +571,7 @@ static void mtp_complete_in(struct usb_ep *ep, struct usb_request *req)
 	wake_up(&dev->write_wq);
 }
 
+static struct completion usb_read_completion;
 static atomic_t usb_rdone;
 static int64_t usb_rcnt;
 static int64_t vfs_wcnt;
@@ -610,6 +595,7 @@ static void mtp_complete_out(struct usb_ep *ep, struct usb_request *req)
 
 	wake_up(&dev->read_wq);
 	atomic_inc(&usb_rdone);
+	complete(&usb_read_completion);
 }
 
 static void mtp_complete_intr(struct usb_ep *ep, struct usb_request *req)
@@ -718,7 +704,7 @@ retry_rx_alloc:
 	return 0;
 
 fail:
-	pr_err("mtp_bind() could not allocate requests\n");
+	pr_info("mtp_bind() could not allocate requests\n");
 	return -1;
 }
 
@@ -1108,9 +1094,8 @@ static void send_file_work(struct work_struct *data)
 			header->transaction_id =
 					__cpu_to_le32(dev->xfer_transaction_id);
 		}
-#ifdef CONFIG_MEDIATEK_SOLUTION
 		usb_boost();
-#endif
+
 		monitor_in(MTP_VFS_R);
 		if (mtp_skip_vfs_read) {
 			ret = (xfer - hdr_size);
@@ -1209,9 +1194,8 @@ static void receive_file_work(struct work_struct *data)
 		}
 
 		if (write_req) {
-#ifdef CONFIG_MEDIATEK_SOLUTION
 			usb_boost();
-#endif
+
 			DBG(cdev, "rx %p %d\n", write_req, write_req->actual);
 			monitor_in(MTP_VFS_W);
 			if (mtp_skip_vfs_write) {
@@ -1305,13 +1289,21 @@ static void vfs_write_work(struct work_struct *data)
 	MTP_RX_DBG("write_cnt<%lld>, read_cnt<%lld>, req_cnt<%lld>\n",
 			vfs_wcnt, usb_rcnt, req_cnt);
 
-	while (!rx_cont_abort && (vfs_wcnt != req_cnt)) {
+	for (;;) {
+		wait_for_completion_interruptible(&usb_read_completion);
+
+		/* unbind case */
+		if (rx_cont_abort)
+			goto exit;
+
+		/* cancel case */
 		if (dev->state != STATE_BUSY) {
 			rx_cont_abort = true;
 			MTP_RX_DBG("state<%d>\n", dev->state);
-			break;
+			goto exit;
 		}
-		if (atomic_read(&usb_rdone) > 0) {
+		/* deal with what we have */
+		while (atomic_read(&usb_rdone) > 0) {
 			int rc;
 
 			write_req = dev->rx_req[index];
@@ -1354,7 +1346,7 @@ static void vfs_write_work(struct work_struct *data)
 				if (unlikely(rc)) {
 					rx_cont_abort = true;
 					MTP_RX_DBG("rc<%d>\n", rc);
-					break;
+					goto exit;
 				}
 				usb_rcnt += read_req->length;
 				MTP_RX_DBG("v_wcnt%lld,u_rcnt%lld,req%lld\n",
@@ -1362,7 +1354,12 @@ static void vfs_write_work(struct work_struct *data)
 						req_cnt);
 			}
 		}
-	};
+		/* check done or not */
+		if (vfs_wcnt == req_cnt)
+			goto exit;
+
+	} /* for (;;) */
+exit:
 	MTP_RX_DBG("write_cnt<%lld>, read_cnt<%lld>, req_cnt<%lld>\n",
 			vfs_wcnt, usb_rcnt, req_cnt);
 }
@@ -1384,6 +1381,7 @@ void trigger_rx_cont(void)
 	atomic_set(&usb_rdone, 0);
 	usb_rcnt = vfs_wcnt = 0;
 	rx_cont_abort = false;
+	init_completion(&usb_read_completion);
 
 	mb(); /* make all related status reset and sync */
 
@@ -1908,6 +1906,7 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 				dev->state = STATE_CANCELED;
 				wake_up(&dev->read_wq);
 				wake_up(&dev->write_wq);
+				complete(&usb_read_completion);
 			}
 			spin_unlock_irqrestore(&dev->lock, flags);
 
@@ -2033,10 +2032,9 @@ mtp_function_unbind(struct usb_configuration *c, struct usb_function *f)
 	struct usb_request *req;
 	int i;
 
-	if (dev->wq) {
-		flush_workqueue(dev->wq);
-		pr_debug("[USB]: %s flush workqueue\n", __func__);
-	}
+	pr_info("%s before flush\n", __func__);
+	flush_workqueue(dev->wq);
+	pr_info("%s after flush\n", __func__);
 
 	mtp_string_defs[INTERFACE_STRING_INDEX].id = 0;
 	while ((req = mtp_req_get(dev, &dev->tx_idle)))
@@ -2136,6 +2134,8 @@ static int __mtp_setup(struct mtp_instance *fi_mtp)
 	atomic_set(&dev->ioctl_excl, 0);
 	INIT_LIST_HEAD(&dev->tx_idle);
 	INIT_LIST_HEAD(&dev->intr_idle);
+
+	init_completion(&usb_read_completion);
 
 	dev->wq = create_singlethread_workqueue("f_mtp");
 	if (!dev->wq) {
@@ -2244,8 +2244,7 @@ static ssize_t cpu_mask_store(struct device *dev,
 	return size;
 }
 
-static DEVICE_ATTR(cpu_mask, 0644, cpu_mask_show,
-					       cpu_mask_store);
+static DEVICE_ATTR_RW(cpu_mask);
 
 static ssize_t mtp_server_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -2253,8 +2252,7 @@ static ssize_t mtp_server_show(struct device *dev,
 	return sprintf(buf, "%d\n", mtp_get_mtp_server());
 }
 
-static DEVICE_ATTR(mtp_server, 0444, mtp_server_show,
-					       NULL);
+static DEVICE_ATTR_RO(mtp_server);
 
 static struct device_attribute *mtp_function_attributes[] = {
 	&dev_attr_cpu_mask,
@@ -2302,7 +2300,9 @@ static void mtp_free_inst(struct usb_function_instance *fi)
 	//kfree(fi_mtp->mtp_os_desc.group.default_groups);
 	kfree(fi_mtp);
 }
-
+#ifdef CONFIG_USB_CONFIGFS_UEVENT
+extern struct device *create_function_device(char *name);
+#endif
 struct usb_function_instance *alloc_inst_mtp_ptp(bool mtp_config)
 {
 	struct mtp_instance *fi_mtp;
@@ -2331,7 +2331,7 @@ struct usb_function_instance *alloc_inst_mtp_ptp(bool mtp_config)
 		ret = mtp_setup_configfs(fi_mtp);
 		if (ret) {
 			kfree(fi_mtp);
-			pr_err("Error setting MTP\n");
+			pr_info("Error setting MTP\n");
 			return ERR_PTR(ret);
 		}
 	} else
@@ -2388,34 +2388,19 @@ static void mtp_free(struct usb_function *f)
 	/*NO-OP: no function specific resource allocation in mtp_alloc*/
 }
 
-static void get_mtp_interface(int *InterfaceClass, int *InterfaceSubClass, int *InterfaceProtocol)
-{
-	static struct device_node *of_node;
-
-	of_node = of_find_compatible_node(NULL, NULL, "mediatek,mtp_interface");
-	if (!of_node){
-		pr_err("don't found mtp_interface node");
-		return;
-	}
-	of_property_read_u32(of_node, "InterfaceClass", (u32 *) InterfaceClass);
-	of_property_read_u32(of_node,"InterfaceSubClass", (u32 *) InterfaceSubClass);
-	of_property_read_u32(of_node,"InterfaceProtocol", (u32 *) InterfaceProtocol);
-}
-
 struct usb_function *function_alloc_mtp_ptp(struct usb_function_instance *fi,
 					bool mtp_config)
 {
 	struct mtp_instance *fi_mtp = to_fi_mtp(fi);
 	struct mtp_dev *dev;
-	int InterfaceClass=1, InterfaceSubClass=1, InterfaceProtocol=1;
-	get_mtp_interface(&InterfaceClass,&InterfaceSubClass,&InterfaceProtocol);
+
 	/*
 	 * PTP piggybacks on MTP function so make sure we have
 	 * created MTP function before we associate this PTP
 	 * function with a gadget configuration.
 	 */
 	if (fi_mtp->dev == NULL) {
-		pr_err("fi_mtp->dev == NULL\n");
+		pr_info("fi_mtp->dev == NULL\n");
 		return ERR_PTR(-EINVAL); /* Invalid Configuration */
 	}
 
@@ -2423,14 +2408,6 @@ struct usb_function *function_alloc_mtp_ptp(struct usb_function_instance *fi,
 	dev->function.name = DRIVER_NAME;
 	dev->function.strings = mtp_strings;
 	if (mtp_config) {
-		if(InterfaceClass !=1)
-			mtp_interface_desc.bInterfaceClass = InterfaceClass;
-		if(InterfaceSubClass !=1)
-			mtp_interface_desc.bInterfaceSubClass = InterfaceSubClass;
-		if(InterfaceProtocol !=1)
-			mtp_interface_desc.bInterfaceProtocol = InterfaceProtocol;
-		pr_err("mtp InterfaceClass=%d,InterfaceSubClass=%d,InterfaceProtocol=%d\n",mtp_interface_desc.bInterfaceClass,
-			mtp_interface_desc.bInterfaceSubClass,mtp_interface_desc.bInterfaceProtocol);
 		dev->function.fs_descriptors = fs_mtp_descs;
 		dev->function.hs_descriptors = hs_mtp_descs;
 		dev->function.ss_descriptors = ss_mtp_descs;

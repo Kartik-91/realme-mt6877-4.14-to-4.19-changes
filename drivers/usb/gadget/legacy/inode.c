@@ -1,13 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * inode.c -- user mode filesystem api for usb gadget controllers
  *
  * Copyright (C) 2003-2004 David Brownell
  * Copyright (C) 2003 Agilent Technologies
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
  */
 
 
@@ -112,7 +108,6 @@ enum ep0_state {
 
 /* enough for the whole queue: most events invalidate others */
 #define	N_EVENT			5
-#define	RBUF_SIZE		256
 
 #define RBUF_SIZE		256
 
@@ -1216,11 +1211,11 @@ dev_release (struct inode *inode, struct file *fd)
 	return 0;
 }
 
-static unsigned int
+static __poll_t
 ep0_poll (struct file *fd, poll_table *wait)
 {
        struct dev_data         *dev = fd->private_data;
-       int                     mask = 0;
+       __poll_t                mask = 0;
 
 	if (dev->state <= STATE_DEV_OPENED)
 		return DEFAULT_POLLMASK;
@@ -1232,16 +1227,16 @@ ep0_poll (struct file *fd, poll_table *wait)
        /* report fd mode change before acting on it */
        if (dev->setup_abort) {
                dev->setup_abort = 0;
-               mask = POLLHUP;
+               mask = EPOLLHUP;
                goto out;
        }
 
        if (dev->state == STATE_DEV_SETUP) {
                if (dev->setup_in || dev->setup_can_stall)
-                       mask = POLLOUT;
+                       mask = EPOLLOUT;
        } else {
                if (dev->ev_next != 0)
-                       mask = POLLIN;
+                       mask = EPOLLIN;
        }
 out:
        spin_unlock_irq(&dev->lock);
@@ -1340,14 +1335,14 @@ gadgetfs_setup (struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	u16				w_length = le16_to_cpu(ctrl->wLength);
 
 	if (w_length > RBUF_SIZE) {
-		if (ctrl->bRequestType == USB_DIR_OUT) {
-			return value;
-		} else {
+		if (ctrl->bRequestType & USB_DIR_IN) {
 			/* Cast away the const, we are going to overwrite on purpose. */
 			__le16 *temp = (__le16 *)&ctrl->wLength;
 
 			*temp = cpu_to_le16(RBUF_SIZE);
 			w_length = RBUF_SIZE;
+		} else {
+			return value;
 		}
 	}
 
@@ -1488,7 +1483,6 @@ delegate:
 			dev->setup_wLength = w_length;
 			dev->setup_out_ready = 0;
 			dev->setup_out_error = 0;
-			value = 0;
 
 			/* read DATA stage for OUT right away */
 			if (unlikely (!dev->setup_in && w_length)) {
@@ -2063,6 +2057,9 @@ gadgetfs_fill_super (struct super_block *sb, void *opts, int silent)
 	return 0;
 
 Enomem:
+	kfree(CHIP);
+	CHIP = NULL;
+
 	return -ENOMEM;
 }
 
