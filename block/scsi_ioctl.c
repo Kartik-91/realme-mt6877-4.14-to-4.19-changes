@@ -34,13 +34,6 @@
 #include <scsi/scsi_ioctl.h>
 #include <scsi/scsi_cmnd.h>
 
-/*
- * MTK PATCH: Include UFS ioctl code definition.
- */
-#ifdef CONFIG_MTK_UFS_SUPPORT
-#include <scsi/ufs/ufs-mtk-ioctl.h>
-#endif
-
 struct blk_cmd_filter {
 	unsigned long read_ok[BLK_SCSI_CMD_PER_LONG];
 	unsigned long write_ok[BLK_SCSI_CMD_PER_LONG];
@@ -220,7 +213,7 @@ static void blk_set_cmd_filter_defaults(struct blk_cmd_filter *filter)
 #endif
 }
 
-int blk_verify_command(unsigned char *cmd, fmode_t has_write_perm)
+int blk_verify_command(unsigned char *cmd, fmode_t mode)
 {
 	struct blk_cmd_filter *filter = &blk_default_cmd_filter;
 
@@ -233,7 +226,7 @@ int blk_verify_command(unsigned char *cmd, fmode_t has_write_perm)
 		return 0;
 
 	/* Write-safe commands require a writable open */
-	if (test_bit(cmd[0], filter->write_ok) && has_write_perm)
+	if (test_bit(cmd[0], filter->write_ok) && (mode & FMODE_WRITE))
 		return 0;
 
 	return -EPERM;
@@ -247,7 +240,7 @@ static int blk_fill_sghdr_rq(struct request_queue *q, struct request *rq,
 
 	if (copy_from_user(req->cmd, hdr->cmdp, hdr->cmd_len))
 		return -EFAULT;
-	if (blk_verify_command(req->cmd, mode & FMODE_WRITE))
+	if (blk_verify_command(req->cmd, mode))
 		return -EPERM;
 
 	/*
@@ -334,17 +327,10 @@ static int sg_io(struct request_queue *q, struct gendisk *bd_disk,
 		at_head = 1;
 
 	ret = -ENOMEM;
-	rq = blk_get_request(q, writing ? REQ_OP_SCSI_OUT : REQ_OP_SCSI_IN,
-			GFP_KERNEL);
+	rq = blk_get_request(q, writing ? REQ_OP_SCSI_OUT : REQ_OP_SCSI_IN, 0);
 	if (IS_ERR(rq))
 		return PTR_ERR(rq);
 	req = scsi_req(rq);
-
-	/* MTK PATCH for SPOH */
-	#ifdef MTK_UFS_HQA
-	if (hdr->flags & SG_FLAG_POWER_LOSS)
-		rq->cmd_flags |= REQ_POWER_LOSS;
-	#endif
 
 	if (hdr->cmd_len > BLK_MAX_CDB) {
 		req->cmd = kzalloc(hdr->cmd_len, GFP_KERNEL);
@@ -403,9 +389,10 @@ out_put_request:
 
 /**
  * sg_scsi_ioctl  --  handle deprecated SCSI_IOCTL_SEND_COMMAND ioctl
- * @file:	file this ioctl operates on (optional)
  * @q:		request queue to send scsi commands down
  * @disk:	gendisk to operate on (option)
+ * @mode:	mode used to open the file through which the ioctl has been
+ *		submitted
  * @sic:	userspace structure describing the command to perform
  *
  * Send down the scsi command described by @sic to the device below
@@ -434,21 +421,21 @@ out_put_request:
  *      Positive numbers returned are the compacted SCSI error codes (4
  *      bytes in one int) where the lowest byte is the SCSI status.
  */
-#define OMAX_SB_LEN 16          /* For backward compatibility */
 int sg_scsi_ioctl(struct request_queue *q, struct gendisk *disk, fmode_t mode,
 		struct scsi_ioctl_command __user *sic)
 {
+	enum { OMAX_SB_LEN = 16 };	/* For backward compatibility */
 	struct request *rq;
 	struct scsi_request *req;
 	int err;
 	unsigned int in_len, out_len, bytes, opcode, cmdlen;
 	char *buffer = NULL;
-
 #ifdef OPLUS_FEATURE_STORAGE_TOOL
 // vendor cmd len is 16 and not 10 in spec.
 // in current application ,only samsung health will use this cmd.
 	struct scsi_device *sdev = NULL;
 #endif
+
 	if (!sic)
 		return -EINVAL;
 
@@ -472,8 +459,7 @@ int sg_scsi_ioctl(struct request_queue *q, struct gendisk *disk, fmode_t mode,
 
 	}
 
-	rq = blk_get_request(q, in_len ? REQ_OP_SCSI_OUT : REQ_OP_SCSI_IN,
-			__GFP_RECLAIM);
+	rq = blk_get_request(q, in_len ? REQ_OP_SCSI_OUT : REQ_OP_SCSI_IN, 0);
 	if (IS_ERR(rq)) {
 		err = PTR_ERR(rq);
 		goto error_free_buffer;
@@ -481,7 +467,6 @@ int sg_scsi_ioctl(struct request_queue *q, struct gendisk *disk, fmode_t mode,
 	req = scsi_req(rq);
 
 	cmdlen = COMMAND_SIZE(opcode);
-
 #ifdef OPLUS_FEATURE_STORAGE_TOOL
 // vendor cmd len is 16 and not 10 in spec.
 // in current application ,only samsung health will use this cmd.
@@ -492,6 +477,7 @@ int sg_scsi_ioctl(struct request_queue *q, struct gendisk *disk, fmode_t mode,
 		cmdlen = 16;
 	}
 #endif
+
 	/*
 	 * get command and data to send to device, if any
 	 */
@@ -503,7 +489,7 @@ int sg_scsi_ioctl(struct request_queue *q, struct gendisk *disk, fmode_t mode,
 	if (in_len && copy_from_user(buffer, sic->data + cmdlen, in_len))
 		goto error;
 
-	err = blk_verify_command(req->cmd, mode & FMODE_WRITE);
+	err = blk_verify_command(req->cmd, mode);
 	if (err)
 		goto error;
 
@@ -534,7 +520,7 @@ int sg_scsi_ioctl(struct request_queue *q, struct gendisk *disk, fmode_t mode,
 		break;
 	}
 
-	if (bytes && blk_rq_map_kern(q, rq, buffer, bytes, __GFP_RECLAIM)) {
+	if (bytes && blk_rq_map_kern(q, rq, buffer, bytes, GFP_NOIO)) {
 		err = DRIVER_ERROR << 24;
 		goto error;
 	}
@@ -553,7 +539,7 @@ int sg_scsi_ioctl(struct request_queue *q, struct gendisk *disk, fmode_t mode,
 		if (copy_to_user(sic->data, buffer, out_len))
 			err = -EFAULT;
 	}
-
+	
 error:
 	blk_put_request(rq);
 
@@ -571,7 +557,7 @@ static int __blk_send_generic(struct request_queue *q, struct gendisk *bd_disk,
 	struct request *rq;
 	int err;
 
-	rq = blk_get_request(q, REQ_OP_SCSI_OUT, __GFP_RECLAIM);
+	rq = blk_get_request(q, REQ_OP_SCSI_OUT, 0);
 	if (IS_ERR(rq))
 		return PTR_ERR(rq);
 	rq->timeout = BLK_DEFAULT_SG_TIMEOUT;
@@ -726,49 +712,8 @@ int scsi_verify_blk_ioctl(struct block_device *bd, unsigned int cmd)
 	if (bd && bd == bd->bd_contains)
 		return 0;
 
-	/* Actually none of these is particularly useful on a partition,
-	 * but they are safe.
-	 */
-	switch (cmd) {
-	case SCSI_IOCTL_GET_IDLUN:
-	case SCSI_IOCTL_GET_BUS_NUMBER:
-	case SCSI_IOCTL_GET_PCI:
-	case SCSI_IOCTL_PROBE_HOST:
-	case SG_GET_VERSION_NUM:
-	case SG_SET_TIMEOUT:
-	case SG_GET_TIMEOUT:
-	case SG_GET_RESERVED_SIZE:
-	case SG_SET_RESERVED_SIZE:
-	case SG_EMULATED_HOST:
-		return 0;
-	case CDROM_GET_CAPABILITY:
-		/* Keep this until we remove the printk below.  udev sends it
-		 * and we do not want to spam dmesg about it.   CD-ROMs do
-		 * not have partitions, so we get here only for disks.
-		 */
-		return -ENOIOCTLCMD;
-/* MTK PATCH */
-#ifdef CONFIG_MTK_UFS_SUPPORT
-	/*
-	 * MTK PATCH: bypass CAP_SYS_RAWIO checking for UFS ioctl facility.
-	 */
-	case UFS_IOCTL_FFU:
-		return 0;
-	case UFS_IOCTL_QUERY:
-		return 0;
-	case UFS_IOCTL_GET_FW_VER:
-		return 0;
-#endif
-	default:
-		break;
-	}
-
 	if (capable(CAP_SYS_RAWIO))
 		return 0;
-
-	/* In particular, rule out all resets and host-specific ioctls.  */
-	printk_ratelimited(KERN_WARNING
-			   "%s: sending ioctl %x to a partition!\n", current->comm, cmd);
 
 	return -ENOIOCTLCMD;
 }

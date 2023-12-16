@@ -10,6 +10,10 @@
 
 #include "blk.h"
 
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
+#include "uxio_first/uxio_first_opt.h"
+#endif 
+
 /**
  * blk_queue_find_tag - find a request by its tag and queue
  * @q:	 The request queue for the device
@@ -99,17 +103,20 @@ init_tag_map(struct request_queue *q, struct blk_queue_tag *tags, int depth)
 		       __func__, depth);
 	}
 
-	tag_index = kzalloc(depth * sizeof(struct request *), GFP_ATOMIC);
+	tag_index = kcalloc(depth, sizeof(struct request *), GFP_ATOMIC);
 	if (!tag_index)
 		goto fail;
 
 	nr_ulongs = ALIGN(depth, BITS_PER_LONG) / BITS_PER_LONG;
-	tag_map = kzalloc(nr_ulongs * sizeof(unsigned long), GFP_ATOMIC);
+	tag_map = kcalloc(nr_ulongs, sizeof(unsigned long), GFP_ATOMIC);
 	if (!tag_map)
 		goto fail;
 
 	tags->real_max_depth = depth;
 	tags->max_depth = depth;
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
+	tags->bg_max_depth = BLK_MAX_BG_DEPTH;
+#endif 
 	tags->tag_index = tag_index;
 	tags->tag_map = tag_map;
 
@@ -188,7 +195,6 @@ int blk_queue_init_tags(struct request_queue *q, int depth,
 	 */
 	q->queue_tags = tags;
 	queue_flag_set_unlocked(QUEUE_FLAG_QUEUED, q);
-	INIT_LIST_HEAD(&q->tag_busy_list);
 	return 0;
 }
 EXPORT_SYMBOL(blk_queue_init_tags);
@@ -374,27 +380,6 @@ int blk_queue_start_tag(struct request_queue *q, struct request *rq)
 	rq->tag = tag;
 	bqt->tag_index[tag] = rq;
 	blk_start_request(rq);
-	list_add(&rq->queuelist, &q->tag_busy_list);
 	return 0;
 }
 EXPORT_SYMBOL(blk_queue_start_tag);
-
-/**
- * blk_queue_invalidate_tags - invalidate all pending tags
- * @q:  the request queue for the device
- *
- *  Description:
- *   Hardware conditions may dictate a need to stop all pending requests.
- *   In this case, we will safely clear the block side of the tag queue and
- *   readd all requests to the request queue in the right order.
- **/
-void blk_queue_invalidate_tags(struct request_queue *q)
-{
-	struct list_head *tmp, *n;
-
-	lockdep_assert_held(q->queue_lock);
-
-	list_for_each_safe(tmp, n, &q->tag_busy_list)
-		blk_requeue_request(q, list_entry_rq(tmp));
-}
-EXPORT_SYMBOL(blk_queue_invalidate_tags);
