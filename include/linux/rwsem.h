@@ -23,11 +23,6 @@
 struct rw_semaphore;
 
 #ifdef OPLUS_FEATURE_SCHED_ASSIST
-//#ifdef CONFIG_UXCHAIN_V2
-extern void uxchain_rwsem_wake(struct task_struct *tsk,
-	struct rw_semaphore *sem);
-extern void uxchain_rwsem_down(struct rw_semaphore *sem);
-extern void uxchain_rwsem_up(struct rw_semaphore *sem);
 #define PREEMPT_DISABLE_RWSEM 3000000
 #endif
 
@@ -60,6 +55,11 @@ struct rw_semaphore {
 #ifdef CONFIG_KERNEL_LOCK_OPT
 	struct list_head	owner_list;
 #endif
+        /* NOTICE: m_count is a vendor variable used for the config
+         * CONFIG_RWSEM_PRIO_AWARE. This is included here to maintain ABI
+         * compatibility with our vendors */
+        /* count for waiters preempt to queue in wait list */
+	long m_count;
 };
 
 /*
@@ -162,6 +162,7 @@ static inline int rwsem_is_contended(struct rw_semaphore *sem)
  * lock for reading
  */
 extern void down_read(struct rw_semaphore *sem);
+extern int __must_check down_read_killable(struct rw_semaphore *sem);
 
 /*
  * trylock for reading -- returns 1 if successful, 0 if contention

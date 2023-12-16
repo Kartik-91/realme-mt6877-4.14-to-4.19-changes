@@ -8,8 +8,6 @@
 * Author     :
 * TAG        :
 ****************************************************************/
-#ifndef _OPLUS_KEVENT_H_
-#define _OPLUS_KEVENT_H_
 
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -44,4 +42,4 @@ void kernel_kevent_receive(struct sk_buff *__skbbr);
 #ifdef CONFIG_OPLUS_KEVENT_TEST
 ssize_t demo_kevent_write(struct file *filp, const char __user *buffer, size_t count, loff_t *f_pos);
 #endif /* CONFIG_OPLUS_KEVENT_TEST */
-#endif
+

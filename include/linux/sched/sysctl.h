@@ -10,6 +10,7 @@ struct ctl_table;
 extern int	     sysctl_hung_task_check_count;
 extern unsigned int  sysctl_hung_task_panic;
 extern unsigned long sysctl_hung_task_timeout_secs;
+extern unsigned long sysctl_hung_task_check_interval_secs;
 extern int sysctl_hung_task_warnings;
 #ifdef CONFIG_OPLUS_FEATURE_HUNG_TASK_ENHANCE
 extern int sysctl_hung_task_selective_monitoring;
@@ -28,17 +29,11 @@ extern unsigned int sysctl_sched_sync_hint_enable;
 extern unsigned int sysctl_sched_cstate_aware;
 extern unsigned int sysctl_sched_wakeup_granularity;
 extern unsigned int sysctl_sched_child_runs_first;
-#ifdef CONFIG_SCHED_WALT
+#if defined (OPLUS_FEATURE_SCHED_ASSIST) && defined (CONFIG_SCHED_WALT)
 extern unsigned int sysctl_sched_use_walt_cpu_util;
 extern unsigned int sysctl_sched_use_walt_task_util;
 extern unsigned int sysctl_sched_walt_init_task_load_pct;
-extern unsigned int sysctl_sched_walt_cpu_high_irqload;
-#endif
-#ifdef CONFIG_MTK_SCHED_BOOST
-extern unsigned int sysctl_sched_isolation_hint_enable;
-#endif
-
-extern unsigned int sysctl_sched_rotation_enable;
+#endif /* defined (OPLUS_FEATURE_SCHED_ASSIST) && defined (CONFIG_SCHED_WALT) */
 
 enum sched_tunable_scaling {
 	SCHED_TUNABLESCALING_NONE,
@@ -56,7 +51,6 @@ extern unsigned int sysctl_numa_balancing_scan_size;
 #ifdef CONFIG_SCHED_DEBUG
 extern __read_mostly unsigned int sysctl_sched_migration_cost;
 extern __read_mostly unsigned int sysctl_sched_nr_migrate;
-extern __read_mostly unsigned int sysctl_sched_time_avg;
 
 int sched_proc_update_handler(struct ctl_table *table, int write,
 		void __user *buffer, size_t *length,
@@ -81,13 +75,6 @@ extern unsigned int sysctl_sched_uclamp_util_max;
 extern unsigned int sysctl_sched_cfs_bandwidth_slice;
 #endif
 
-#ifdef CONFIG_SCHED_TUNE
-extern int stune_task_threshold;
-extern int sched_stune_task_threshold_handler(struct ctl_table *table,
-					int write, void __user *buffer,
-					size_t *length, loff_t *ppos);
-#endif
-
 #ifdef CONFIG_SCHED_AUTOGROUP
 extern unsigned int sysctl_sched_autogroup_enabled;
 #endif
@@ -104,9 +91,9 @@ extern int sched_rt_handler(struct ctl_table *table, int write,
 		loff_t *ppos);
 
 #ifdef CONFIG_UCLAMP_TASK
-extern int sched_uclamp_handler(struct ctl_table *table, int write,
-				void __user *buffer, size_t *lenp,
-				loff_t *ppos);
+extern int sysctl_sched_uclamp_handler(struct ctl_table *table, int write,
+				       void __user *buffer, size_t *lenp,
+				       loff_t *ppos);
 #endif
 
 extern int sysctl_numa_balancing(struct ctl_table *table, int write,
@@ -116,6 +103,13 @@ extern int sysctl_numa_balancing(struct ctl_table *table, int write,
 extern int sysctl_schedstats(struct ctl_table *table, int write,
 				 void __user *buffer, size_t *lenp,
 				 loff_t *ppos);
+
+#if defined(CONFIG_ENERGY_MODEL) && defined(CONFIG_CPU_FREQ_GOV_SCHEDUTIL)
+extern unsigned int sysctl_sched_energy_aware;
+extern int sched_energy_aware_handler(struct ctl_table *table, int write,
+				 void __user *buffer, size_t *lenp,
+				 loff_t *ppos);
+#endif
 
 #ifdef OPLUS_FEATURE_SCHED_ASSIST
 extern int sysctl_sched_assist_scene_handler(struct ctl_table *table, int write,

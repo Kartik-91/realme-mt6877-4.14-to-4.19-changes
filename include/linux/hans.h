@@ -1,5 +1,5 @@
 /***********************************************************
-** Copyright (C), 2008-2019, OPPO Mobile Comm Corp., Ltd.
+** Copyright (C), 2008-2019, Mobile Comm Corp., Ltd.
 ** File: hans.h
 ** Description: Add for hans freeze manager
 **
@@ -26,6 +26,8 @@
 #define INTERFACETOKEN_BUFF_SIZE (140)
 #define PARCEL_OFFSET (16) /*sync with the writeInterfaceToken*/
 #define CPUCTL_VERSION (2)
+#define CHECK_KERN_SUPPORT_CGRPV2 (-8000)
+#define HANS_USE_CGRPV2 (-99)
 
 /* hans_message for comunication with HANS native deamon
  * type: async binder/sync binder/signal/pkg/loopback
@@ -36,21 +38,21 @@
  * pkg_cmd: Add/Remove monitored UID
  */
 struct hans_message {
-        int type;
-        int port;  /*pid*/
+	int type;
+	int port;  // pid
 
 	int caller_uid;  /*caller -> unfreeze UID*/
 	int caller_pid;  /*caller -> unfreeze UID*/
 	int target_pid;  /*unfreeze UID, pkg add/remove UID*/
 	int target_uid;  /*unfreeze UID, pkg add/remove UID*/
 
-        int pkg_cmd;     /*Add/remove monitored uid*/
+	int pkg_cmd;     //Add/remove monitored uid
 
-        int code;
-        char rpc_name[INTERFACETOKEN_BUFF_SIZE];
+	int code;
+	char rpc_name[INTERFACETOKEN_BUFF_SIZE];
 };
 
-/*hans message type definition*/
+// hans message type definition
 enum message_type {
 	ASYNC_BINDER,
 	SYNC_BINDER,
@@ -63,23 +65,37 @@ enum message_type {
 	SIGNAL_CPUCTL,
 	CPUCTL_TRANS,
 
-        /*kernel <--> native deamon*/
-        LOOP_BACK,
-        TYPE_MAX
+	// kernel <--> native deamon
+	LOOP_BACK,
+	TYPE_MAX
 };
 
-/*pkg cmd type*/
+// pkg cmd type
 enum pkg_cmd {
-        ADD_ONE_UID,
-        DEL_ONE_UID,
-        DEL_ALL_UID,
-        PKG_CMD_MAX
+    ADD_ONE_UID,
+    DEL_ONE_UID,
+    DEL_ALL_UID,
+
+    PKG_CMD_MAX
 };
 
-/*Check if the thread group is frozen*/
-static inline bool is_frozen_tg(struct task_struct *task)
+//Check if the thread group is frozen
+static inline bool is_jobctl_frozen(struct task_struct *task)
 {
-        return (freezing(task->group_leader) || frozen(task->group_leader));
+        return ((task->jobctl & JOBCTL_TRAP_FREEZE) != 0);
+}
+static inline bool is_frozen_tg(struct task_struct* task)
+{
+	return ((cgroup_task_frozen(task) && is_jobctl_frozen(task)) || frozen(task->group_leader) || freezing(task->group_leader));
+}
+
+static inline bool is_zombie_tg(struct task_struct* task)
+{
+	if(task != NULL && task->group_leader != NULL) {
+        	return (task->group_leader->exit_state == EXIT_ZOMBIE);
+	}
+
+	return false;
 }
 
 int hans_report(enum message_type type, int caller_pid, int caller_uid, int target_pid, int target_uid, const char *rpc_name, int code);

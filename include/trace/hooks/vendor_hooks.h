@@ -1,5 +1,4 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-
 /*
  * Note: we intentionally omit include file ifdef protection
  *  This is due to the way trace events work. If a file includes two

@@ -1,15 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2015 MediaTek Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+ * Copyright (c) 2019 MediaTek Inc.
+*/
 
 
 #ifndef _UAPI_MEDIATEK_DRM_H
@@ -398,6 +390,13 @@ struct DISP_CCORR_COEF_T {
 	unsigned int coef[3][3];
 };
 
+#define SLD_CCORR_SIZE 512
+
+struct DISP_SLD_PARAM {
+	int sld_ccorr_table[SLD_CCORR_SIZE];
+	int sld_bl;
+};
+
 #define DISP_GAMMA_LUT_SIZE 512
 
 enum disp_gamma_id_t {
@@ -463,6 +462,8 @@ struct DISP_PQ_PARAM {
 #define DRM_MTK_SUPPORT_COLOR_TRANSFORM    0x2D
 #define DRM_MTK_READ_SW_REG   0x2E
 #define DRM_MTK_WRITE_SW_REG   0x2F
+#define DRM_MTK_SUPPORT_SLD 0x56
+#define DRM_MTK_SET_SLD_PARAM 0x57
 
 /* AAL */
 #define DRM_MTK_AAL_INIT_REG	0x30
@@ -570,20 +571,23 @@ struct drm_mtk_layer_config {
 	__u8 secure;
 };
 
+#define LYE_CRTC 4
 struct drm_mtk_layering_info {
-	struct drm_mtk_layer_config __user *input_config[3];
-	int disp_mode[3];
+	struct drm_mtk_layer_config *input_config[LYE_CRTC];
+	int disp_mode[LYE_CRTC];
 	/* index of crtc display mode including resolution, fps... */
-	int disp_mode_idx[3];
-	int layer_num[3];
-	int gles_head[3];
-	int gles_tail[3];
+	int disp_mode_idx[LYE_CRTC];
+	int layer_num[LYE_CRTC];
+	int gles_head[LYE_CRTC];
+	int gles_tail[LYE_CRTC];
 	int hrt_num;
+	__u32 disp_idx;
+	__u32 disp_list;
 	/* res_idx: SF/HWC selects which resolution to use */
 	int res_idx;
 	uint32_t hrt_weight;
 	uint32_t hrt_idx;
-	struct mml_frame_info *mml_cfg[3];
+	struct mml_frame_info *mml_cfg[LYE_CRTC];
 };
 
 /**
@@ -627,6 +631,9 @@ enum MTK_DRM_DISP_FEATURE {
 	DRM_DISP_FEATURE_MML_PRIMARY = 0x00000400,
 	DRM_DISP_FEATURE_VIRUTAL_DISPLAY = 0x00000800,
 	DRM_DISP_FEATURE_IOMMU = 0x00001000,
+	DRM_DISP_FEATURE_OVL_BW_MONITOR = 0x00002000,
+	DRM_DISP_FEATURE_GPU_CACHE = 0x00004000,
+	DRM_DISP_FEATURE_SPHRT = 0x00008000,
 };
 
 enum mtk_mmsys_id {
@@ -829,6 +836,10 @@ struct mtk_drm_pq_caps_info {
 #define DRM_IOCTL_MTK_SET_PQ_CAPS    DRM_IOWR(DRM_COMMAND_BASE + \
 		DRM_MTK_SET_PQ_CAPS, struct mtk_drm_pq_caps_info)
 
+#define DRM_IOCTL_MTK_SUPPORT_SLD  DRM_IOWR(DRM_COMMAND_BASE + \
+	DRM_MTK_SUPPORT_SLD, bool)
+#define DRM_IOCTL_MTK_SET_SLD_PARAM    DRM_IOWR(DRM_COMMAND_BASE + \
+	DRM_MTK_SET_SLD_PARAM, struct DISP_SLD_PARAM)
 
 /* AAL IOCTL */
 #define AAL_HIST_BIN            33	/* [0..32] */

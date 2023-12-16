@@ -1,6 +1,5 @@
 /******************************************************************
-** Copyright (C), 2004-2017, OPLUS Mobile Comm Corp., Ltd.
-**
+** Copyright (C), 2004-2017, OPPO Mobile Comm Corp., Ltd.
 ** File: - xlog.h
 ** Description: Source file for lcd drvier.
 ** lcd driver including parameter and power control.
